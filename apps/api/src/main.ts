@@ -1,5 +1,6 @@
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 
@@ -7,7 +8,12 @@ import { AppModule } from './app.module';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: false });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: false });
+
+  // `POST /designs` carries the fabric scene plus a mockup data-url per side -
+  // express' 100 kB default rejects a design with any real artwork on it as 413.
+  // Object storage for previews is the proper fix (see README, "Not built yet").
+  app.useBodyParser('json', { limit: process.env.JSON_BODY_LIMIT ?? '12mb' });
 
   const port = Number(process.env.PORT ?? 4000);
   const prefix = process.env.API_PREFIX ?? 'api';
