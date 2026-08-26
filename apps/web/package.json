@@ -11,9 +11,11 @@
   },
   "dependencies": {
     "@inkhaus/shared": "*",
+    "@serwist/turbopack": "^9.5.12",
     "clsx": "^2.1.1",
     "fabric": "^6.9.1",
     "framer-motion": "^13.1.1",
+    "idb": "^8.0.3",
     "lucide-react": "^1.33.0",
     "next": "^16.3.2",
     "react": "^19.2.8",
@@ -25,10 +27,12 @@
     "@types/node": "^26.2.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
+    "esbuild": "^0.25.12",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.2",
     "postcss": "^8.5.26",
     "puppeteer-core": "^25.8.0",
+    "serwist": "^9.5.12",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2"
   }

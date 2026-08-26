@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Menu, X, ShoppingBag } from "lucide-react";
+import { Menu, X, ShoppingBag, Download } from "lucide-react";
 import { FREE_SHIPPING_OVER } from "@/lib/catalog";
+import { useInstallPrompt } from "@/lib/use-install-prompt";
 
 const NAV = [
   { href: "/products", label: "Shop blanks" },
@@ -25,6 +26,9 @@ const TICKER = [
 export default function SiteHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  // the always-available route in, separate from the contextual prompt the
+  // studio raises - this one ignores `dismissed`, since the user opened a menu
+  const { canInstall, install } = useInstallPrompt();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -144,6 +148,21 @@ export default function SiteHeader() {
                   </Link>
                 </motion.div>
               ))}
+              {canInstall && (
+                <motion.button
+                  type="button"
+                  initial={{ y: 40, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.15 + NAV.length * 0.06, ease: [0.16, 1, 0.3, 1], duration: 0.7 }}
+                  onClick={async () => {
+                    await install();
+                    setOpen(false);
+                  }}
+                  className="mt-7 flex items-center gap-2 self-start rounded-full border hairline px-5 py-3 text-[12px] font-bold uppercase tracking-[0.14em] text-ink/70 hover:border-ink hover:text-ink"
+                >
+                  <Download size={14} aria-hidden /> Install app
+                </motion.button>
+              )}
             </nav>
           </motion.div>
         )}
