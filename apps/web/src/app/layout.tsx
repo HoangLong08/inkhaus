@@ -3,6 +3,7 @@ import { Anton, Inter_Tight, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
+import CartRoot from "@/components/cart/CartRoot";
 import ServiceWorker from "@/components/pwa/ServiceWorker";
 import OfflineBanner from "@/components/pwa/OfflineBanner";
 import UpdateToast from "@/components/pwa/UpdateToast";
@@ -58,6 +59,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <SiteHeader />
           <main>{children}</main>
           <SiteFooter />
+          <CartRoot />
           <UpdateToast />
         </ServiceWorker>
       </body>

@@ -36,6 +36,8 @@ export interface StudioDraft {
   qtyBySize: Record<string, number>;
   scenes: Record<Side, string | null>;
   savedAt: number;
+  /** print method label — optional so drafts written before it existed still load */
+  method?: string;
 }
 
 interface StoredAsset {

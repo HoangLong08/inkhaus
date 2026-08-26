@@ -7,10 +7,15 @@ import {
   Trash2, Copy, AlignCenter, ArrowUp, ArrowDown, Download, ShoppingBag,
   Loader2, RotateCw, Info, Check, Eraser,
 } from "lucide-react";
+import Link from "next/link";
 import Garment from "@/components/Garment";
 import InstallPrompt from "@/components/pwa/InstallPrompt";
-import { PRODUCTS, SIZES, unitPrice, type Product } from "@/lib/catalog";
+import SizeGrid from "@/components/cart/SizeGrid";
+import { PRODUCTS, quote, type Product } from "@/lib/catalog";
 import { CLIPART, FONTS, INK_COLORS } from "@/lib/clipart";
+import { api } from "@/lib/api";
+import { colorSlug, useCart, type CartDesign } from "@/lib/cart";
+import { putPendingDesign } from "@/lib/cart-designs";
 import {
   ASSET_PROP, assetIdsIn, clearAll, getAsset, loadDraft, putAsset,
   requestPersistence, saveDraft, sweepAssets, type Side,
@@ -22,6 +27,20 @@ import {
 const MAX_UPLOAD_MB = 25;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 type Tool = "product" | "upload" | "text" | "art" | "ai" | "layers";
+
+/** how many objects a stored side carries, without deserialising it into fabric */
+function sceneObjectCount(json: string | null) {
+  if (!json) return 0;
+  try {
+    return (JSON.parse(json).objects ?? []).length as number;
+  } catch {
+    return 0;
+  }
+}
+
+const uid = () =>
+  globalThis.crypto?.randomUUID?.() ??
+  `d-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 
 const TOOLS: { id: Tool; label: string; icon: typeof Upload }[] = [
   { id: "product", label: "Product", icon: Shirt },
@@ -58,6 +77,7 @@ export default function Studio() {
 
   const [product, setProduct] = useState<Product>(PRODUCTS[0]);
   const [colorIdx, setColorIdx] = useState(0);
+  const [method, setMethod] = useState<string>(PRODUCTS[0].method[0]);
   const [side, setSide] = useState<Side>("front");
   const [tool, setTool] = useState<Tool>("upload");
   const [ready, setReady] = useState(false);
@@ -73,17 +93,31 @@ export default function Studio() {
   const [aiBusy, setAiBusy] = useState(false);
   const [dpiWarn, setDpiWarn] = useState<string | null>(null);
   const [added, setAdded] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [qtyBySize, setQtyBySize] = useState<Record<string, number>>({ M: 1 });
   /** bumped by every canvas mutation; the autosave effect keys off it */
   const [revision, setRevision] = useState(0);
+
+  const addToCartLine = useCart((s) => s.add);
+  const openCart = useCart((s) => s.openDrawer);
 
   const color = product.colors[Math.min(colorIdx, product.colors.length - 1)];
   const totalQty = useMemo(
     () => Object.values(qtyBySize).reduce((a, b) => a + (b || 0), 0),
     [qtyBySize]
   );
-  const unit = unitPrice(product, Math.max(totalQty, 1));
-  const total = unit * totalQty;
+  // the same maths the cart and the API run, so the three numbers cannot disagree
+  const priced = useMemo(
+    () =>
+      quote(
+        product,
+        Object.entries(qtyBySize)
+          .filter(([, q]) => q > 0)
+          .map(([size, qty]) => ({ size, qty })),
+      ),
+    [product, qtyBySize],
+  );
+  const total = priced.subtotal;
 
   const printBox = product.printArea;
   const boxStyle = {
@@ -127,7 +161,7 @@ export default function Studio() {
    *
    * @returns how many objects were dropped
    */
-  const hydrateScene = useCallback(async (c: FabricNS.Canvas, json: string) => {
+  const hydrateScene = useCallback(async (c: FabricNS.StaticCanvas, json: string) => {
     const scene = JSON.parse(json);
     const objects: Record<string, unknown>[] = scene.objects ?? [];
     let dropped = 0;
@@ -270,6 +304,7 @@ export default function Studio() {
       if (draft && !disposed) {
         const saved = PRODUCTS.find((p) => p.slug === draft.productSlug);
         if (saved) setProduct(saved);
+        if (draft.method) setMethod(draft.method);
         setColorIdx(draft.colorIdx);
         setQtyBySize(draft.qtyBySize);
         sideStore.current = draft.scenes;
@@ -293,6 +328,23 @@ export default function Studio() {
           }
         }
       }
+      // "Put art on it" from a product page names the blank and the colourway.
+      // Read off the URL directly rather than with useSearchParams: this
+      // component is server-rendered inside an otherwise static route, and that
+      // hook would drag the whole page into a Suspense-or-bail-out dance for
+      // two optional parameters.
+      const params = new URLSearchParams(window.location.search);
+      const wanted = PRODUCTS.find((p) => p.slug === params.get("product"));
+      if (wanted && !disposed) {
+        const previous = draft?.productSlug ?? PRODUCTS[0].slug;
+        const changed = wanted.slug !== previous;
+        setProduct(wanted);
+        if (changed || !draft?.method) setMethod(wanted.method[0]);
+        const idx = wanted.colors.findIndex((c) => colorSlug(c) === params.get("color"));
+        if (idx >= 0) setColorIdx(idx);
+        else if (changed) setColorIdx(0);
+      }
+
       restored.current = true;
       requestPersistence();
 
@@ -317,10 +369,10 @@ export default function Studio() {
   /* ---------------- autosave ---------------- */
   // canvas callbacks are bound once, so anything they need at save time has to
   // be readable from a ref rather than captured from a render
-  const metaRef = useRef({ productSlug: product.slug, colorIdx, side, qtyBySize });
+  const metaRef = useRef({ productSlug: product.slug, colorIdx, side, qtyBySize, method });
   useEffect(() => {
-    metaRef.current = { productSlug: product.slug, colorIdx, side, qtyBySize };
-  }, [product, colorIdx, side, qtyBySize]);
+    metaRef.current = { productSlug: product.slug, colorIdx, side, qtyBySize, method };
+  }, [product, colorIdx, side, qtyBySize, method]);
 
   const persist = useCallback(async () => {
     const c = canvasRef.current;
@@ -344,7 +396,7 @@ export default function Studio() {
   // restored state, which is what we want anyway.
   useEffect(() => {
     scheduleSave();
-  }, [revision, side, product, colorIdx, qtyBySize, scheduleSave]);
+  }, [revision, side, product, colorIdx, qtyBySize, method, scheduleSave]);
 
   useEffect(() => {
     const flush = () => {
@@ -609,67 +661,214 @@ export default function Studio() {
   };
 
   /**
+   * The artwork for a side, rasterised at `multiplier`.
+   *
+   * The side on screen comes straight off the live canvas. The other one is
+   * replayed onto a throwaway StaticCanvas of the same pixel size — the cart
+   * thumbnail should show the front even while the back is being worked on.
+   * Returns null for an empty side, so callers can tell "nothing there" from
+   * "a transparent rectangle".
+   */
+  const artCanvasFor = useCallback(
+    async (target: Side, multiplier: number) => {
+      const live = canvasRef.current;
+      const fabric = fabricRef.current;
+      if (!live || !fabric) return null;
+
+      if (target === sideRef.current) {
+        return live.getObjects().length > 0 ? live.toCanvasElement(multiplier) : null;
+      }
+
+      const json = sideStore.current[target];
+      if (!json) return null;
+
+      const off = new fabric.StaticCanvas(undefined, {
+        width: live.getWidth(),
+        height: live.getHeight(),
+      });
+      try {
+        // a restored draft's other side still carries the previous document's
+        // blob: URLs, so it has to go the long way round through IndexedDB
+        if (staleSides.current.has(target)) await hydrateScene(off, json);
+        else await off.loadFromJSON(JSON.parse(json));
+        off.renderAll();
+        return off.getObjects().length > 0 ? off.toCanvasElement(multiplier) : null;
+      } catch {
+        return null;
+      } finally {
+        void off.dispose();
+      }
+    },
+    [hydrateScene],
+  );
+
+  /**
    * The print file carries artwork only — the press does not want a picture of a
    * shirt. This is the customer-facing mockup, so it rasterises the live garment
    * SVG and composites the artwork into the print box on top of it.
+   *
+   * `background` matters for JPEG output: the garment is drawn onto transparency,
+   * and a JPEG turns that black.
    */
-  const exportMockup = async () => {
-    const c = canvasRef.current;
-    const svgEl = wrapRef.current?.querySelector("svg");
-    if (!c || !svgEl) return;
+  const renderMockup = useCallback(
+    async (
+      target: Side,
+      width: number,
+      { mime = "image/png", quality, background }: {
+        mime?: string;
+        quality?: number;
+        background?: string;
+      } = {},
+    ): Promise<string | null> => {
+      const c = canvasRef.current;
+      const svgEl = wrapRef.current?.querySelector("svg");
+      if (!c || !svgEl) return null;
 
-    const W = 1200;
-    const H = Math.round((W * 700) / 600);
+      const W = width;
+      const H = Math.round((W * 700) / 600);
 
-    const clone = svgEl.cloneNode(true) as SVGSVGElement;
-    // the tailwind utilities on it (the drop shadow) do not exist inside a
-    // standalone svg document, and an unresolved class is better than none
-    clone.removeAttribute("class");
-    clone.setAttribute("width", String(W));
-    clone.setAttribute("height", String(H));
+      const clone = svgEl.cloneNode(true) as SVGSVGElement;
+      // the tailwind utilities on it (the drop shadow) do not exist inside a
+      // standalone svg document, and an unresolved class is better than none
+      clone.removeAttribute("class");
+      clone.setAttribute("width", String(W));
+      clone.setAttribute("height", String(H));
 
-    // useId() produces ids like "«r0»" — not valid XML names, and an svg loaded
-    // through <img> is parsed as XML. Rename every id, then repoint url(#...).
-    const renames = new Map<string, string>();
-    clone.querySelectorAll("[id]").forEach((el, i) => {
-      renames.set(el.id, `g${i}`);
-      el.id = `g${i}`;
-    });
-    let markup = new XMLSerializer().serializeToString(clone);
-    renames.forEach((to, from) => {
-      markup = markup.replaceAll(`#${from}`, `#${to}`);
-    });
-
-    const url = URL.createObjectURL(new Blob([markup], { type: "image/svg+xml" }));
-    try {
-      const img = new Image();
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error("garment did not rasterise"));
-        img.src = url;
+      // useId() produces ids like "«r0»" — not valid XML names, and an svg loaded
+      // through <img> is parsed as XML. Rename every id, then repoint url(#...).
+      const renames = new Map<string, string>();
+      clone.querySelectorAll("[id]").forEach((el, i) => {
+        renames.set(el.id, `g${i}`);
+        el.id = `g${i}`;
+      });
+      let markup = new XMLSerializer().serializeToString(clone);
+      renames.forEach((to, from) => {
+        markup = markup.replaceAll(`#${from}`, `#${to}`);
       });
 
-      const out = document.createElement("canvas");
-      out.width = W;
-      out.height = H;
-      const ctx = out.getContext("2d");
-      if (!ctx) return;
-      ctx.drawImage(img, 0, 0, W, H);
+      const url = URL.createObjectURL(new Blob([markup], { type: "image/svg+xml" }));
+      try {
+        const img = new Image();
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error("garment did not rasterise"));
+          img.src = url;
+        });
 
-      // the canvas *is* the print box, so its bounds already clip the artwork —
-      // it only has to be scaled from screen px into the 600x700 garment space
-      const k = W / 600;
-      const art = c.toCanvasElement((printBox.w * k) / c.getWidth());
-      ctx.drawImage(art, printBox.x * k, printBox.y * k, printBox.w * k, printBox.h * k);
+        const out = document.createElement("canvas");
+        out.width = W;
+        out.height = H;
+        const ctx = out.getContext("2d");
+        if (!ctx) return null;
+        if (background) {
+          ctx.fillStyle = background;
+          ctx.fillRect(0, 0, W, H);
+        }
+        ctx.drawImage(img, 0, 0, W, H);
 
-      const link = document.createElement("a");
-      link.download = `inkhaus-${product.slug}-${color.name.toLowerCase().replace(/\s+/g, "-")}-${side}-mockup.png`;
-      link.href = out.toDataURL("image/png");
-      link.click();
-    } catch {
+        // the canvas *is* the print box, so its bounds already clip the artwork —
+        // it only has to be scaled from screen px into the 600x700 garment space
+        const k = W / 600;
+        const art = await artCanvasFor(target, (printBox.w * k) / c.getWidth());
+        if (art) ctx.drawImage(art, printBox.x * k, printBox.y * k, printBox.w * k, printBox.h * k);
+
+        return out.toDataURL(mime, quality);
+      } catch {
+        return null;
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    },
+    [artCanvasFor, printBox],
+  );
+
+  const exportMockup = async () => {
+    const data = await renderMockup(side, 1200);
+    if (!data) {
       setDpiWarn("This browser couldn't render the mockup. The print file still exports fine.");
+      return;
+    }
+    const link = document.createElement("a");
+    link.download = `inkhaus-${product.slug}-${color.name.toLowerCase().replace(/\s+/g, "-")}-${side}-mockup.png`;
+    link.href = data;
+    link.click();
+  };
+
+  /**
+   * Add to cart — the point of the whole screen.
+   *
+   * The artwork has to become a real design before it can be ordered, so this
+   * flattens both sides, renders the mockups and posts them to `/designs`. If
+   * that call cannot land (the storefront is built to work with the API down)
+   * the payload is parked in IndexedDB and checkout retries it. Either way the
+   * line goes into the cart, carrying the thumbnail it will be shown with.
+   */
+  const addToCart = async () => {
+    const c = canvasRef.current;
+    if (!c || totalQty === 0 || adding) return;
+    setAdding(true);
+    try {
+      // capture the side on screen first — everything below reads sideStore
+      sideStore.current[sideRef.current] = serializeScene(c);
+      const scenes = { ...sideStore.current };
+      const sides = (["front", "back"] as Side[]).filter((s) => sceneObjectCount(scenes[s]) > 0);
+
+      let design: CartDesign | undefined;
+
+      if (sides.length > 0) {
+        const key = uid();
+        const name = `${product.name} · ${color.name}`;
+        const slugOfColor = colorSlug(color);
+
+        // sequential on purpose: each render replays a side through the same
+        // canvas machinery, and hydrating one twice at once would mint two sets
+        // of blob: URLs for the same upload
+        const thumb = await renderMockup(sides[0], 360, {
+          mime: "image/jpeg",
+          quality: 0.72,
+          background: "#F2F3EF",
+        });
+        const previewFront = sides.includes("front")
+          ? await renderMockup("front", 900)
+          : null;
+        const previewBack = sides.includes("back") ? await renderMockup("back", 900) : null;
+
+        const scene: Record<string, unknown> = {};
+        for (const s of ["front", "back"] as Side[]) {
+          if (scenes[s]) scene[s] = JSON.parse(scenes[s]!);
+        }
+
+        design = { key, name, sides, preview: thumb ?? undefined };
+
+        const payload = {
+          productSlug: product.slug,
+          colorSlug: slugOfColor,
+          name,
+          scene,
+          previewFront: previewFront ?? undefined,
+          previewBack: previewBack ?? undefined,
+        };
+
+        try {
+          design.publicId = (await api.saveDesign(payload)).publicId;
+        } catch {
+          await putPendingDesign({ ...payload, key, savedAt: Date.now() });
+        }
+      }
+
+      addToCartLine({
+        productSlug: product.slug,
+        colorSlug: colorSlug(color),
+        method,
+        sizes: qtyBySize,
+        design,
+      });
+
+      setAdded(true);
+      setTimeout(() => setAdded(false), 2400);
+      openCart();
     } finally {
-      URL.revokeObjectURL(url);
+      setAdding(false);
     }
   };
 
@@ -820,7 +1019,7 @@ export default function Studio() {
                   {PRODUCTS.map((p) => (
                     <button
                       key={p.slug}
-                      onClick={() => { setProduct(p); setColorIdx(0); }}
+                      onClick={() => { setProduct(p); setColorIdx(0); setMethod(p.method[0]); }}
                       className={`rounded-xl border p-2 text-left transition ${
                         product.slug === p.slug ? "border-acid-2 bg-paper-2" : "hairline hover:bg-paper-3"
                       }`}
@@ -838,11 +1037,30 @@ export default function Studio() {
                       key={c.name}
                       onClick={() => setColorIdx(i)}
                       title={c.name}
+                      aria-label={c.name}
+                      aria-pressed={i === colorIdx}
                       className={`h-9 w-9 rounded-full border-2 transition hover:scale-105 ${
                         i === colorIdx ? "border-acid-2" : "border-ink/15"
                       }`}
                       style={{ background: c.hex }}
                     />
+                  ))}
+                </div>
+                <SubTitle>Print method</SubTitle>
+                <div className="flex flex-wrap gap-1.5">
+                  {product.method.map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => setMethod(m)}
+                      aria-pressed={m === method}
+                      className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition ${
+                        m === method
+                          ? "bg-ink text-paper"
+                          : "border hairline text-ink/55 hover:text-ink"
+                      }`}
+                    >
+                      {m}
+                    </button>
                   ))}
                 </div>
                 <p className="text-[12px] text-ink/45">{product.blurb}</p>
@@ -1020,41 +1238,58 @@ export default function Studio() {
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-ink/40">
                 Sizes &amp; quantity
               </p>
-              <div className="mt-3 grid grid-cols-4 gap-1.5">
-                {SIZES.map((s) => (
-                  <label key={s} className="rounded-lg border hairline p-1.5 text-center">
-                    <span className="block text-[10px] uppercase tracking-[0.1em] text-ink/45">{s}</span>
-                    <input
-                      type="number"
-                      min={0}
-                      value={qtyBySize[s] ?? 0}
-                      onChange={(e) =>
-                        setQtyBySize((q) => ({ ...q, [s]: Math.max(0, +e.target.value) }))
-                      }
-                      className="w-full bg-transparent text-center text-[15px] font-semibold outline-none"
-                    />
-                  </label>
-                ))}
+              <div className="mt-3">
+                <SizeGrid
+                  value={qtyBySize}
+                  onChange={setQtyBySize}
+                  layout="panel"
+                  idPrefix="studio"
+                />
               </div>
 
               <div className="mt-4 space-y-1.5 border-t hairline pt-4 text-[13px]">
                 <Row l="Units" r={String(totalQty)} />
-                <Row l="Per unit" r={`$${unit.toFixed(2)}`} />
+                <Row l="Per unit" r={`$${priced.baseUnitPrice.toFixed(2)}`} />
+                {priced.tier.off > 0 && (
+                  <Row
+                    l={`${priced.tier.min}+ tier`}
+                    r={`− $${priced.savings.toFixed(2)}`}
+                  />
+                )}
                 <Row l="Print locations" r={String(printLocations)} />
                 <Row l="Total" r={`$${total.toFixed(2)}`} strong />
               </div>
 
               <button
-                onClick={() => { setAdded(true); setTimeout(() => setAdded(false), 2200); }}
-                disabled={totalQty === 0}
+                onClick={addToCart}
+                disabled={totalQty === 0 || adding || !ready}
+                data-testid="studio-add-to-cart"
                 className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-acid py-3.5 text-[12px] font-bold uppercase tracking-[0.14em] text-ink transition disabled:opacity-40"
               >
-                {added ? <Check size={15} /> : <ShoppingBag size={15} />}
-                {added ? "Added to cart" : "Add to cart"}
+                {adding ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : added ? (
+                  <Check size={15} />
+                ) : (
+                  <ShoppingBag size={15} />
+                )}
+                {adding ? "Adding…" : added ? "Added to cart" : "Add to cart"}
               </button>
-              <p className="mt-2.5 text-center text-[10px] uppercase tracking-[0.14em] text-ink/35">
-                Free proof · ships in 3–5 days
-              </p>
+              {added ? (
+                <p className="mt-2.5 text-center text-[11px] text-ink/50">
+                  <Link href="/cart" className="font-semibold text-acid-2 hover:underline">
+                    View cart
+                  </Link>{" "}
+                  ·{" "}
+                  <Link href="/checkout" className="font-semibold text-acid-2 hover:underline">
+                    checkout
+                  </Link>
+                </p>
+              ) : (
+                <p className="mt-2.5 text-center text-[10px] uppercase tracking-[0.14em] text-ink/35">
+                  Free proof · ships in 3–5 days
+                </p>
+              )}
             </div>
           </div>
         </aside>

@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Menu, X, ShoppingBag, Download } from "lucide-react";
+import { Menu, X, Download, ShoppingBag, PackageSearch } from "lucide-react";
+import CartButton from "@/components/cart/CartButton";
 import { FREE_SHIPPING_OVER } from "@/lib/catalog";
+import { selectCount, useCart } from "@/lib/cart";
 import { useInstallPrompt } from "@/lib/use-install-prompt";
 
 const NAV = [
@@ -26,6 +28,9 @@ const TICKER = [
 export default function SiteHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const count = useCart(selectCount);
+  const cartHydrated = useCart((s) => s.hydrated);
+  const openCart = useCart((s) => s.openDrawer);
   // the always-available route in, separate from the contextual prompt the
   // studio raises - this one ignores `dismissed`, since the user opened a menu
   const { canInstall, install } = useInstallPrompt();
@@ -87,12 +92,7 @@ export default function SiteHeader() {
             </nav>
 
             <div className="flex items-center gap-3">
-              <button
-                aria-label="Cart"
-                className="hidden h-10 w-10 place-items-center rounded-full border hairline text-ink/80 transition hover:border-acid-2 hover:text-acid-2 sm:grid"
-              >
-                <ShoppingBag size={16} />
-              </button>
+              <CartButton />
               <Link
                 href="/design"
                 className="group relative hidden overflow-hidden rounded-full bg-ink px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.14em] text-paper transition-colors duration-500 hover:text-ink sm:inline-flex"
@@ -148,21 +148,47 @@ export default function SiteHeader() {
                   </Link>
                 </motion.div>
               ))}
-              {canInstall && (
-                <motion.button
+              <motion.div
+                initial={{ y: 40, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.15 + NAV.length * 0.06, ease: [0.16, 1, 0.3, 1], duration: 0.7 }}
+                className="mt-7 flex flex-wrap gap-2.5"
+              >
+                <button
                   type="button"
-                  initial={{ y: 40, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.15 + NAV.length * 0.06, ease: [0.16, 1, 0.3, 1], duration: 0.7 }}
-                  onClick={async () => {
-                    await install();
+                  onClick={() => {
                     setOpen(false);
+                    openCart();
                   }}
-                  className="mt-7 flex items-center gap-2 self-start rounded-full border hairline px-5 py-3 text-[12px] font-bold uppercase tracking-[0.14em] text-ink/70 hover:border-ink hover:text-ink"
+                  className="flex items-center gap-2 rounded-full border hairline px-5 py-3 text-[12px] font-bold uppercase tracking-[0.14em] text-ink/70 hover:border-ink hover:text-ink"
                 >
-                  <Download size={14} aria-hidden /> Install app
-                </motion.button>
-              )}
+                  <ShoppingBag size={14} aria-hidden /> Cart
+                  {cartHydrated && count > 0 && (
+                    <span className="rounded-full bg-acid px-2 py-0.5 text-[10px] tabular-nums text-ink">
+                      {count}
+                    </span>
+                  )}
+                </button>
+                <Link
+                  href="/orders"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2 rounded-full border hairline px-5 py-3 text-[12px] font-bold uppercase tracking-[0.14em] text-ink/70 hover:border-ink hover:text-ink"
+                >
+                  <PackageSearch size={14} aria-hidden /> Track order
+                </Link>
+                {canInstall && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await install();
+                      setOpen(false);
+                    }}
+                    className="flex items-center gap-2 rounded-full border hairline px-5 py-3 text-[12px] font-bold uppercase tracking-[0.14em] text-ink/70 hover:border-ink hover:text-ink"
+                  >
+                    <Download size={14} aria-hidden /> Install app
+                  </button>
+                )}
+              </motion.div>
             </nav>
           </motion.div>
         )}

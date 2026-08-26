@@ -99,6 +99,33 @@ The Design Studio's export note still stands: iOS Safari caps a canvas at
 studio clamps DPI rather than shipping an empty file — the real fix is to render the
 print file server side from the design JSON now that `/designs` stores the scene.
 
+### Cart and checkout
+
+| Route | What |
+|---|---|
+| drawer | opens from the header button and from every add-to-cart |
+| `/cart` | full editor — sizes, colourway, print method, per-line volume tier |
+| `/checkout` | contact + US shipping, then `POST /orders` |
+| `/orders/:number` | status, timeline and totals as the API reports them |
+| `/orders` | look an order up by number; also lists what this browser has placed |
+
+`apps/web/src/lib/cart.ts` holds the whole model. Three things about it are load
+bearing:
+
+- **The tier is applied per line, across that line's sizes** — the same rule
+  `OrdersService.priceItem` uses. Two lines never pool their quantities, so the
+  cart must not sum first and price second.
+- **Prices come from `@inkhaus/shared`.** The cart shows a number, the API decides
+  one; they agree because both call the same `quote()`.
+- **The cart is the browser's.** It lives in localStorage (with a `sanitizeLines`
+  pass on the way back in, so a colourway that has since been unstocked cannot
+  reach the till), and two open tabs stay in sync through the `storage` event.
+
+A customised line is only orderable once `POST /designs` has given it a public id.
+That is attempted the moment it is added; if the API is unreachable the payload is
+parked in IndexedDB (`inkhaus-cart`) and checkout retries it before placing the
+order. An order never silently goes to press without its artwork.
+
 ## Scripts
 
 | Command | What |
@@ -108,9 +135,19 @@ print file server side from the design JSON now that `/designs` stores the scene
 | `npm run typecheck` · `npm test` | across all workspaces |
 | `npm run db:up` / `db:down` | Postgres container |
 | `npm run db:migrate` / `db:deploy` / `db:reset` / `db:seed` / `db:studio` | Prisma |
+| `node apps/web/scripts/verify-cart.mjs` | headless-Chrome pass over add-to-cart → order |
+| `node apps/web/scripts/verify-cart-recovery.mjs` | the same flow with the API cut off mid-design |
+| `node apps/web/scripts/verify-pwa.mjs` | offline / service-worker verification |
+
+The two cart scripts drive a real browser against a running storefront (see the
+header comment in each for the exact sequence). They read expected prices out of
+`@inkhaus/shared`, so a drift between the browser, the ladder and the API fails
+the run rather than reaching a customer.
 
 ## Not built yet
 
-Payments, real auth (the admin key is a placeholder), server-side print-file
-rendering, POD partner integration, object storage for design previews (they are
-stored as data-urls today).
+Payments (checkout places the order and stops at `PENDING_PAYMENT` — the proof is
+sent before any money is asked for), real auth (the admin key is a placeholder,
+and an order is looked up by its number alone), server-side print-file rendering,
+POD partner integration, object storage for design previews — they are still
+data-urls, which is why the API's JSON body limit had to be raised to 12 MB.

@@ -22,10 +22,10 @@ const GROUPS: { title: string; links: [string, string][] }[] = [
   {
     title: "Help",
     links: [
+      ["Track an order", "/orders"],
       ["How it works", "/how-it-works"],
       ["Size guide", "/how-it-works"],
       ["Shipping & returns", "/how-it-works"],
-      ["Artwork guidelines", "/how-it-works"],
     ],
   },
 ];
