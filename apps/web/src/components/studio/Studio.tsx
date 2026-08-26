@@ -5,13 +5,22 @@ import type * as FabricNS from "fabric";
 import {
   Upload, Type as TypeIcon, Shapes, Sparkles, Layers, Shirt, Undo2, Redo2,
   Trash2, Copy, AlignCenter, ArrowUp, ArrowDown, Download, ShoppingBag,
-  Loader2, RotateCw, Info, Check,
+  Loader2, RotateCw, Info, Check, Eraser,
 } from "lucide-react";
 import Garment from "@/components/Garment";
+import InstallPrompt from "@/components/pwa/InstallPrompt";
 import { PRODUCTS, SIZES, unitPrice, type Product } from "@/lib/catalog";
 import { CLIPART, FONTS, INK_COLORS } from "@/lib/clipart";
+import {
+  ASSET_PROP, assetIdsIn, clearAll, getAsset, loadDraft, putAsset,
+  requestPersistence, saveDraft, sweepAssets, type Side,
+} from "@/lib/studio-store";
 
-type Side = "front" | "back";
+/** The figure the artwork spec on /how-it-works already promises. Uploads were
+ *  previously unbounded; past this the Blob, the decoded bitmap and the
+ *  IndexedDB copy together are enough to wedge a phone. */
+const MAX_UPLOAD_MB = 25;
+const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 type Tool = "product" | "upload" | "text" | "art" | "ai" | "layers";
 
 const TOOLS: { id: Tool; label: string; icon: typeof Upload }[] = [
@@ -38,6 +47,14 @@ export default function Studio() {
     back: { stack: [], index: -1 },
   });
   const historyLock = useRef(false);
+  /** blob: URLs minted for restored uploads, revoked on unmount */
+  const objectUrls = useRef<string[]>([]);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** suppresses autosave until the initial restore has finished, so an empty
+   *  canvas cannot overwrite the draft it is about to load */
+  const restored = useRef(false);
+  /** sides whose stored JSON still points at a previous document's blob: URLs */
+  const staleSides = useRef<Set<Side>>(new Set());
 
   const [product, setProduct] = useState<Product>(PRODUCTS[0]);
   const [colorIdx, setColorIdx] = useState(0);
@@ -57,6 +74,8 @@ export default function Studio() {
   const [dpiWarn, setDpiWarn] = useState<string | null>(null);
   const [added, setAdded] = useState(false);
   const [qtyBySize, setQtyBySize] = useState<Record<string, number>>({ M: 1 });
+  /** bumped by every canvas mutation; the autosave effect keys off it */
+  const [revision, setRevision] = useState(0);
 
   const color = product.colors[Math.min(colorIdx, product.colors.length - 1)];
   const totalQty = useMemo(
@@ -90,11 +109,56 @@ export default function Studio() {
     });
   }, []);
 
+  /* ---------------- serialisation ---------------- */
+  /**
+   * fabric v6's toJSON() takes no arguments, so custom properties are dropped.
+   * Every snapshot goes through toObject() instead to keep the asset id that
+   * links an image back to its Blob in IndexedDB.
+   */
+  const serializeScene = useCallback(
+    (c: FabricNS.Canvas) => JSON.stringify(c.toObject([ASSET_PROP])),
+    [],
+  );
+
+  /**
+   * Re-points every stored asset id at a live blob: URL before fabric sees the
+   * scene. Uploads whose Blob is gone - iOS evicts origin storage LRU - are
+   * dropped rather than restored as a broken image.
+   *
+   * @returns how many objects were dropped
+   */
+  const hydrateScene = useCallback(async (c: FabricNS.Canvas, json: string) => {
+    const scene = JSON.parse(json);
+    const objects: Record<string, unknown>[] = scene.objects ?? [];
+    let dropped = 0;
+
+    const kept: Record<string, unknown>[] = [];
+    for (const obj of objects) {
+      const id = obj[ASSET_PROP];
+      if (typeof id !== "string") {
+        kept.push(obj);
+        continue;
+      }
+      const blob = await getAsset(id);
+      if (!blob) {
+        dropped += 1;
+        continue;
+      }
+      const url = URL.createObjectURL(blob);
+      objectUrls.current.push(url);
+      kept.push({ ...obj, src: url });
+    }
+
+    scene.objects = kept;
+    await c.loadFromJSON(scene);
+    return dropped;
+  }, []);
+
   /* ---------------- history ---------------- */
   const snapshot = useCallback(() => {
     const c = canvasRef.current;
     if (!c || historyLock.current) return;
-    const json = JSON.stringify(c.toJSON());
+    const json = serializeScene(c);
     const h = histories.current[sideRef.current];
     // delete/duplicate snapshot twice - once from the canvas event, once from act().
     // Collapsing identical states keeps one undo press equal to one user action.
@@ -103,13 +167,15 @@ export default function Studio() {
     h.stack.push(json);
     if (h.stack.length > 40) h.stack.shift();
     h.index = h.stack.length - 1;
-  }, []);
+  }, [serializeScene]);
 
   const restore = useCallback(
     async (json: string) => {
       const c = canvasRef.current;
       if (!c) return;
       historyLock.current = true;
+      // within a session the blob: URLs in these snapshots are still live, so
+      // undo/redo needs no IndexedDB round trip
       await c.loadFromJSON(JSON.parse(json));
       c.renderAll();
       historyLock.current = false;
@@ -159,9 +225,16 @@ export default function Studio() {
       c.on("selection:created", sync);
       c.on("selection:updated", sync);
       c.on("selection:cleared", sync);
-      c.on("object:modified", () => { snapshot(); sync(); });
-      c.on("object:added", () => { snapshot(); sync(); });
-      c.on("object:removed", () => { snapshot(); sync(); });
+      // scheduleSave is read through a ref: it changes identity whenever the
+      // draft metadata does, and these handlers must not be rebound (that would
+      // mean tearing down and re-creating the fabric canvas on every edit)
+      // bumping a counter rather than calling the debouncer directly: these
+      // handlers are bound once and must not close over an autosave callback
+      // that changes identity with the draft metadata
+      const touched = () => { snapshot(); sync(); setRevision((r) => r + 1); };
+      c.on("object:modified", touched);
+      c.on("object:added", touched);
+      c.on("object:removed", touched);
 
       const fit = () => {
         const el = wrapRef.current?.querySelector<HTMLElement>("[data-printbox]");
@@ -189,6 +262,40 @@ export default function Studio() {
       };
 
       fit();
+
+      // ---- restore last session ----
+      // Auto-restore rather than prompt: this is a canvas tool, and Excalidraw,
+      // tldraw and Figma all just put the work back. "Start over" is one click.
+      const draft = await loadDraft();
+      if (draft && !disposed) {
+        const saved = PRODUCTS.find((p) => p.slug === draft.productSlug);
+        if (saved) setProduct(saved);
+        setColorIdx(draft.colorIdx);
+        setQtyBySize(draft.qtyBySize);
+        sideStore.current = draft.scenes;
+        sideRef.current = draft.side;
+        setSide(draft.side);
+        staleSides.current = new Set(["front", "back"] as Side[]);
+
+        const scene = draft.scenes[draft.side];
+        if (scene) {
+          historyLock.current = true;
+          const dropped = await hydrateScene(c, scene);
+          staleSides.current.delete(draft.side);
+          c.renderAll();
+          historyLock.current = false;
+          if (dropped > 0) {
+            setDpiWarn(
+              `${dropped} uploaded image${dropped > 1 ? "s" : ""} could not be restored — ` +
+                `your browser reclaimed the file${dropped > 1 ? "s" : ""} to free up space. ` +
+                `Everything else is as you left it.`,
+            );
+          }
+        }
+      }
+      restored.current = true;
+      requestPersistence();
+
       setReady(true);
       snapshot();
       sync();
@@ -202,21 +309,106 @@ export default function Studio() {
       ro?.disconnect();
       canvasRef.current?.dispose();
       canvasRef.current = null;
+      objectUrls.current.forEach(URL.revokeObjectURL);
+      objectUrls.current = [];
     };
-  }, [snapshot, sync]);
+  }, [snapshot, sync, hydrateScene]);
+
+  /* ---------------- autosave ---------------- */
+  // canvas callbacks are bound once, so anything they need at save time has to
+  // be readable from a ref rather than captured from a render
+  const metaRef = useRef({ productSlug: product.slug, colorIdx, side, qtyBySize });
+  useEffect(() => {
+    metaRef.current = { productSlug: product.slug, colorIdx, side, qtyBySize };
+  }, [product, colorIdx, side, qtyBySize]);
+
+  const persist = useCallback(async () => {
+    const c = canvasRef.current;
+    // before the restore lands, the canvas is empty - saving here would wipe
+    // the very draft that is about to be read back
+    if (!c || !restored.current) return;
+    const scenes = { ...sideStore.current, [sideRef.current]: serializeScene(c) };
+    await saveDraft({ schema: 1, ...metaRef.current, scenes, savedAt: Date.now() });
+    // deleting a layer does not delete its upload; without this every image the
+    // user ever placed would sit in IndexedDB forever
+    await sweepAssets(assetIdsIn(scenes));
+  }, [serializeScene]);
+
+  const scheduleSave = useCallback(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => void persist(), 800);
+  }, [persist]);
+
+  // No restored.current guard: persist() already refuses to run before the
+  // restore lands, and a debounced call that fires afterwards saves the
+  // restored state, which is what we want anyway.
+  useEffect(() => {
+    scheduleSave();
+  }, [revision, side, product, colorIdx, qtyBySize, scheduleSave]);
+
+  useEffect(() => {
+    const flush = () => {
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+      }
+      void persist();
+    };
+    // beforeunload never fires reliably on mobile - a backgrounded iOS tab is
+    // killed without it. visibilitychange is the one that actually lands.
+    const onVisibility = () => { if (document.visibilityState === "hidden") flush(); };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", flush);
+    };
+  }, [persist]);
+
+  const startOver = async () => {
+    const c = canvasRef.current;
+    if (!c) return;
+    if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
+    historyLock.current = true;
+    c.clear();
+    c.backgroundColor = "transparent";
+    c.renderAll();
+    historyLock.current = false;
+
+    sideStore.current = { front: null, back: null };
+    histories.current = { front: { stack: [], index: -1 }, back: { stack: [], index: -1 } };
+    objectUrls.current.forEach(URL.revokeObjectURL);
+    objectUrls.current = [];
+
+    setSideHasArt({ front: false, back: false });
+    setDpiWarn(null);
+    await clearAll();
+    snapshot();
+    sync();
+  };
 
   /* ------------- switch sides (persist each) ------------- */
   const switchSide = async (next: Side) => {
     const c = canvasRef.current;
     if (!c || next === side) return;
-    sideStore.current[side] = JSON.stringify(c.toJSON());
+    sideStore.current[side] = serializeScene(c);
 
     historyLock.current = true;
     sideRef.current = next;
     c.clear();
     c.backgroundColor = "transparent";
     const saved = sideStore.current[next];
-    if (saved) await c.loadFromJSON(JSON.parse(saved));
+    if (saved) {
+      // A restored draft only hydrates the side it opens on; the other side's
+      // JSON still carries blob: URLs minted by the previous document, which
+      // are dead. Route it through hydrateScene the first time it is opened.
+      if (staleSides.current.has(next)) {
+        await hydrateScene(c, saved);
+        staleSides.current.delete(next);
+      } else {
+        await c.loadFromJSON(JSON.parse(saved));
+      }
+    }
     c.renderAll();
     historyLock.current = false;
 
@@ -273,11 +465,33 @@ export default function Studio() {
     const fabric = fabricRef.current;
     const c = canvasRef.current;
     if (!fabric || !c) return;
+
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setDpiWarn(
+        `That file is ${(file.size / 1024 / 1024).toFixed(0)} MB. The studio caps uploads at ` +
+          `${MAX_UPLOAD_MB} MB — export a flattened PNG or JPG and try again.`,
+      );
+      return;
+    }
+
+    // Stored before the object URL is handed to fabric. fabric serialises the
+    // blob: URL into `src`, and that URL dies with this document — the id is
+    // what survives a reload, and hydrateScene() trades it back for a Blob.
+    const assetId = crypto.randomUUID();
+    const stored = await putAsset(assetId, file);
+
     const url = URL.createObjectURL(file);
+    objectUrls.current.push(url);
     const img = await fabric.FabricImage.fromURL(url);
     const target = c.getWidth() * 0.7;
     img.scaleToWidth(target);
-    img.set({ left: center().x, top: center().y, originX: "center", originY: "center" });
+    img.set({
+      left: center().x,
+      top: center().y,
+      originX: "center",
+      originY: "center",
+      [ASSET_PROP]: assetId,
+    });
     c.add(img);
     c.setActiveObject(img);
     c.renderAll();
@@ -285,11 +499,16 @@ export default function Studio() {
     // DPI check against the real print size
     const printedW = (img.width ?? 0) * (img.scaleX ?? 1) / c.getWidth() * product.printInches.w;
     const dpi = Math.round((img.width ?? 0) / Math.max(printedW, 0.01));
-    setDpiWarn(
-      dpi < 150
-        ? `Low resolution — about ${dpi} DPI at this size. Scale it down or upload a bigger file (300 DPI recommended).`
-        : null
-    );
+    if (dpi < 150) {
+      setDpiWarn(
+        `Low resolution — about ${dpi} DPI at this size. Scale it down or upload a bigger file (300 DPI recommended).`
+      );
+    } else if (!stored) {
+      // the canvas is fine either way; the user just has no safety net now
+      setDpiWarn("This image couldn't be saved to your device — it won't survive a page reload.");
+    } else {
+      setDpiWarn(null);
+    }
   };
 
   const generateAi = async () => {
@@ -476,12 +695,19 @@ export default function Studio() {
               {t.label}
             </button>
           ))}
-          <div className="mx-1 hidden h-px bg-ink/10 lg:my-2 lg:block" />
-          <button onClick={undo} className="hidden shrink-0 flex-col items-center gap-1.5 rounded-xl px-3 py-3 text-[10px] uppercase tracking-[0.1em] text-ink/50 hover:bg-paper-3 hover:text-ink lg:flex">
+          <div className="mx-1 h-auto w-px shrink-0 self-stretch bg-ink/10 lg:my-2 lg:h-px lg:w-auto" />
+          <button onClick={undo} className="flex shrink-0 flex-col items-center gap-1.5 rounded-xl px-3 py-3 text-[10px] uppercase tracking-[0.1em] text-ink/50 hover:bg-paper-3 hover:text-ink">
             <Undo2 size={18} /> Undo
           </button>
-          <button onClick={redo} className="hidden shrink-0 flex-col items-center gap-1.5 rounded-xl px-3 py-3 text-[10px] uppercase tracking-[0.1em] text-ink/50 hover:bg-paper-3 hover:text-ink lg:flex">
+          <button onClick={redo} className="flex shrink-0 flex-col items-center gap-1.5 rounded-xl px-3 py-3 text-[10px] uppercase tracking-[0.1em] text-ink/50 hover:bg-paper-3 hover:text-ink">
             <Redo2 size={18} /> Redo
+          </button>
+          <button
+            onClick={startOver}
+            title="Discard this design and the copy saved on this device"
+            className="flex shrink-0 flex-col items-center gap-1.5 rounded-xl px-3 py-3 text-[10px] uppercase tracking-[0.1em] text-ink/50 hover:bg-paper-3 hover:text-flame lg:mt-auto"
+          >
+            <Eraser size={18} /> Reset
           </button>
         </aside>
 
@@ -558,6 +784,9 @@ export default function Studio() {
             </div>
           )}
 
+          {/* only once there is something worth coming back to */}
+          <InstallPrompt active={sideHasArt.front || sideHasArt.back} />
+
           {/* selection toolbar */}
           {selected && (
             <div className="mt-6 flex flex-wrap items-center justify-center gap-1.5 rounded-full border hairline bg-paper/90 px-2 py-2 backdrop-blur">
@@ -625,7 +854,7 @@ export default function Studio() {
                 <label className="checker flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-ink/20 p-10 text-center transition hover:border-acid-2">
                   <Upload size={22} className="text-acid-2" />
                   <span className="text-[13px] font-semibold">Drop a file or browse</span>
-                  <span className="text-[11px] text-ink/50">PNG · JPG · SVG · up to 25 MB</span>
+                  <span className="text-[11px] text-ink/50">PNG · JPG · SVG · up to {MAX_UPLOAD_MB} MB</span>
                   <input
                     type="file"
                     accept="image/*"
