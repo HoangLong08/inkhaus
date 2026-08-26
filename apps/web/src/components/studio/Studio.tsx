@@ -389,6 +389,71 @@ export default function Studio() {
     link.click();
   };
 
+  /**
+   * The print file carries artwork only — the press does not want a picture of a
+   * shirt. This is the customer-facing mockup, so it rasterises the live garment
+   * SVG and composites the artwork into the print box on top of it.
+   */
+  const exportMockup = async () => {
+    const c = canvasRef.current;
+    const svgEl = wrapRef.current?.querySelector("svg");
+    if (!c || !svgEl) return;
+
+    const W = 1200;
+    const H = Math.round((W * 700) / 600);
+
+    const clone = svgEl.cloneNode(true) as SVGSVGElement;
+    // the tailwind utilities on it (the drop shadow) do not exist inside a
+    // standalone svg document, and an unresolved class is better than none
+    clone.removeAttribute("class");
+    clone.setAttribute("width", String(W));
+    clone.setAttribute("height", String(H));
+
+    // useId() produces ids like "«r0»" — not valid XML names, and an svg loaded
+    // through <img> is parsed as XML. Rename every id, then repoint url(#...).
+    const renames = new Map<string, string>();
+    clone.querySelectorAll("[id]").forEach((el, i) => {
+      renames.set(el.id, `g${i}`);
+      el.id = `g${i}`;
+    });
+    let markup = new XMLSerializer().serializeToString(clone);
+    renames.forEach((to, from) => {
+      markup = markup.replaceAll(`#${from}`, `#${to}`);
+    });
+
+    const url = URL.createObjectURL(new Blob([markup], { type: "image/svg+xml" }));
+    try {
+      const img = new Image();
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error("garment did not rasterise"));
+        img.src = url;
+      });
+
+      const out = document.createElement("canvas");
+      out.width = W;
+      out.height = H;
+      const ctx = out.getContext("2d");
+      if (!ctx) return;
+      ctx.drawImage(img, 0, 0, W, H);
+
+      // the canvas *is* the print box, so its bounds already clip the artwork —
+      // it only has to be scaled from screen px into the 600x700 garment space
+      const k = W / 600;
+      const art = c.toCanvasElement((printBox.w * k) / c.getWidth());
+      ctx.drawImage(art, printBox.x * k, printBox.y * k, printBox.w * k, printBox.h * k);
+
+      const link = document.createElement("a");
+      link.download = `inkhaus-${product.slug}-${color.name.toLowerCase().replace(/\s+/g, "-")}-${side}-mockup.png`;
+      link.href = out.toDataURL("image/png");
+      link.click();
+    } catch {
+      setDpiWarn("This browser couldn't render the mockup. The print file still exports fine.");
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  };
+
   const isText = !!selected && ["textbox", "i-text", "text"].includes(selected.type ?? "");
   /** a side only counts once it actually carries artwork - visiting it is not enough */
   const printLocations = Math.max(1, Number(sideHasArt.front) + Number(sideHasArt.back));
@@ -441,7 +506,15 @@ export default function Studio() {
               {showGuide ? "Hide" : "Show"} print area
             </button>
             <button
+              onClick={exportMockup}
+              title="PNG of the garment with your artwork on it"
+              className="flex items-center gap-1.5 rounded-full border hairline px-4 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-ink/60 hover:text-ink"
+            >
+              <Download size={13} /> Mockup
+            </button>
+            <button
               onClick={exportPng}
+              title="Artwork only, transparent background — the file that goes to the press"
               className="flex items-center gap-1.5 rounded-full border hairline px-4 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-ink/60 hover:text-ink"
             >
               <Download size={13} /> Print file
