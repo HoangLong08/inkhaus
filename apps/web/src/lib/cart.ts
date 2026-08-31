@@ -6,12 +6,12 @@ import {
   COLORS,
   FREE_SHIPPING_OVER,
   SHIPPING_FLAT,
-  SIZES,
   SIZE_UPCHARGE,
   TIERS,
   getProduct,
   quote,
   round,
+  sizesFor,
   unitPrice,
   type Colorway,
   type Product,
@@ -40,12 +40,23 @@ export function colorSlug(c: Colorway): string {
   );
 }
 
+/**
+ * Careful: this is a `Record<string, ...>`, so TypeScript will NOT tell you when
+ * a new `Product.method` label has no entry. `normalise()` returns null for an
+ * unmapped label and `sanitizeLines` then deletes that line out of a saved cart,
+ * silently. The catalog invariant test is what actually guards this — keep it in
+ * step with METHOD_TO_LABEL in apps/api/src/modules/catalog/catalog.mapper.ts.
+ */
 export const METHOD_ENUM: Record<string, PrintMethodEnum> = {
   DTG: "DTG",
   "Screen print": "SCREEN_PRINT",
   Embroidery: "EMBROIDERY",
   Puff: "PUFF",
   "Leather patch": "LEATHER_PATCH",
+  Sublimation: "SUBLIMATION",
+  "UV print": "UV_PRINT",
+  Engraving: "ENGRAVING",
+  "Digital print": "DIGITAL_PRINT",
 };
 
 /** the way back, for anything read off an order */
@@ -125,10 +136,11 @@ export function resolveLine(line: CartLine): ResolvedLine | null {
   const color = product.colors.find((c) => colorSlug(c) === line.colorSlug);
   if (!color) return null;
 
-  const entries = SIZES.filter((s) => (line.sizes[s] ?? 0) > 0).map((s) => ({
-    size: s as string,
-    qty: line.sizes[s],
-  }));
+  // the blank's own run, not the global apparel one — a one-size mug keeps
+  // its "OS" quantity instead of resolving to an empty line
+  const entries = sizesFor(product)
+    .filter((s) => (line.sizes[s] ?? 0) > 0)
+    .map((s) => ({ size: s, qty: line.sizes[s] }));
 
   return {
     ...line,
@@ -192,9 +204,18 @@ export function nextTier(product: Product, quantity: number) {
  * than at the till.
  * ------------------------------------------------------------------ */
 
-function cleanSizes(sizes: Record<string, number> | undefined) {
+/**
+ * Keeps only the codes the blank actually stocks. It takes the product rather
+ * than reading the global `SIZES` because the run is per-product now: filtering
+ * an "OS" mug against the apparel run would empty the line, and an empty line
+ * is deleted by `normalise`.
+ */
+function cleanSizes(
+  product: Pick<Product, "sizes">,
+  sizes: Record<string, number> | undefined,
+) {
   const out: Record<string, number> = {};
-  for (const s of SIZES) {
+  for (const s of sizesFor(product)) {
     const n = Math.floor(Number(sizes?.[s] ?? 0));
     if (Number.isFinite(n) && n > 0) out[s] = Math.min(n, MAX_QTY_PER_SIZE);
   }
@@ -206,7 +227,7 @@ function normalise(line: CartLine): CartLine | null {
   if (!product) return null;
   if (!product.colors.some((c) => colorSlug(c) === line.colorSlug)) return null;
 
-  const sizes = cleanSizes(line.sizes);
+  const sizes = cleanSizes(product, line.sizes);
   if (Object.keys(sizes).length === 0) return null;
 
   // a withdrawn print method falls back to the blank's first supported one
@@ -357,7 +378,9 @@ export const useCart = create<CartState>()(
 
       add: (input) => {
         const id = lineId(input);
-        const sizes = cleanSizes(input.sizes);
+        const product = getProduct(input.productSlug);
+        if (!product) return id;
+        const sizes = cleanSizes(product, input.sizes);
         if (Object.keys(sizes).length === 0) return id;
 
         const lines = [...get().lines];
@@ -405,10 +428,15 @@ export const useCart = create<CartState>()(
       },
 
       setSizes: (id, sizes) => {
-        const clean = cleanSizes(sizes);
         set({
           lines: get()
-            .lines.map((l) => (l.id === id ? { ...l, sizes: clean } : l))
+            .lines.map((l) => {
+              if (l.id !== id) return l;
+              // the run is the line's own product's, so the clean has to happen
+              // per line rather than once against a global size list
+              const product = getProduct(l.productSlug);
+              return product ? { ...l, sizes: cleanSizes(product, sizes) } : l;
+            })
             .filter((l) => Object.keys(l.sizes).length > 0),
         });
       },

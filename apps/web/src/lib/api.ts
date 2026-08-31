@@ -116,7 +116,17 @@ export type OrderDto = {
 };
 
 /** the enum names Prisma stores, keyed by the labels the storefront shows */
-export type PrintMethodEnum = "DTG" | "SCREEN_PRINT" | "EMBROIDERY" | "PUFF" | "LEATHER_PATCH";
+/** mirrors `enum PrintMethod` in apps/api/prisma/schema.prisma */
+export type PrintMethodEnum =
+  | "DTG"
+  | "SCREEN_PRINT"
+  | "EMBROIDERY"
+  | "PUFF"
+  | "LEATHER_PATCH"
+  | "SUBLIMATION"
+  | "UV_PRINT"
+  | "ENGRAVING"
+  | "DIGITAL_PRINT";
 
 export type PlaceOrderBody = {
   customer: { email: string; name?: string; phone?: string; company?: string };

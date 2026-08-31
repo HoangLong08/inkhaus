@@ -11,7 +11,7 @@ import Link from "next/link";
 import Garment from "@/components/Garment";
 import InstallPrompt from "@/components/pwa/InstallPrompt";
 import SizeGrid from "@/components/cart/SizeGrid";
-import { PRODUCTS, quote, type Product } from "@/lib/catalog";
+import { PRODUCTS, quote, sizesFor, type Product } from "@/lib/catalog";
 import { CLIPART, FONTS, INK_COLORS } from "@/lib/clipart";
 import { api } from "@/lib/api";
 import { colorSlug, useCart, type CartDesign } from "@/lib/cart";
@@ -95,6 +95,8 @@ export default function Studio() {
   const [added, setAdded] = useState(false);
   const [adding, setAdding] = useState(false);
   const [qtyBySize, setQtyBySize] = useState<Record<string, number>>({ M: 1 });
+  const sizeRun = sizesFor(product);
+  const defaultSize = sizeRun.includes("M") ? "M" : sizeRun[0];
   /** bumped by every canvas mutation; the autosave effect keys off it */
   const [revision, setRevision] = useState(0);
 
@@ -102,20 +104,38 @@ export default function Studio() {
   const openCart = useCart((s) => s.openDrawer);
 
   const color = product.colors[Math.min(colorIdx, product.colors.length - 1)];
+
+  /**
+   * Switching blanks can change the size run under the quantities — 6xM on a
+   * tee means nothing on a one-size mug, and the cart would drop those units on
+   * the next load. Reconciled on read rather than synced through an effect, so
+   * there is no render where the panel and the price disagree.
+   */
+  const sizeQty = useMemo(() => {
+    const stray = Object.keys(qtyBySize).filter((s) => !sizeRun.includes(s));
+    if (stray.length === 0) return qtyBySize;
+    const next = Object.fromEntries(
+      Object.entries(qtyBySize).filter(([s]) => sizeRun.includes(s)),
+    );
+    const moved = stray.reduce((n, s) => n + (qtyBySize[s] || 0), 0);
+    next[defaultSize] = (next[defaultSize] ?? 0) + moved;
+    return next;
+  }, [qtyBySize, sizeRun, defaultSize]);
+
   const totalQty = useMemo(
-    () => Object.values(qtyBySize).reduce((a, b) => a + (b || 0), 0),
-    [qtyBySize]
+    () => Object.values(sizeQty).reduce((a, b) => a + (b || 0), 0),
+    [sizeQty]
   );
   // the same maths the cart and the API run, so the three numbers cannot disagree
   const priced = useMemo(
     () =>
       quote(
         product,
-        Object.entries(qtyBySize)
+        Object.entries(sizeQty)
           .filter(([, q]) => q > 0)
           .map(([size, qty]) => ({ size, qty })),
       ),
-    [product, qtyBySize],
+    [product, sizeQty],
   );
   const total = priced.subtotal;
 
@@ -369,10 +389,12 @@ export default function Studio() {
   /* ---------------- autosave ---------------- */
   // canvas callbacks are bound once, so anything they need at save time has to
   // be readable from a ref rather than captured from a render
-  const metaRef = useRef({ productSlug: product.slug, colorIdx, side, qtyBySize, method });
+  // the reconciled quantities, so a draft saved after a blank switch comes back
+  // with codes the new blank actually stocks
+  const metaRef = useRef({ productSlug: product.slug, colorIdx, side, qtyBySize: sizeQty, method });
   useEffect(() => {
-    metaRef.current = { productSlug: product.slug, colorIdx, side, qtyBySize, method };
-  }, [product, colorIdx, side, qtyBySize, method]);
+    metaRef.current = { productSlug: product.slug, colorIdx, side, qtyBySize: sizeQty, method };
+  }, [product, colorIdx, side, sizeQty, method]);
 
   const persist = useCallback(async () => {
     const c = canvasRef.current;
@@ -396,7 +418,7 @@ export default function Studio() {
   // restored state, which is what we want anyway.
   useEffect(() => {
     scheduleSave();
-  }, [revision, side, product, colorIdx, qtyBySize, method, scheduleSave]);
+  }, [revision, side, product, colorIdx, sizeQty, method, scheduleSave]);
 
   useEffect(() => {
     const flush = () => {
@@ -860,7 +882,7 @@ export default function Studio() {
         productSlug: product.slug,
         colorSlug: colorSlug(color),
         method,
-        sizes: qtyBySize,
+        sizes: sizeQty,
         design,
       });
 
@@ -1240,10 +1262,11 @@ export default function Studio() {
               </p>
               <div className="mt-3">
                 <SizeGrid
-                  value={qtyBySize}
+                  value={sizeQty}
                   onChange={setQtyBySize}
                   layout="panel"
                   idPrefix="studio"
+                  sizes={sizeRun}
                 />
               </div>
 

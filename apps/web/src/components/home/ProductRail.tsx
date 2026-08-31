@@ -3,14 +3,17 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
-import Garment from "@/components/Garment";
+import ProductMedia from "@/components/ProductMedia";
 import { Reveal } from "@/components/Reveal";
+import { colorSlug } from "@/lib/cart";
 import { PRODUCTS } from "@/lib/catalog";
+import { heroImage } from "@/lib/productImages";
 
 function Card({ index }: { index: number }) {
   const p = PRODUCTS[index];
   const [ci, setCi] = useState(0);
   const color = p.colors[ci];
+  const photo = heroImage(p, colorSlug(color));
 
   return (
     <div className="group relative flex w-[78vw] shrink-0 snap-start flex-col sm:w-[46vw] lg:w-[30vw] xl:w-[24vw]">
@@ -24,9 +27,11 @@ function Card({ index }: { index: number }) {
           </span>
         )}
         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-ink/20 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-        <Garment
+        <ProductMedia
+          image={photo}
           type={p.type}
           color={color.hex}
+          sizes="(min-width: 1280px) 24vw, (min-width: 1024px) 30vw, (min-width: 640px) 46vw, 78vw"
           className="w-full transition-transform duration-[900ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.04]"
         />
         <span className="absolute bottom-4 right-4 flex h-11 w-11 translate-y-3 items-center justify-center rounded-full bg-acid text-ink opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">

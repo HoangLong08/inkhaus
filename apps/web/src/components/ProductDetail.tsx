@@ -1,19 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { useMemo, useRef, useState } from "react";
 import { ArrowUpRight, Check, Ruler, ShieldCheck, ShoppingBag, Truck } from "lucide-react";
-import Garment from "@/components/Garment";
+import ProductMedia from "@/components/ProductMedia";
+import ProductGallery from "@/components/products/ProductGallery";
+import StickyAddToCart from "@/components/products/StickyAddToCart";
 import SizeGrid from "@/components/cart/SizeGrid";
 import { FreeShippingMeter, TierHint } from "@/components/cart/Meters";
 import { colorSlug, useCart } from "@/lib/cart";
+import { heroImage } from "@/lib/productImages";
 import {
   FREE_SHIPPING_OVER,
   PRODUCTS,
   TIERS,
   getProduct,
   quote,
+  sizesFor,
   unitPrice,
 } from "@/lib/catalog";
 
@@ -23,9 +26,13 @@ export default function ProductDetail({ slug }: { slug: string }) {
   const openDrawer = useCart((s) => s.openDrawer);
   const lines = useCart((s) => s.lines);
 
+  const run = sizesFor(product);
+  // M for apparel, but a one-size blank has no M to start on
+  const defaultSize = run.includes("M") ? "M" : run[0];
+
   const [ci, setCi] = useState(0);
   const [method, setMethod] = useState(product.method[0]);
-  const [sizes, setSizes] = useState<Record<string, number>>({ M: 1 });
+  const [sizes, setSizes] = useState<Record<string, number>>({ [defaultSize]: 1 });
   const [justAdded, setJustAdded] = useState(false);
 
   const color = product.colors[ci];
@@ -49,13 +56,21 @@ export default function ProductDetail({ slug }: { slug: string }) {
     return line ? Object.values(line.sizes).reduce((a, b) => a + b, 0) : 0;
   }, [lines, product.slug, slugOfColor, method]);
 
-  const others = PRODUCTS.filter((p) => p.slug !== slug).slice(0, 3);
+  // same aisle first — a mug next to a mug is a better suggestion than a mug
+  // next to whatever happens to be first in the catalog
+  const others = useMemo(() => {
+    const rest = PRODUCTS.filter((p) => p.slug !== slug);
+    const near = rest.filter((p) => p.category === product.category);
+    return [...near, ...rest.filter((p) => p.category !== product.category)].slice(0, 3);
+  }, [slug, product.category]);
 
-  /** top the run up to a tier minimum — the extra units land on M */
+  const addButton = useRef<HTMLButtonElement>(null);
+
+  /** top the run up to a tier minimum — the extra units land on the default size */
   const jumpTo = (min: number) => {
     const diff = min - totalQty;
     if (diff <= 0) return;
-    setSizes((s) => ({ ...s, M: (s.M ?? 0) + diff }));
+    setSizes((s) => ({ ...s, [defaultSize]: (s[defaultSize] ?? 0) + diff }));
   };
 
   const addToCart = () => {
@@ -71,25 +86,7 @@ export default function ProductDetail({ slug }: { slug: string }) {
       <div className="edge grid gap-12 pb-20 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
         {/* visual */}
         <div className="lg:sticky lg:top-[calc(var(--nav-h)+40px)] lg:h-fit">
-          <div className="relative overflow-hidden rounded-3xl border hairline bg-[radial-gradient(ellipse_at_50%_0%,#ffffff,#eceee7)] p-6">
-            <motion.div
-              key={color.hex}
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <Garment
-                type={product.type}
-                color={color.hex}
-                printArea={product.printArea}
-                showPrintGuide
-                className="w-full drop-shadow-[0_24px_48px_rgba(22,23,27,0.18)]"
-              />
-            </motion.div>
-            <span className="absolute bottom-6 left-6 rounded-full border hairline bg-paper/80 px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-ink/60 backdrop-blur">
-              Print area {product.printInches.w}&quot; × {product.printInches.h}&quot;
-            </span>
-          </div>
+          <ProductGallery product={product} color={color} colorKey={slugOfColor} />
 
           <div className="mt-4 grid grid-cols-3 gap-3 text-[11px] uppercase tracking-[0.12em] text-ink/45">
             <span className="flex items-center gap-2 rounded-xl border hairline px-3 py-3">
@@ -165,7 +162,12 @@ export default function ProductDetail({ slug }: { slug: string }) {
             )}
           </div>
           <div className="mt-3">
-            <SizeGrid value={sizes} onChange={setSizes} idPrefix={`pdp-${product.slug}`} />
+            <SizeGrid
+              value={sizes}
+              onChange={setSizes}
+              idPrefix={`pdp-${product.slug}`}
+              sizes={run}
+            />
           </div>
           <p className="mt-2.5 text-[11px] leading-relaxed text-ink/40">
             Mix sizes freely — the volume discount is earned on the total, so 6 × M and 6 × L reach
@@ -248,6 +250,7 @@ export default function ProductDetail({ slug }: { slug: string }) {
 
             <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
               <button
+                ref={addButton}
                 onClick={addToCart}
                 disabled={totalQty === 0}
                 data-testid="pdp-add-to-cart"
@@ -310,9 +313,11 @@ export default function ProductDetail({ slug }: { slug: string }) {
               href={`/products/${p.slug}`}
               className="group rounded-2xl border hairline bg-paper-2 p-4 transition hover:bg-paper-3"
             >
-              <Garment
+              <ProductMedia
+                image={heroImage(p, colorSlug(p.colors[0]))}
                 type={p.type}
                 color={p.colors[0].hex}
+                sizes="(min-width: 640px) 30vw, 90vw"
                 className="w-full transition-transform duration-700 group-hover:scale-105"
               />
               <p className="mt-3 text-[15px] font-semibold">{p.name}</p>
@@ -321,6 +326,15 @@ export default function ProductDetail({ slug }: { slug: string }) {
           ))}
         </div>
       </section>
+
+      <StickyAddToCart
+        unitPrice={priced.baseUnitPrice}
+        quantity={totalQty}
+        subtotal={priced.subtotal}
+        disabled={totalQty === 0}
+        onAdd={addToCart}
+        watch={addButton}
+      />
     </div>
   );
 }

@@ -7,12 +7,13 @@
  */
 import { PrismaClient, Prisma } from '@prisma/client';
 import {
+  ALL_SIZE_CODES,
   CLIPART,
   COLORS,
   FONTS,
   INK_COLORS,
   PRODUCTS,
-  SIZES,
+  SIZE_LABEL,
   SIZE_UPCHARGE,
   TIERS,
 } from '@inkhaus/shared';
@@ -78,19 +79,26 @@ async function seedColors() {
 }
 
 async function seedSizes() {
-  for (const [i, code] of SIZES.entries()) {
+  // ALL_SIZE_CODES, not SIZES: `PricingService` builds its upcharge map from this
+  // table and `OrdersService` rejects any line whose size is missing from it, so
+  // a one-size blank that never gets an "OS" row here 400s at checkout.
+  for (const [i, code] of ALL_SIZE_CODES.entries()) {
     await prisma.size.upsert({
       where: { code },
-      update: { upcharge: new Prisma.Decimal(SIZE_UPCHARGE[code] ?? 0), sortOrder: i },
+      update: {
+        label: SIZE_LABEL[code] ?? code,
+        upcharge: new Prisma.Decimal(SIZE_UPCHARGE[code] ?? 0),
+        sortOrder: i,
+      },
       create: {
         code,
-        label: code,
+        label: SIZE_LABEL[code] ?? code,
         upcharge: new Prisma.Decimal(SIZE_UPCHARGE[code] ?? 0),
         sortOrder: i,
       },
     });
   }
-  return SIZES.length;
+  return ALL_SIZE_CODES.length;
 }
 
 async function seedTiers() {
@@ -109,9 +117,11 @@ async function seedProducts() {
     const data = {
       name: p.name,
       type: SLUG_TO_GARMENT_TYPE[p.type],
+      category: p.category,
       blurb: p.blurb,
       fabric: p.fabric,
       tag: p.tag ?? null,
+      sizes: p.sizes ? [...p.sizes] : [],
       price: new Prisma.Decimal(p.price),
       bulkPrice: new Prisma.Decimal(p.bulkPrice),
       methods: p.method.map((m) => {
@@ -143,6 +153,27 @@ async function seedProducts() {
       const color = await prisma.color.findUniqueOrThrow({ where: { slug } });
       await prisma.productColor.create({
         data: { productId: product.id, colorId: color.id, sortOrder: order },
+      });
+    }
+
+    // same shape as the colour rebuild: product-images.ts is generated from what
+    // is on disk, so a photo deleted there has to disappear from the table too
+    await prisma.productImage.deleteMany({ where: { productId: product.id } });
+    for (const [order, img] of (p.images ?? []).entries()) {
+      const color = img.color
+        ? await prisma.color.findUnique({ where: { slug: img.color } })
+        : null;
+      await prisma.productImage.create({
+        data: {
+          productId: product.id,
+          src: img.src,
+          src2x: img.src2x ?? null,
+          alt: img.alt,
+          width: img.w,
+          height: img.h,
+          colorId: color?.id ?? null,
+          sortOrder: order,
+        },
       });
     }
   }

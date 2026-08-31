@@ -6,10 +6,14 @@ import { motion } from "framer-motion";
 import { ArrowUpRight, MousePointerClick } from "lucide-react";
 import Garment from "@/components/Garment";
 import Magnetic from "@/components/Magnetic";
-import { COLORS } from "@/lib/catalog";
+import { COLORS, getProduct } from "@/lib/catalog";
 
 const SWATCHES = [COLORS.bone, COLORS.black, COLORS.acid, COLORS.forest, COLORS.flame, COLORS.navy];
 const EASE = [0.16, 1, 0.3, 1] as const;
+
+// The hero used to hard-code this blank's print box and its 50+ price, which
+// meant editing the catalog quietly made the front page lie.
+const HERO = getProduct("heavyweight-tee")!;
 
 export default function Hero() {
   const [color, setColor] = useState(SWATCHES[0]);
@@ -138,7 +142,7 @@ export default function Hero() {
             <Garment
               type="tee"
               color={color.hex}
-              printArea={{ x: 204, y: 242, w: 192, h: 256 }}
+              printArea={HERO.printArea}
               className="w-full drop-shadow-[0_34px_64px_rgba(22,23,27,0.20)]"
             >
               <g fill={color.dark ? "#F4F1E9" : "#151517"}>
@@ -184,7 +188,8 @@ export default function Hero() {
             transition={{ delay: 1.1, duration: 0.7, ease: EASE }}
             className="absolute -right-2 top-6 rotate-6 rounded-lg border hairline bg-paper/90 px-3 py-2 text-[10px] uppercase tracking-[0.16em] backdrop-blur"
           >
-            <span className="text-acid-2">DTG</span> · 300 dpi · 12×16&quot;
+            <span className="text-acid-2">{HERO.method[0]}</span> · 300 dpi ·{" "}
+            {HERO.printInches.w}×{HERO.printInches.h}&quot;
           </motion.div>
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -192,7 +197,7 @@ export default function Hero() {
             transition={{ delay: 1.25, duration: 0.7, ease: EASE }}
             className="absolute -left-3 bottom-16 -rotate-6 rounded-lg border hairline bg-paper/90 px-3 py-2 text-[10px] uppercase tracking-[0.16em] backdrop-blur"
           >
-            $11.40 <span className="text-ink/40">/ unit at 50+</span>
+            ${HERO.bulkPrice.toFixed(2)} <span className="text-ink/40">/ unit at 50+</span>
           </motion.div>
         </motion.div>
 

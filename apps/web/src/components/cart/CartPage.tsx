@@ -9,6 +9,7 @@ import SizeGrid from "@/components/cart/SizeGrid";
 import { FreeShippingMeter, TierHint } from "@/components/cart/Meters";
 import { readCart, useCart, type ResolvedLine } from "@/lib/cart";
 import { colorSlug } from "@/lib/cart";
+import { sizesFor } from "@/lib/catalog";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -264,6 +265,7 @@ function CartLineCard({ line }: { line: ResolvedLine }) {
               onChange={(next) => setSizes(line.id, next)}
               layout="dense"
               idPrefix={`cart-${line.id}`}
+              sizes={sizesFor(line.product)}
             />
           </div>
 

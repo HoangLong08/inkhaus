@@ -14,10 +14,35 @@ export const TIERS = [
 export const SIZES = ["XS", "S", "M", "L", "XL", "2XL", "3XL"] as const;
 export type Size = (typeof SIZES)[number];
 
+/**
+ * A mug has no size M. Non-apparel carries this single code instead of the
+ * apparel run, so the cart, the quote and the API all keep one size axis
+ * rather than growing a second concept for "no size".
+ */
+export const ONE_SIZE = ["OS"] as const;
+
+/** every size code the `sizes` table has to know about — the seed reads this */
+export const ALL_SIZE_CODES = [...SIZES, ...ONE_SIZE] as const;
+
 /** sizes above XL cost more blank — applied per unit on top of the tier price */
 export const SIZE_UPCHARGE: Record<string, number> = {
-  XS: 0, S: 0, M: 0, L: 0, XL: 0, "2XL": 2, "3XL": 4,
+  XS: 0, S: 0, M: 0, L: 0, XL: 0, "2XL": 2, "3XL": 4, OS: 0,
 };
+
+/** display only — a code with no entry renders as itself */
+export const SIZE_LABEL: Record<string, string> = {
+  OS: "One size",
+};
+
+/**
+ * The size run a product actually stocks. Everything that iterates sizes must
+ * go through this: `cleanSizes` in the cart drops any quantity whose code is
+ * not in the run, so an "OS" line filtered against the apparel run would be
+ * silently deleted on the next page load.
+ */
+export function sizesFor(p: Pick<Product, "sizes">): readonly string[] {
+  return p.sizes?.length ? p.sizes : SIZES;
+}
 
 /**
  * Shipping thresholds live here for the same reason the tier ladder does: the

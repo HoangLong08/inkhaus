@@ -1,0 +1,7 @@
+# Chrome profile the Etsy crawler reuses so a solved bot challenge survives
+# between runs. Contains cookies — never commit it.
+.etsy-profile/
+
+# Raw crawler output, keyed by Etsy listing id. Only the mapped and renamed
+# files under public/products/<slug>/ are part of the site.
+public/products/_incoming/

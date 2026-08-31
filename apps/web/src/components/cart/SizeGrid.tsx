@@ -1,7 +1,7 @@
 "use client";
 
 import { Minus, Plus } from "lucide-react";
-import { SIZES, SIZE_UPCHARGE } from "@/lib/catalog";
+import { SIZES, SIZE_LABEL, SIZE_UPCHARGE } from "@/lib/catalog";
 
 /**
  * The size/quantity grid — the control apparel is actually bought with.
@@ -27,12 +27,15 @@ export default function SizeGrid({
   onChange,
   layout = "wide",
   idPrefix = "size",
+  sizes = SIZES,
 }: {
   value: Record<string, number>;
   onChange: (next: Record<string, number>) => void;
   layout?: keyof typeof LAYOUTS;
   /** disambiguates the input ids when two grids are on one page */
   idPrefix?: string;
+  /** the blank's own run — a mug passes ["OS"] and gets a plain stepper */
+  sizes?: readonly string[];
 }) {
   const { cols, stacked: compact } = LAYOUTS[layout];
 
@@ -44,9 +47,51 @@ export default function SizeGrid({
     onChange(next);
   };
 
+  // A one-size blank has nothing to spread an order across, so the seven-cell
+  // grid would be a lie. Same input id scheme, so anything driving the grid by
+  // id keeps working.
+  if (sizes.length === 1) {
+    const s = sizes[0];
+    const qty = value[s] ?? 0;
+    return (
+      <div
+        className={`flex items-center justify-between rounded-xl border px-4 py-3 transition ${
+          qty > 0 ? "border-acid-2 bg-acid/10" : "hairline bg-paper"
+        }`}
+      >
+        <label
+          htmlFor={`${idPrefix}-${s}`}
+          className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink/50"
+        >
+          {SIZE_LABEL[s] ?? s}
+        </label>
+        <div className="flex items-center gap-1">
+          <Step label="One less" disabled={qty === 0} onClick={() => set(s, qty - 1)}>
+            <Minus size={13} />
+          </Step>
+          <input
+            id={`${idPrefix}-${s}`}
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={9999}
+            value={qty === 0 ? "" : qty}
+            placeholder="0"
+            aria-label="Quantity"
+            onChange={(e) => set(s, +e.target.value)}
+            className="w-16 min-w-0 bg-transparent text-center text-[16px] font-semibold tabular-nums outline-none placeholder:text-ink/25 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          />
+          <Step label="One more" onClick={() => set(s, qty + 1)}>
+            <Plus size={13} />
+          </Step>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`grid gap-1.5 ${cols}`}>
-      {SIZES.map((s) => {
+      {sizes.map((s) => {
         const qty = value[s] ?? 0;
         const upcharge = SIZE_UPCHARGE[s] ?? 0;
         return (

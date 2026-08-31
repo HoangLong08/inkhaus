@@ -25,7 +25,7 @@ cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env.local
 
 npm run db:migrate # apply prisma/migrations
-npm run db:seed    # load the 8 blanks, 12 colours, 16 clip arts, tiers, reviews
+npm run db:seed    # load the 24 blanks, 12 colours, 8 sizes, 16 clip arts, tiers, reviews
 
 npm run dev        # shared (tsc --watch) + api + web together
 ```
@@ -94,6 +94,32 @@ import { api } from "@/lib/api";
 const products = await api.products();   // GET /catalog/products
 ```
 
+### Product photography
+
+Every blank renders as a live SVG (`apps/web/src/components/Garment.tsx`) unless a
+photograph exists for it, so the storefront ships and deploys with no imagery at
+all — photos are additive, and a product without them simply keeps its drawing.
+
+The filename carries the metadata; there is no JSON to edit:
+
+```
+apps/web/public/products/<slug>/<nn>-<colorkey|any>[@2x].jpg
+```
+
+Drop files in, then regenerate the catalog they feed:
+
+```bash
+npm run images:sync -w @inkhaus/web   # writes packages/shared/src/product-images.ts
+npm run build:shared
+```
+
+`apps/web/scripts/crawl-etsy.mjs` can pull them off an Etsy shop. Etsy fronts its
+pages with DataDome — plain HTTP and headless Chrome both get a 403 — so that
+script drives a real Chrome in a visible window and waits while you answer the
+slide-to-verify puzzle once, against a persistent profile. See
+`apps/web/scripts/README.md` for that route and the two that need no crawling at
+all.
+
 The Design Studio's export note still stands: iOS Safari caps a canvas at
 16,777,216 px, so a 12×16in @300 DPI print file (17.2M px) comes back blank. The
 studio clamps DPI rather than shipping an empty file — the real fix is to render the
@@ -135,11 +161,14 @@ order. An order never silently goes to press without its artwork.
 | `npm run typecheck` · `npm test` | across all workspaces |
 | `npm run db:up` / `db:down` | Postgres container |
 | `npm run db:migrate` / `db:deploy` / `db:reset` / `db:seed` / `db:studio` | Prisma |
+| `npm run images:sync -w @inkhaus/web` | rebuild the photo catalog from `apps/web/public/products/` |
+| `npm run crawl:etsy -w @inkhaus/web -- --headful` | pull product photography off an Etsy shop |
+| `node apps/web/scripts/verify-catalog.mjs` | headless-Chrome pass over the index filters, all 24 product pages, quick view, the mobile buy bar |
 | `node apps/web/scripts/verify-cart.mjs` | headless-Chrome pass over add-to-cart → order |
 | `node apps/web/scripts/verify-cart-recovery.mjs` | the same flow with the API cut off mid-design |
 | `node apps/web/scripts/verify-pwa.mjs` | offline / service-worker verification |
 
-The two cart scripts drive a real browser against a running storefront (see the
+The verify scripts drive a real browser against a running storefront (see the
 header comment in each for the exact sequence). They read expected prices out of
 `@inkhaus/shared`, so a drift between the browser, the ladder and the API fails
 the run rather than reaching a customer.

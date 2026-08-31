@@ -5,13 +5,29 @@
  * import `@/lib/catalog` keep working, and anything switching to live data can
  * fetch the same `Product` shape from the API.
  */
-export type { Colorway, GarmentType, Product, Quote, QuoteLine, Size, Tier } from "@inkhaus/shared";
+export type {
+  Colorway,
+  GarmentType,
+  Product,
+  ProductCategory,
+  ProductImage,
+  Quote,
+  QuoteLine,
+  Size,
+  Tier,
+} from "@inkhaus/shared";
 export {
+  CATEGORIES,
+  CATEGORY_LABEL,
   COLORS,
   PRODUCTS,
+  PRODUCT_IMAGES,
   getProduct,
+  ONE_SIZE,
   SIZES,
+  SIZE_LABEL,
   SIZE_UPCHARGE,
+  sizesFor,
   TIERS,
   quote,
   round,

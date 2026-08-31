@@ -21,6 +21,19 @@ enum GarmentType {
   CAP
   TOTE
   CREWNECK
+  // added with the homeware range - see GARMENT_TYPE_TO_SLUG in catalog.mapper.ts
+  ZIPHOODIE
+  BEANIE
+  MUG
+  TUMBLER
+  BLANKET
+  PILLOW
+  APRON
+  MOUSEPAD
+  ORNAMENT
+  PHONECASE
+  STICKER
+  POSTER
 }
 
 enum PrintMethod {
@@ -29,6 +42,14 @@ enum PrintMethod {
   EMBROIDERY
   PUFF
   LEATHER_PATCH
+  // non-apparel decoration. Adding a value here also needs METHOD_TO_LABEL in
+  // catalog.mapper.ts AND METHOD_ENUM in apps/web/src/lib/cart.ts - TypeScript
+  // enforces the first but not the second, and a missing second silently drops
+  // saved cart lines.
+  SUBLIMATION
+  UV_PRINT
+  ENGRAVING
+  DIGITAL_PRINT
 }
 
 model Product {
@@ -39,6 +60,13 @@ model Product {
   blurb  String
   fabric String
   tag    String?
+
+  /// which aisle the shop merchandises this in - a second axis to `type`,
+  /// because a beanie and a cap belong together but draw nothing alike
+  category String @default("apparel")
+  /// the size run this blank stocks; empty means the default apparel run.
+  /// A mug carries ["OS"] - see ALL_SIZE_CODES in @inkhaus/shared
+  sizes    String[] @default([])
 
   /// price for a single unit, USD
   price     Decimal @db.Decimal(10, 2)
@@ -62,12 +90,14 @@ model Product {
   updatedAt DateTime @updatedAt
 
   colors     ProductColor[]
+  images     ProductImage[]
   designs    Design[]
   orderItems OrderItem[]
   quotes     BulkQuote[]
   reviews    Review[]
 
   @@index([active, sortOrder])
+  @@index([category])
   @@map("products")
 }
 
@@ -83,8 +113,35 @@ model Color {
   products   ProductColor[]
   designs    Design[]
   orderItems OrderItem[]
+  images     ProductImage[]
 
   @@map("colors")
+}
+
+/// A real product photograph. The file itself is committed under
+/// apps/web/public/products/<slug>/ and served as a static asset - this table
+/// mirrors what `packages/shared/src/product-images.ts` generates, so the API
+/// hands out the same gallery the static storefront renders.
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  /// root-relative path, e.g. /products/heavyweight-tee/01-black.jpg
+  src       String
+  /// higher-resolution master for the lightbox, when one was downloaded
+  src2x     String?
+  alt       String
+  width     Int
+  height    Int
+  /// null means the shot is shown for every colourway
+  colorId   String?
+  sortOrder Int     @default(0)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  color   Color?  @relation(fields: [colorId], references: [id], onDelete: SetNull)
+
+  @@unique([productId, src])
+  @@index([productId, sortOrder])
+  @@map("product_images")
 }
 
 model ProductColor {

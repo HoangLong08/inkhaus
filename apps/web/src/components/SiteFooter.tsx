@@ -1,12 +1,15 @@
 import Link from "next/link";
 
 const GROUPS: { title: string; links: [string, string][] }[] = [
+  // category links rather than individual slugs: an aisle survives a product
+  // being renamed or retired, a hard-coded slug does not
   {
     title: "Shop",
     links: [
-      ["Heavyweight tee", "/products/heavyweight-tee"],
-      ["Hoodies", "/products/heavy-hoodie"],
-      ["Headwear", "/products/dad-cap"],
+      ["Apparel", "/products?cat=apparel"],
+      ["Headwear", "/products?cat=headwear"],
+      ["Drinkware", "/products?cat=drinkware"],
+      ["Home", "/products?cat=home"],
       ["All blanks", "/products"],
     ],
   },
