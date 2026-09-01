@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/* A deliberately quieter palette than the storefront's. This is a tool staff
+   stare at all day, not a shopfront: density and legibility over character.
+   The two share only the acid accent, so the apps still read as one company. */
+@theme {
+  --color-ink: #16171b;
+  --color-ink-2: #3a3d45;
+  --color-ink-3: #6b6f7a;
+
+  --color-paper: #fbfbfa;
+  --color-paper-2: #f3f4f1;
+  --color-paper-3: #e7e8e3;
+  --color-line: #dcded7;
+
+  --color-acid: #d8ff3e;
+  --color-acid-2: #4f6f00;
+  --color-flame: #d93a10;
+  --color-sky: #2f6ee0;
+  --color-moss: #2f7d4f;
+  --color-amber: #9a6b00;
+
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+}
+
+html {
+  background: var(--color-paper);
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-acid);
+  color: var(--color-ink);
+}
+
+/* one focus ring everywhere, since this app is heavily keyboard-driven */
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--color-sky);
+  outline-offset: 2px;
+}

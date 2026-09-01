@@ -5,8 +5,8 @@ export default () => ({
   apiPrefix: process.env.API_PREFIX ?? 'api',
   databaseUrl: process.env.DATABASE_URL,
   corsOrigin: (process.env.CORS_ORIGIN ?? 'http://localhost:4321').split(',').map((o) => o.trim()),
-  /// shared secret for the write/admin endpoints - set it in .env, there is no default in prod
-  adminKey: process.env.ADMIN_API_KEY ?? '',
+  /// how long an admin session token stays valid before a fresh sign-in
+  adminSessionTtlHours: Number(process.env.ADMIN_SESSION_TTL_HOURS ?? 12),
   order: {
     /// flat shipping until a real carrier is wired in
     shippingFlat: Number(process.env.SHIPPING_FLAT ?? SHIPPING_FLAT),

@@ -5,6 +5,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import configuration from './config/configuration';
 import { PrismaModule } from './common/prisma/prisma.module';
+import { AdminAuthModule } from './modules/admin-auth/admin-auth.module';
 import { AssetsModule } from './modules/assets/assets.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { DesignsModule } from './modules/designs/designs.module';
@@ -20,6 +21,7 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     PrismaModule,
     HealthModule,
+    AdminAuthModule,
     CatalogModule,
     AssetsModule,
     PricingModule,

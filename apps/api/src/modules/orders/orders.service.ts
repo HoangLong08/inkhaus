@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { OrderStatus, Prisma } from '@prisma/client';
-import { quote as computeQuote } from '@inkhaus/shared';
+import { canTransition, quote as computeQuote } from '@inkhaus/shared';
 
 import { num, round2 } from '../../common/decimal';
 import { paginate, type PaginationDto } from '../../common/dto/pagination.dto';
@@ -11,18 +11,6 @@ import { PricingService } from '../pricing/pricing.service';
 import type { CreateOrderDto, OrderItemDto } from './dto/create-order.dto';
 import type { ListOrdersDto } from './dto/list-orders.dto';
 import type { UpdateOrderStatusDto } from './dto/update-order-status.dto';
-
-/** which transitions the back office is allowed to make */
-const ALLOWED: Record<OrderStatus, OrderStatus[]> = {
-  DRAFT: ['PENDING_PAYMENT', 'CANCELLED'],
-  PENDING_PAYMENT: ['PAID', 'CANCELLED'],
-  PAID: ['IN_PRODUCTION', 'REFUNDED', 'CANCELLED'],
-  IN_PRODUCTION: ['SHIPPED', 'CANCELLED'],
-  SHIPPED: ['DELIVERED'],
-  DELIVERED: ['REFUNDED'],
-  CANCELLED: [],
-  REFUNDED: [],
-};
 
 const orderInclude = {
   customer: true,
@@ -147,7 +135,9 @@ export class OrdersService {
     const current = await this.prisma.order.findUnique({ where: { number } });
     if (!current) throw new NotFoundException(`No order "${number}"`);
 
-    if (current.status !== dto.status && !ALLOWED[current.status].includes(dto.status)) {
+    // the same table the admin app builds its dropdown from, so the two cannot
+    // disagree about what is a legal move
+    if (!canTransition(current.status, dto.status)) {
       throw new BadRequestException(
         `Cannot move an order from ${current.status} to ${dto.status}`,
       );

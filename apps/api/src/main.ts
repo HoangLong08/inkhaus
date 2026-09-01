@@ -42,7 +42,7 @@ async function bootstrap() {
     .setTitle('INKHAUS API')
     .setDescription('Catalog, design studio, pricing and orders for the INKHAUS storefront.')
     .setVersion('1.0')
-    .addApiKey({ type: 'apiKey', name: 'x-admin-key', in: 'header' }, 'admin-key')
+    .addBearerAuth()
     .build();
   SwaggerModule.setup(`${prefix}/docs`, app, SwaggerModule.createDocument(app, swagger), {
     jsonDocumentUrl: `${prefix}/docs/json`,

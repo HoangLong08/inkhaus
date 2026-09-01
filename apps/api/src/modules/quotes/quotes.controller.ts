@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
-import { AdminKeyGuard } from '../../common/guards/admin-key.guard';
+import { AdminAuthGuard } from '../../common/guards/admin-auth.guard';
 import { CreateBulkQuoteDto } from './dto/create-quote.dto';
 import { ListBulkQuotesDto } from './dto/list-quotes.dto';
 import { UpdateBulkQuoteDto } from './dto/update-quote.dto';
@@ -19,15 +19,15 @@ export class QuotesController {
   }
 
   @Get()
-  @UseGuards(AdminKeyGuard)
-  @ApiSecurity('admin-key')
+  @UseGuards(AdminAuthGuard)
+  @ApiBearerAuth()
   list(@Query() query: ListBulkQuotesDto) {
     return this.quotes.list(query);
   }
 
   @Patch(':id')
-  @UseGuards(AdminKeyGuard)
-  @ApiSecurity('admin-key')
+  @UseGuards(AdminAuthGuard)
+  @ApiBearerAuth()
   update(@Param('id') id: string, @Body() dto: UpdateBulkQuoteDto) {
     return this.quotes.update(id, dto);
   }

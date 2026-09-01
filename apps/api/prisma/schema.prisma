@@ -409,3 +409,51 @@ model Review {
   @@index([published, createdAt])
   @@map("reviews")
 }
+
+// -------------------------------------------------------------- back office
+
+enum AdminRole {
+  OWNER
+  STAFF
+}
+
+/// Staff accounts for the admin app. Deliberately unrelated to `Customer`:
+/// a customer never signs in, and merging the two would put a password hash
+/// one careless `include` away from a public order lookup.
+model AdminUser {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  /// argon2id, from @node-rs/argon2 - never a plaintext password
+  passwordHash String
+  name         String?
+  role         AdminRole @default(STAFF)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  sessions AdminSession[]
+
+  @@map("admin_users")
+}
+
+/// Server-side sessions rather than stateless JWTs, so signing out - or
+/// deactivating a colleague - takes effect on the very next request instead of
+/// whenever the token happens to expire.
+model AdminSession {
+  id String @id @default(cuid())
+  /// sha256 of the opaque token. The token itself is shown once, at login, and
+  /// never stored: a leaked database dump must not be a set of live sessions.
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userAgent String?
+  ip        String?
+
+  user AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("admin_sessions")
+}

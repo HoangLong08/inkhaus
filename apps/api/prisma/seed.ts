@@ -5,7 +5,7 @@
  *
  *   npm run db:seed -w @inkhaus/api
  */
-import { PrismaClient, Prisma } from '@prisma/client';
+import { AdminRole, PrismaClient, Prisma } from '@prisma/client';
 import {
   ALL_SIZE_CODES,
   CLIPART,
@@ -18,6 +18,7 @@ import {
   TIERS,
 } from '@inkhaus/shared';
 
+import { AdminAuthService } from '../src/modules/admin-auth/admin-auth.service';
 import {
   LABEL_TO_METHOD,
   SLUG_TO_GARMENT_TYPE,
@@ -234,6 +235,30 @@ async function seedReviews() {
   return REVIEWS.length;
 }
 
+/**
+ * The first staff account, so a fresh clone has a way into the admin app.
+ * Skipped unless both env vars are set - a seeded default password would be the
+ * same on every deployment that forgot to override it.
+ */
+async function seedAdmin() {
+  const email = process.env.ADMIN_BOOTSTRAP_EMAIL?.trim().toLowerCase();
+  const password = process.env.ADMIN_BOOTSTRAP_PASSWORD;
+  if (!email || !password) return 'skipped (no ADMIN_BOOTSTRAP_* set)';
+
+  const existing = await prisma.adminUser.findUnique({ where: { email } });
+  if (existing) return `${email} (already present, password untouched)`;
+
+  await prisma.adminUser.create({
+    data: {
+      email,
+      passwordHash: await AdminAuthService.hashPassword(password),
+      name: 'Owner',
+      role: AdminRole.OWNER,
+    },
+  });
+  return `${email} (created)`;
+}
+
 async function main() {
   console.log('Seeding INKHAUS...');
   const colors = await seedColors();
@@ -242,6 +267,7 @@ async function main() {
   const products = await seedProducts();
   const assets = await seedStudioAssets();
   const reviews = await seedReviews();
+  const admin = await seedAdmin();
 
   console.log(
     [
@@ -253,6 +279,7 @@ async function main() {
       `  fonts     ${assets.fonts}`,
       `  inks      ${assets.inks}`,
       `  reviews   ${reviews}`,
+      `  admin     ${admin}`,
     ].join('\n'),
   );
 }

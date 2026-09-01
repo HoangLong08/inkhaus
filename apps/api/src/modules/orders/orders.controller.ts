@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
-import { AdminKeyGuard } from '../../common/guards/admin-key.guard';
+import { AdminAuthGuard } from '../../common/guards/admin-auth.guard';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ListOrdersDto } from './dto/list-orders.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
@@ -25,16 +25,16 @@ export class OrdersController {
   }
 
   @Get()
-  @UseGuards(AdminKeyGuard)
-  @ApiSecurity('admin-key')
+  @UseGuards(AdminAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Back office order list' })
   list(@Query() query: ListOrdersDto) {
     return this.orders.list(query);
   }
 
   @Patch(':number/status')
-  @UseGuards(AdminKeyGuard)
-  @ApiSecurity('admin-key')
+  @UseGuards(AdminAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Advance an order through production' })
   updateStatus(@Param('number') number: string, @Body() dto: UpdateOrderStatusDto) {
     return this.orders.updateStatus(number, dto);
