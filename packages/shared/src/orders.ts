@@ -37,3 +37,23 @@ export const ORDER_TRANSITIONS: Record<OrderStatusCode, OrderStatusCode[]> = {
 export function canTransition(from: OrderStatusCode, to: OrderStatusCode) {
   return from === to || ORDER_TRANSITIONS[from].includes(to);
 }
+
+// ------------------------------------------------------------ authorization
+
+export const ADMIN_ROLES = ["OWNER", "STAFF"] as const;
+
+export type AdminRoleCode = (typeof ADMIN_ROLES)[number];
+
+/**
+ * Cancelling or refunding is a money decision, not a production step, so it is
+ * kept to owners. These are values rather than routes - both live on the same
+ * `PATCH /orders/:number/status` endpoint - which is why the check cannot be a
+ * plain route guard and lives here instead, shared by the API that enforces it
+ * and the dropdown that must not offer what the API will reject.
+ */
+export const OWNER_ONLY_ORDER_STATUSES: OrderStatusCode[] = ["CANCELLED", "REFUNDED"];
+
+/** true when `role` is allowed to move an order into `to` */
+export function canSetStatus(role: AdminRoleCode, to: OrderStatusCode) {
+  return role === "OWNER" || !OWNER_ONLY_ORDER_STATUSES.includes(to);
+}

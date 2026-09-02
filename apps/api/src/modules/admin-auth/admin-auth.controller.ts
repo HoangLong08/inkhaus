@@ -4,20 +4,31 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { AdminAuthGuard, type AdminRequest } from '../../common/guards/admin-auth.guard';
 import { AdminAuthService, toDto } from './admin-auth.service';
-import { LoginDto } from './dto/login.dto';
+import { GoogleLoginDto } from './dto/google-login.dto';
+
+/**
+ * Read from process.env rather than ConfigService: a decorator is evaluated when
+ * the class is defined, long before DI exists. Ten a minute is plenty for a
+ * human with a slow finger; the e2e suite raises it because a browser test that
+ * signs in twenty times is not an attack.
+ */
+const LOGIN_RATE_LIMIT = Number(process.env.ADMIN_LOGIN_RATE_LIMIT ?? 10);
 
 @ApiTags('admin-auth')
 @Controller({ path: 'admin/auth', version: '1' })
 export class AdminAuthController {
   constructor(private readonly auth: AdminAuthService) {}
 
-  @Post('login')
+  @Post('google')
   // the global throttler is 120/min, which is a brute-force budget rather than a
-  // limit on a login form. Ten tries a minute per IP is plenty for a typo.
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Exchange staff credentials for a session token' })
-  login(@Body() dto: LoginDto, @Req() req: AdminRequest) {
-    return this.auth.login(dto, { userAgent: req.header('user-agent'), ip: req.ip });
+  // limit on a sign-in endpoint
+  @Throttle({ default: { limit: LOGIN_RATE_LIMIT, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Exchange a Google id_token for a session token' })
+  google(@Body() dto: GoogleLoginDto, @Req() req: AdminRequest) {
+    return this.auth.loginWithGoogle(dto.idToken, {
+      userAgent: req.header('user-agent'),
+      ip: req.ip,
+    });
   }
 
   @Post('logout')

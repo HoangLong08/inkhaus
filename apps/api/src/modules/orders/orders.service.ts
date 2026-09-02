@@ -1,6 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { OrderStatus, Prisma } from '@prisma/client';
-import { canTransition, quote as computeQuote } from '@inkhaus/shared';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { AdminRole, OrderStatus, Prisma } from '@prisma/client';
+import { canSetStatus, canTransition, quote as computeQuote } from '@inkhaus/shared';
 
 import { num, round2 } from '../../common/decimal';
 import { paginate, type PaginationDto } from '../../common/dto/pagination.dto';
@@ -131,9 +136,18 @@ export class OrdersService {
     return paginate(rows.map((r) => this.toDto(r)), total, query as PaginationDto);
   }
 
-  async updateStatus(number: string, dto: UpdateOrderStatusDto) {
+  async updateStatus(number: string, dto: UpdateOrderStatusDto, role: AdminRole) {
     const current = await this.prisma.order.findUnique({ where: { number } });
     if (!current) throw new NotFoundException(`No order "${number}"`);
+
+    // Cancelling and refunding move money, so they are owner-only. Checked
+    // before the transition table so staff get "you may not" rather than a
+    // confusing "cannot move from X to Y".
+    if (!canSetStatus(role, dto.status)) {
+      throw new ForbiddenException(
+        `Only an owner can move an order to ${dto.status}`,
+      );
+    }
 
     // the same table the admin app builds its dropdown from, so the two cannot
     // disagree about what is a legal move

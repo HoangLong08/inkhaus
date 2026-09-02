@@ -1,63 +1,97 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  Logger,
+  OnModuleInit,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { hash, verify } from '@node-rs/argon2';
 import type { AdminUser } from '@prisma/client';
+import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
 import { createHash, randomBytes } from 'node:crypto';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
-import type { LoginDto } from './dto/login.dto';
 
-/**
- * argon2id hash of a random value nobody will ever type. `login` verifies
- * against it when the email does not exist, so a missing account burns the same
- * milliseconds as a wrong password and the response time stops being a user
- * enumeration oracle. Computed once, lazily - a hardcoded literal risks being
- * rejected by the parser instantly, which is exactly the timing tell we are
- * trying to remove.
- */
-let dummyHash: Promise<string> | null = null;
-function decoyHash() {
-  dummyHash ??= hash(randomBytes(32).toString('hex'));
-  return dummyHash;
-}
+/** the claims we actually rely on, beyond the registered ones jose checks */
+type GoogleClaims = JWTPayload & {
+  email?: string;
+  email_verified?: boolean;
+  name?: string;
+};
 
 @Injectable()
-export class AdminAuthService {
+export class AdminAuthService implements OnModuleInit {
   private readonly logger = new Logger(AdminAuthService.name);
+  private jwks!: ReturnType<typeof createRemoteJWKSet>;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
   ) {}
 
-  /** the one place a password becomes a hash - used by login checks and the seed */
-  static hashPassword(password: string) {
-    return hash(password);
+  onModuleInit() {
+    // createRemoteJWKSet caches the key set and refetches on an unknown `kid`,
+    // so this is built once rather than per request
+    this.jwks = createRemoteJWKSet(new URL(this.config.get<string>('google.jwksUrl')!));
   }
 
   /**
-   * Verifies the credentials and mints an opaque session token. The token is
-   * returned exactly once - only its sha256 is written, so the sessions table is
-   * useless to anyone who reads it.
+   * Verifies a Google ID token and mints a session for the matching staff
+   * account. The session token is returned exactly once - only its sha256 is
+   * written, so the sessions table is useless to anyone who reads it.
+   *
+   * No account is ever created here. `admin_users` IS the allowlist: a valid
+   * Google identity with no row is simply refused, which is what keeps "anyone
+   * with a Gmail account" from being a login.
    */
-  async login(dto: LoginDto, meta: { userAgent?: string; ip?: string }) {
-    const email = dto.email.trim().toLowerCase();
+  async loginWithGoogle(idToken: string, meta: { userAgent?: string; ip?: string }) {
+    const clientId = this.config.get<string>('google.clientId');
+    if (!clientId) {
+      // a blank audience would make `aud` unverifiable - fail loudly rather
+      // than accepting tokens minted for some other application
+      this.logger.error('GOOGLE_CLIENT_ID is not configured; refusing to verify id tokens');
+      throw new UnauthorizedException('Google sign-in is not configured');
+    }
+
+    let claims: GoogleClaims;
+    try {
+      const { payload } = await jwtVerify(idToken, this.jwks, {
+        issuer: this.config.get<string>('google.issuer'),
+        audience: clientId,
+      });
+      claims = payload as GoogleClaims;
+    } catch (err) {
+      this.logger.warn(`Rejected Google id token: ${(err as Error).message}`);
+      throw new UnauthorizedException('Invalid Google sign-in');
+    }
+
+    // Without this, a Workspace domain that lets users set an unverified
+    // address could claim any email, including one on the allowlist.
+    if (claims.email_verified !== true || !claims.email) {
+      throw new UnauthorizedException('That Google account has no verified email');
+    }
+
+    const email = claims.email.trim().toLowerCase();
+    const sub = claims.sub;
     const user = await this.prisma.adminUser.findUnique({ where: { email } });
 
-    const ok = await verify(user?.passwordHash ?? (await decoyHash()), dto.password).catch(
-      () => false,
-    );
+    if (!user || !user.isActive) {
+      this.logger.warn(`Google sign-in refused for "${email}" from ${meta.ip ?? 'unknown ip'}`);
+      throw new ForbiddenException('This account is not allowed in the back office');
+    }
 
-    if (!user || !ok || !user.isActive) {
-      this.logger.warn(`Failed admin login for "${email}" from ${meta.ip ?? 'unknown ip'}`);
-      throw new UnauthorizedException('Invalid email or password');
+    // First sign-in binds the account to a Google subject; later ones must match
+    // it, so a recycled or spoofed address cannot take over an existing row.
+    if (user.googleSub && sub && user.googleSub !== sub) {
+      this.logger.error(`Google sub mismatch for "${email}" - refusing`);
+      throw new ForbiddenException('This account is bound to a different Google identity');
     }
 
     const token = randomBytes(32).toString('base64url');
     const ttlHours = this.config.get<number>('adminSessionTtlHours') ?? 12;
     const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
 
-    await this.prisma.$transaction([
+    const [, updated] = await this.prisma.$transaction([
       this.prisma.adminSession.create({
         data: {
           tokenHash: sha256(token),
@@ -69,13 +103,19 @@ export class AdminAuthService {
       }),
       this.prisma.adminUser.update({
         where: { id: user.id },
-        data: { lastLoginAt: new Date() },
+        data: {
+          lastLoginAt: new Date(),
+          googleSub: user.googleSub ?? sub,
+          // Google is the source of truth for the display name, but never for
+          // the role - that is ours to decide
+          name: user.name ?? claims.name ?? null,
+        },
       }),
       // opportunistic sweep - expired rows are dead weight and there is no cron
       this.prisma.adminSession.deleteMany({ where: { expiresAt: { lt: new Date() } } }),
     ]);
 
-    return { token, expiresAt, user: toDto(user) };
+    return { token, expiresAt, user: toDto(updated) };
   }
 
   /**

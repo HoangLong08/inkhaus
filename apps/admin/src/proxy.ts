@@ -21,9 +21,11 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Everything except the login page, Next's own assets, and robots.txt.
-  // Excluding /login matters: redirecting it would loop for anyone without a
-  // cookie. robots.txt has to stay reachable or a crawler is told to sign in
-  // instead of being told to go away.
-  matcher: ["/((?!login|robots.txt|_next/static|_next/image|favicon.ico).*)"],
+  // Everything except the login page, the OAuth routes, Next's own assets, and
+  // robots.txt. Excluding /login matters: redirecting it would loop for anyone
+  // without a cookie. /auth/google matters more: the callback is precisely the
+  // request that arrives *without* a session cookie and whose job is to create
+  // one - proxying it away would make signing in impossible. robots.txt has to
+  // stay reachable or a crawler is told to sign in instead of to go away.
+  matcher: ["/((?!login|auth/google|robots.txt|_next/static|_next/image|favicon.ico).*)"],
 };

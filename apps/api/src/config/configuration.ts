@@ -1,5 +1,19 @@
 import { FREE_SHIPPING_OVER, SHIPPING_FLAT } from '@inkhaus/shared';
 
+const GOOGLE_ISSUER = 'https://accounts.google.com';
+const GOOGLE_JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
+
+/**
+ * The e2e suite swaps Google for a local OIDC stub, which means the issuer and
+ * key set have to be overridable. That is a loaded gun: an environment variable
+ * pointing at an attacker's issuer would make every forged token valid. So the
+ * overrides are refused outright in production rather than merely discouraged -
+ * the check lives here, at the single place config is read, not at each use.
+ */
+const isProd = process.env.NODE_ENV === 'production';
+const devOnly = (value: string | undefined, fallback: string) =>
+  !isProd && value ? value : fallback;
+
 export default () => ({
   port: Number(process.env.PORT ?? 4000),
   apiPrefix: process.env.API_PREFIX ?? 'api',
@@ -7,6 +21,12 @@ export default () => ({
   corsOrigin: (process.env.CORS_ORIGIN ?? 'http://localhost:4321').split(',').map((o) => o.trim()),
   /// how long an admin session token stays valid before a fresh sign-in
   adminSessionTtlHours: Number(process.env.ADMIN_SESSION_TTL_HOURS ?? 12),
+  google: {
+    /// the `aud` every admin id_token must carry - same client as apps/admin uses
+    clientId: process.env.GOOGLE_CLIENT_ID ?? '',
+    issuer: devOnly(process.env.GOOGLE_ISSUER, GOOGLE_ISSUER),
+    jwksUrl: devOnly(process.env.GOOGLE_JWKS_URL, GOOGLE_JWKS_URL),
+  },
   order: {
     /// flat shipping until a real carrier is wired in
     shippingFlat: Number(process.env.SHIPPING_FLAT ?? SHIPPING_FLAT),

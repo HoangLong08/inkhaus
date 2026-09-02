@@ -1,10 +1,11 @@
-import { ORDER_TRANSITIONS, type OrderStatusCode } from "@inkhaus/shared";
+import { canSetStatus, ORDER_TRANSITIONS, type OrderStatusCode } from "@inkhaus/shared";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { setOrderStatus } from "@/app/actions";
 import StatusBadge from "@/components/StatusBadge";
 import { adminApi, ApiError } from "@/lib/api";
+import { requireAdmin } from "@/lib/dal";
 import { at, humanize, usd } from "@/lib/format";
 
 export async function generateMetadata({ params }: { params: Promise<{ number: string }> }) {
@@ -19,14 +20,24 @@ export default async function OrderPage({
   params: Promise<{ number: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
-  const [{ number }, { error }] = await Promise.all([params, searchParams]);
+  const [{ number }, { error }, user] = await Promise.all([
+    params,
+    searchParams,
+    // cached by the DAL, so this costs nothing beyond the layout's own call
+    requireAdmin(),
+  ]);
 
   const order = await adminApi.order(number).catch((err) => {
     if (err instanceof ApiError && err.status === 404) notFound();
     throw err;
   });
 
-  const next = ORDER_TRANSITIONS[order.status as OrderStatusCode] ?? [];
+  // Two filters, and both matter: the transition table says what is reachable
+  // from here, the role says what this person may reach. Staff simply never see
+  // Cancel or Refund - offering a button that always 403s is worse than none.
+  const next = (ORDER_TRANSITIONS[order.status as OrderStatusCode] ?? []).filter((s) =>
+    canSetStatus(user.role, s),
+  );
   const ship = order.shippingAddress;
 
   return (
@@ -131,8 +142,13 @@ export default async function OrderPage({
             </h2>
 
             {next.length === 0 ? (
-              <p className="text-sm text-ink-3">
-                {humanize(order.status)} is a final state — nothing left to do here.
+              // An empty list has two very different causes, and telling staff
+              // an order is "final" when it is really "not yours to cancel"
+              // would send them hunting for a bug.
+              <p className="text-sm text-ink-3" data-testid="no-moves">
+                {(ORDER_TRANSITIONS[order.status as OrderStatusCode] ?? []).length === 0
+                  ? `${humanize(order.status)} is a final state — nothing left to do here.`
+                  : `Moving an order out of ${humanize(order.status)} is limited to owners.`}
               </p>
             ) : (
               <form action={setOrderStatus} className="space-y-3">

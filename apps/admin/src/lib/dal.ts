@@ -36,3 +36,14 @@ export async function requireAdmin() {
   if (!user) redirect("/login");
   return user;
 }
+
+/**
+ * Owner-only pages and actions. Note this is a convenience for the UI, not the
+ * defence: the API enforces the same rule with `@Roles('OWNER')` and would
+ * refuse a hand-made request regardless of what this app rendered.
+ */
+export async function requireOwner() {
+  const user = await requireAdmin();
+  if (user.role !== "OWNER") redirect("/?error=" + encodeURIComponent("Owners only."));
+  return user;
+}

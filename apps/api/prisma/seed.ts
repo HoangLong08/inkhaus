@@ -18,7 +18,6 @@ import {
   TIERS,
 } from '@inkhaus/shared';
 
-import { AdminAuthService } from '../src/modules/admin-auth/admin-auth.service';
 import {
   LABEL_TO_METHOD,
   SLUG_TO_GARMENT_TYPE,
@@ -236,27 +235,33 @@ async function seedReviews() {
 }
 
 /**
- * The first staff account, so a fresh clone has a way into the admin app.
- * Skipped unless both env vars are set - a seeded default password would be the
- * same on every deployment that forgot to override it.
+ * The staff allowlist. There is no password to seed - sign-in is Google-only,
+ * and this table is what decides whether a Google identity is let in at all.
+ * A row here is necessary but not sufficient: the person still has to prove the
+ * address to Google.
+ *
+ * Upsert rather than skip-if-present, so adding an address to
+ * ADMIN_BOOTSTRAP_EMAILS and re-seeding actually grants access, and so an
+ * account demoted by hand is restored to OWNER on the next run.
  */
-async function seedAdmin() {
-  const email = process.env.ADMIN_BOOTSTRAP_EMAIL?.trim().toLowerCase();
-  const password = process.env.ADMIN_BOOTSTRAP_PASSWORD;
-  if (!email || !password) return 'skipped (no ADMIN_BOOTSTRAP_* set)';
+async function seedAdmins() {
+  const emails = (process.env.ADMIN_BOOTSTRAP_EMAILS ?? '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
 
-  const existing = await prisma.adminUser.findUnique({ where: { email } });
-  if (existing) return `${email} (already present, password untouched)`;
+  if (!emails.length) return 'skipped (no ADMIN_BOOTSTRAP_EMAILS set)';
 
-  await prisma.adminUser.create({
-    data: {
-      email,
-      passwordHash: await AdminAuthService.hashPassword(password),
-      name: 'Owner',
-      role: AdminRole.OWNER,
-    },
-  });
-  return `${email} (created)`;
+  for (const email of emails) {
+    await prisma.adminUser.upsert({
+      where: { email },
+      // `name` and `googleSub` are left alone: Google fills them in on first
+      // sign-in and re-seeding must not unbind an account
+      update: { role: AdminRole.OWNER, isActive: true },
+      create: { email, role: AdminRole.OWNER },
+    });
+  }
+  return `${emails.length} owner(s): ${emails.join(', ')}`;
 }
 
 async function main() {
@@ -267,7 +272,7 @@ async function main() {
   const products = await seedProducts();
   const assets = await seedStudioAssets();
   const reviews = await seedReviews();
-  const admin = await seedAdmin();
+  const admin = await seedAdmins();
 
   console.log(
     [

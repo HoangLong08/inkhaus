@@ -21,6 +21,8 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "//test:e2e": "Browser tests for the admin sign-in and role rules. Needs Postgres up (npm run db:up); `test` above stays unit-only so it runs anywhere.",
+    "test:e2e": "npm run build:shared && npm run build -w @inkhaus/api && npm run test:e2e -w @inkhaus/admin",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:generate": "npm run prisma:generate -w @inkhaus/api",

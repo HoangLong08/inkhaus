@@ -148,11 +148,16 @@ export type Paginated<T> = {
 /* ------------------------------------------------------------------- calls */
 
 export const adminApi = {
-  login: (email: string, password: string) =>
-    request<{ token: string; expiresAt: string; user: AdminUser }>("/admin/auth/login", {
+  /**
+   * Hands Google's id_token to the API, which verifies its signature against
+   * Google's JWKS itself. The admin app is never trusted to vouch for an
+   * identity - it only drives the browser end of the flow.
+   */
+  loginWithGoogle: (idToken: string) =>
+    request<{ token: string; expiresAt: string; user: AdminUser }>("/admin/auth/google", {
       method: "POST",
-      body: { email, password },
-      // no cookie exists yet at this point
+      body: { idToken },
+      // no session cookie exists yet at this point
       token: "",
     }),
 

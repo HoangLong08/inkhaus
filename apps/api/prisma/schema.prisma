@@ -418,19 +418,24 @@ enum AdminRole {
 }
 
 /// Staff accounts for the admin app. Deliberately unrelated to `Customer`:
-/// a customer never signs in, and merging the two would put a password hash
-/// one careless `include` away from a public order lookup.
+/// a customer never signs in, and merging the two would put staff identity one
+/// careless `include` away from a public order lookup.
+///
+/// There is no password column: sign-in is Google-only, and this table IS the
+/// allowlist - a Google account with no row here cannot get in, and rows are
+/// only ever created by the seed, never by a login.
 model AdminUser {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  /// argon2id, from @node-rs/argon2 - never a plaintext password
-  passwordHash String
-  name         String?
-  role         AdminRole @default(STAFF)
-  isActive     Boolean   @default(true)
-  lastLoginAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id    String @id @default(cuid())
+  email String @unique
+  /// Google's `sub` claim - stable even if the account's email changes. Null
+  /// until the first successful sign-in binds it.
+  googleSub   String?   @unique
+  name        String?
+  role        AdminRole @default(STAFF)
+  isActive    Boolean   @default(true)
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   sessions AdminSession[]
 
