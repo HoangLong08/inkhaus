@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Menu, X, Download, ShoppingBag, PackageSearch } from "lucide-react";
+import { Menu, X, Download, ShoppingBag, PackageSearch, User } from "lucide-react";
+import AccountButton from "@/components/account/AccountButton";
 import CartButton from "@/components/cart/CartButton";
 import { FREE_SHIPPING_OVER } from "@/lib/catalog";
 import { selectCount, useCart } from "@/lib/cart";
@@ -92,6 +93,7 @@ export default function SiteHeader() {
             </nav>
 
             <div className="flex items-center gap-3">
+              <AccountButton className="hidden sm:grid" />
               <CartButton />
               <Link
                 href="/design"
@@ -175,6 +177,15 @@ export default function SiteHeader() {
                   className="flex items-center gap-2 rounded-full border hairline px-5 py-3 text-[12px] font-bold uppercase tracking-[0.14em] text-ink/70 hover:border-ink hover:text-ink"
                 >
                   <PackageSearch size={14} aria-hidden /> Track order
+                </Link>
+                {/* /account sorts out signed-in from stranger on the server, so
+                    this one label is right in both states */}
+                <Link
+                  href="/account"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2 rounded-full border hairline px-5 py-3 text-[12px] font-bold uppercase tracking-[0.14em] text-ink/70 hover:border-ink hover:text-ink"
+                >
+                  <User size={14} aria-hidden /> Your account
                 </Link>
                 {canInstall && (
                   <button

@@ -8,6 +8,7 @@ import { PrismaModule } from './common/prisma/prisma.module';
 import { AdminAuthModule } from './modules/admin-auth/admin-auth.module';
 import { AssetsModule } from './modules/assets/assets.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
+import { CustomerAuthModule } from './modules/customer-auth/customer-auth.module';
 import { DesignsModule } from './modules/designs/designs.module';
 import { HealthModule } from './modules/health/health.module';
 import { OrdersModule } from './modules/orders/orders.module';
@@ -26,6 +27,7 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
     PrismaModule,
     HealthModule,
     AdminAuthModule,
+    CustomerAuthModule,
     CatalogModule,
     AssetsModule,
     PricingModule,

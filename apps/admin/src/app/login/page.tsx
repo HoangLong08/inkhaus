@@ -35,7 +35,7 @@ export default async function LoginPage({
             </p>
           ) : null}
 
-          <form method="POST" action="/auth/google/start">
+          <form method="POST" action="/api/auth/google/start">
             <input type="hidden" name="next" value={safeNext(next)} />
             <button
               type="submit"

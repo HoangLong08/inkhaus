@@ -21,7 +21,7 @@ test.describe("admin sign-in", () => {
     // a plain form POST to the Route Handler, not a client-side action
     const form = page.locator("form");
     await expect(form).toHaveAttribute("method", /post/i);
-    await expect(form).toHaveAttribute("action", "/auth/google/start");
+    await expect(form).toHaveAttribute("action", "/api/auth/google/start");
 
     // and it still works with scripting switched off entirely
     const noJs = await page.context().browser()!.newContext({ javaScriptEnabled: false });

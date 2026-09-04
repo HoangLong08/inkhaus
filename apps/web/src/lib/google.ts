@@ -1,10 +1,11 @@
 import "server-only";
 
 /**
- * The Google end of the sign-in flow. Deliberately hand-rolled rather than
- * pulling in an OAuth library: the whole dance is authorization-code + PKCE,
- * which is two requests and a hash, and a dependency here would be a
- * dependency in the path of every login.
+ * The Google end of storefront sign-in. Same hand-rolled authorization-code +
+ * PKCE dance as apps/admin - two requests and a hash - and deliberately not
+ * shared code: the two apps sign different people into different systems, and a
+ * "unified" helper is how a storefront session eventually ends up minted with
+ * the back office's redirect URI.
  */
 
 const GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -20,13 +21,21 @@ const isProd = process.env.NODE_ENV === "production";
 const devOnly = (value: string | undefined, fallback: string) =>
   !isProd && value ? value : fallback;
 
+/**
+ * The storefront's own origin. NEXT_PUBLIC_SITE_URL rather than a second
+ * WEB_PUBLIC_URL: `metadataBase` in app/layout.tsx already names this exact
+ * value, and one origin with two env var names is the duplication the shared
+ * root .env exists to kill. It is public either way - an origin is not a secret.
+ */
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:4321").replace(/\/$/, "");
+
 export const googleConfig = {
   clientId: process.env.GOOGLE_CLIENT_ID ?? "",
   clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
   authEndpoint: devOnly(process.env.GOOGLE_AUTH_ENDPOINT, GOOGLE_AUTH),
   tokenEndpoint: devOnly(process.env.GOOGLE_TOKEN_ENDPOINT, GOOGLE_TOKEN),
   /** must match a redirect URI registered on the OAuth client, exactly */
-  redirectUri: `${(process.env.ADMIN_PUBLIC_URL ?? "http://localhost:4322").replace(/\/$/, "")}/api/auth/google/callback`,
+  redirectUri: `${siteUrl}/api/auth/google/callback`,
 };
 
 export function isGoogleConfigured() {
@@ -49,9 +58,10 @@ export function authorizeUrl(state: string, challenge: string) {
     state,
     code_challenge: challenge,
     code_challenge_method: "S256",
-    // staff often have several Google accounts open; without this the browser
-    // silently picks the first one and the refusal looks like a bug
-    prompt: "select_account",
+    // No `prompt: select_account` here, unlike the back office. Staff juggle
+    // several work accounts and want the picker every time; a shopper signing
+    // in to check an order wants one tap, and Google shows the picker anyway
+    // when the browser has more than one session.
   }).toString();
   return url.toString();
 }

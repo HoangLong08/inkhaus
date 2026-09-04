@@ -246,20 +246,58 @@ model Design {
 
 // ------------------------------------------------------------------ orders
 
+/// One row per email address, created by the first order, saved design or bulk
+/// quote from that address - signing in does not invent a new one. That is the
+/// whole reason storefront sign-in can hand someone their order history the
+/// moment they first authenticate: the rows were already theirs, filed under an
+/// address Google has now confirmed they own.
 model Customer {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  phone     String?
-  company   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id    String @id @default(cuid())
+  email String @unique
+  /// Google's `sub` claim - stable even if the account's email changes. Null
+  /// for every customer who has only ever checked out as a guest.
+  googleSub   String?   @unique
+  name        String?
+  /// Google's `picture` claim, shown in the storefront header. Refreshed on
+  /// each sign-in; null for guests.
+  avatarUrl   String?
+  phone       String?
+  company     String?
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  designs Design[]
-  orders  Order[]
-  quotes  BulkQuote[]
+  designs  Design[]
+  orders   Order[]
+  quotes   BulkQuote[]
+  sessions CustomerSession[]
 
   @@map("customers")
+}
+
+/// The storefront twin of AdminSession, and separate from it on purpose: a
+/// customer token must never resolve to a staff account, and keeping the two
+/// tables apart makes that a schema guarantee rather than a code review.
+///
+/// The TTL is far longer than the back office's - a shopper checking an order
+/// next week should not be signed out, while a session with access to every
+/// order in the system should be.
+model CustomerSession {
+  id String @id @default(cuid())
+  /// sha256 of the opaque token, never the token itself - same reasoning as
+  /// AdminSession.
+  tokenHash  String   @unique
+  customerId String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  userAgent  String?
+  ip         String?
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([expiresAt])
+  @@map("customer_sessions")
 }
 
 enum OrderStatus {

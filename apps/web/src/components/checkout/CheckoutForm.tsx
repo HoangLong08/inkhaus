@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, ArrowRight, Loader2, Lock, ShoppingBag, WifiOff } from "lucide-react";
 import LineThumb from "@/components/cart/LineThumb";
 import { FreeShippingMeter } from "@/components/cart/Meters";
@@ -11,6 +11,7 @@ import { METHOD_ENUM, readCart, useCart, type ResolvedLine } from "@/lib/cart";
 import { dropPendingDesign, getPendingDesign } from "@/lib/cart-designs";
 import { rememberOrder } from "@/lib/recent-orders";
 import { useOnlineStatus } from "@/lib/use-online-status";
+import { useSession } from "@/lib/use-session";
 import { useStoredValue, writeStoredValue } from "@/lib/use-stored-value";
 
 /* ---------------- the form ---------------- */
@@ -88,6 +89,36 @@ export default function CheckoutForm() {
 
   const [edited, setEdited] = useState<Fields | null>(null);
   const fields = edited ?? saved ?? EMPTY;
+
+  /**
+   * Fill blanks from the signed-in account - once, and only blanks.
+   *
+   * Deliberately a one-shot effect rather than a value derived from the
+   * session. The session arrives over the network, so a derived value would
+   * re-render this controlled form at an arbitrary moment, and if that moment
+   * lands mid-keystroke the browser appends rather than replaces: the shopper
+   * ends up staring at "you@example.comwhatever-they-typed". Seeding once, into
+   * whatever is still empty, cannot fight the person filling the form in.
+   *
+   * "Only blanks" is the other half: someone sending a run to a workplace or as
+   * a gift typed that other address on purpose, and their own account must not
+   * overwrite it.
+   */
+  const { customer } = useSession();
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (prefilled.current || !customer) return;
+    prefilled.current = true;
+
+    setEdited((current) => {
+      const start = current ?? saved ?? EMPTY;
+      return {
+        ...start,
+        email: start.email || customer.email,
+        name: start.name || customer.name || "",
+      };
+    });
+  }, [customer, saved]);
 
   const [errors, setErrors] = useState<Partial<Record<keyof Fields, string>>>({});
   const [touched, setTouched] = useState(false);

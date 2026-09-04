@@ -116,6 +116,30 @@ export class OrdersService {
     return this.toDto(order);
   }
 
+  /**
+   * Every order belonging to the signed-in shopper, newest first.
+   *
+   * Scoped by `customerId` from the session and never by anything in the
+   * request, which is what separates this from `list()` below: there is no
+   * parameter here a caller could bend into someone else's history.
+   */
+  async listForCustomer(customerId: string, query: PaginationDto) {
+    const where: Prisma.OrderWhereInput = { customerId };
+
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.order.findMany({
+        where,
+        include: orderInclude,
+        orderBy: { createdAt: 'desc' },
+        skip: (query.page - 1) * query.limit,
+        take: query.limit,
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+
+    return paginate(rows.map((r) => this.toDto(r)), total, query);
+  }
+
   async list(query: ListOrdersDto) {
     const where: Prisma.OrderWhereInput = {
       status: query.status,

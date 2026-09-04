@@ -8,7 +8,7 @@ import { requireAdmin } from "@/lib/dal";
 import { clearSession } from "@/lib/session";
 
 // Signing in is not an action: it is a redirect out to Google and back, which
-// only a Route Handler can do. See src/app/auth/google/.
+// only a Route Handler can do. See src/app/api/auth/google/.
 
 export async function logout() {
   // best effort: kill the session server side, then drop the cookie regardless

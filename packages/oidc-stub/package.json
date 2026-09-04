@@ -1,0 +1,24 @@
+{
+  "name": "@inkhaus/oidc-stub",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A local OIDC provider that stands in for Google in the e2e suites",
+  "type": "module",
+  "main": "./fake-google.mjs",
+  "exports": {
+    ".": "./fake-google.mjs",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "fake-google.mjs"
+  ],
+  "scripts": {
+    "start": "node fake-google.mjs"
+  },
+  "dependencies": {
+    "jose": "^6.2.10"
+  },
+  "engines": {
+    "node": ">=20.11"
+  }
+}

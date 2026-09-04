@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowRight, Search } from "lucide-react";
 import { useRecentOrders } from "@/lib/recent-orders";
+import { useSession } from "@/lib/use-session";
 
 /**
  * Order numbers are printed as `INK-000123` but people type what they remember.
@@ -21,6 +22,7 @@ export function normalizeOrderNumber(input: string): string {
 export default function OrderLookup() {
   const router = useRouter();
   const recent = useRecentOrders();
+  const { customer } = useSession();
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -90,6 +92,24 @@ export default function OrderLookup() {
             </p>
           )}
         </form>
+
+        {/* The device list below only knows what this browser has placed. An
+            account knows every order under the address, on any device. */}
+        <p className="mt-5 text-[12px] text-ink/45">
+          {customer ? (
+            <Link href="/account" className="link-underline text-ink/70 hover:text-ink">
+              See all orders on your account →
+            </Link>
+          ) : (
+            <>
+              Placed one on another device?{" "}
+              <Link href="/sign-in?next=%2Faccount" className="link-underline text-ink/70 hover:text-ink">
+                Sign in with Google
+              </Link>{" "}
+              to see every order under your email.
+            </>
+          )}
+        </p>
 
         {recent.length > 0 && (
           <section className="mt-14">

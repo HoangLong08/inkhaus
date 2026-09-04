@@ -1,7 +1,9 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
+import { PaginationDto } from '../../common/dto/pagination.dto';
 import { AdminAuthGuard, type AdminRequest } from '../../common/guards/admin-auth.guard';
+import { CustomerAuthGuard, type CustomerRequest } from '../../common/guards/customer-auth.guard';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ListOrdersDto } from './dto/list-orders.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
@@ -16,6 +18,19 @@ export class OrdersController {
   @ApiOperation({ summary: 'Place an order - every price is recomputed server side' })
   create(@Body() dto: CreateOrderDto) {
     return this.orders.create(dto);
+  }
+
+  /**
+   * Declared BEFORE `:number`. Nest matches routes in declaration order, so
+   * below it this would never run - "mine" would be read as an order number and
+   * answer 404.
+   */
+  @Get('mine')
+  @UseGuards(CustomerAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "The signed-in shopper's own orders" })
+  mine(@Query() query: PaginationDto, @Req() req: CustomerRequest) {
+    return this.orders.listForCustomer(req.customer!.id, query);
   }
 
   @Get(':number')

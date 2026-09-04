@@ -102,12 +102,61 @@ want `Authorization: Bearer <session token>` — see [Back-office auth](#back-of
 | GET · PATCH · DELETE | `/designs?email=` · `/designs/:publicId` | owner only; listing or destroying someone's artwork is not a production task |
 | POST | `/orders` | places an order — **every price is recomputed server side** |
 | GET | `/orders/:number` | order status + timeline |
+| GET | `/orders/mine` | the signed-in shopper's own orders; scoped by session, never by a parameter |
 | GET · PATCH | `/orders` · `/orders/:number/status` | staff; moves validated against the transition table, and cancel/refund need an owner |
 | POST | `/bulk-quotes` | the `/bulk` calculator lead form, snapshots the quoted price |
 | GET · PATCH | `/bulk-quotes` · `/bulk-quotes/:id` | staff |
-| POST | `/admin/auth/google` | swaps a Google `id_token` for a session token |
+| POST | `/auth/google` | swaps a Google `id_token` for a **storefront** session token |
+| POST · GET | `/auth/logout` · `/auth/me` | signed-in shoppers |
+| POST | `/admin/auth/google` | swaps a Google `id_token` for a **back-office** session token |
 | POST · GET | `/admin/auth/logout` · `/admin/auth/me` | staff |
 | GET · POST | `/reviews` | submissions are held unpublished |
+
+### Storefront accounts
+
+Sign-in to `apps/web` is **Google only** as well, and shares the same OAuth
+client as the back office — but almost nothing else.
+
+The mechanics are the same backend-for-frontend: the storefront runs the
+authorization-code + PKCE dance in Route Handlers under `/api/auth/google/`,
+hands the `id_token` to `POST /auth/google`, and the API verifies the signature
+against Google's JWKS itself. The session token comes back into an HttpOnly
+cookie on the storefront's own origin, named `inkhaus_session` — deliberately
+not the admin app's `inkhaus_admin`, because cookies are not scoped by port and
+on localhost the two apps share a hostname.
+
+Three things are deliberately different from the back office:
+
+- **There is no allowlist.** Anyone with a verified Google account may sign in,
+  and signing in creates the `customers` row if it does not exist. Refusing
+  unknown addresses would mean a sign-in button that only works for people who
+  have already ordered.
+- **Guest orders come with the account.** `customers` has always been keyed by
+  email, created by the first order, saved design or bulk quote from that
+  address. Google has just proved the person owns that address, so their history
+  is there on the very first sign-in — nothing to claim or merge.
+- **Sessions last 30 days, not 12 hours** (`CUSTOMER_SESSION_TTL_DAYS`). A
+  shopper checking an order next week should not be signed out; a session that
+  can see *every* order in the system should be.
+
+The two session tables are separate (`customer_sessions` / `admin_sessions`) and
+so are the guards, which makes "a shop token cannot open the till" a schema
+guarantee rather than a code review — there is an e2e test that signs in as a
+seeded OWNER on the storefront and confirms the API still refuses them
+`GET /orders`.
+
+One property worth knowing: because guest checkout takes an email address on
+trust, an order placed with someone else's address will appear in that person's
+account once they sign in. It is visible, not actionable — the account cannot
+change or cancel anything — and it goes away when checkout grows payment, which
+is the point at which an address stops being self-asserted.
+
+Only `/account`, `/sign-in` and the three `/api/auth/` handlers are
+server-rendered per request. The session is never read in the root layout: doing
+that to decorate one header button would opt the entire catalogue — every
+product page the PWA precaches — out of being static. The header asks
+`GET /api/auth/session` instead, and its link points at `/account` either way,
+so it is correct before any JavaScript runs.
 
 ### Back-office auth
 
@@ -143,15 +192,26 @@ plain guard: `canSetStatus` in `@inkhaus/shared` is what both the dropdown and
 
 1. <https://console.cloud.google.com> → pick or create a project.
 2. **APIs & Services → OAuth consent screen** → **External**. Fill in the app
-   name and support email, leave it in **Testing**, and add each admin address
-   under **Test users**. In Testing mode Google does not review the app.
+   name and support email, leave it in **Testing**, and add every address that
+   needs to sign in — staff *and* any shopper you want to test with — under
+   **Test users**. In Testing mode Google does not review the app, but it also
+   refuses anyone not on that list, which looks exactly like a broken sign-in.
+   Publishing the app is what lifts that, and it is required before real
+   customers can sign in to the storefront.
 3. **Credentials → Create credentials → OAuth client ID → Web application**.
-4. Under **Authorized redirect URIs** add every origin the app runs on:
-   - `http://localhost:4322/auth/google/callback`
-   - `https://admin.<your-domain>/auth/google/callback`
-5. Put `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in the root `.env`. Both
-   apps read the same pair from there — the admin app runs the OAuth dance and
-   needs both halves, the API only checks the `aud` claim and never sees the
+4. Under **Authorized redirect URIs** add every origin either app runs on. The
+   storefront and the back office share one client; only the URIs differ:
+   - `http://localhost:4321/api/auth/google/callback` — storefront
+   - `http://localhost:4322/api/auth/google/callback` — back office
+   - `https://<your-domain>/api/auth/google/callback`
+   - `https://admin.<your-domain>/api/auth/google/callback`
+
+   They must match character for character, including the port and the `/api`
+   segment. A missing entry fails late — Google shows `redirect_uri_mismatch`
+   *after* the account picker, not before it.
+5. Put `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in the root `.env`. All
+   three apps read the same pair from there — both Next apps run the OAuth dance
+   and need both halves, the API only checks the `aud` claim and never sees the
    secret it does not need.
 
 Scopes are `openid email profile`, which are default; no API needs enabling.
@@ -271,19 +331,25 @@ header comment in each for the exact sequence). They read expected prices out of
 `@inkhaus/shared`, so a drift between the browser, the ladder and the API fails
 the run rather than reaching a customer.
 
-`npm run test:e2e` starts its own API, admin and database fixtures on dedicated
-ports (4001 / 4323) so it never fights a dev server you already have open. It
-also starts `apps/admin/e2e/fake-google.mjs`, a local OIDC provider that stands
-in for Google: the browser, the redirects and the signed JWTs are all real, only
-the issuer is local. Google actively blocks automated browsers, and there is no
-way at all to test the case that matters most — a valid Google account that is
-*not* on the allowlist being refused — with a real account.
+`npm run test:e2e` runs both browser suites — the back office (`test:e2e:admin`,
+20 tests) and the storefront (`test:e2e:web`, 26). Each starts its own API and
+database fixtures on dedicated ports (4001 / 4323 and 4002 / 4324) so neither
+fights a dev server you already have open, nor each other. They run one after
+the other because they share one database.
+
+Both also start `packages/oidc-stub`, a local OIDC provider that stands in for
+Google: the browser, the redirects and the signed JWTs are all real, only the
+issuer is local. Google actively blocks automated browsers, and there is no way
+at all to test the cases that matter most — a valid Google account that is *not*
+on the back-office allowlist being refused, an unverified address being refused
+everywhere — with a real account. It lives in `packages/` rather than in either
+app because both suites drive it, through the same client id, which is what the
+real system does too.
 
 ## Not built yet
 
 Payments (checkout places the order and stops at `PENDING_PAYMENT` — the proof is
-sent before any money is asked for), customer accounts (an order is still looked
-up by its number alone), server-side print-file rendering, POD partner
+sent before any money is asked for), server-side print-file rendering, POD partner
 integration, object storage for design previews — they are still data-urls,
 which is why the API's JSON body limit had to be raised to 12 MB. There is also
 no deployment story for the API yet: no Dockerfile, no CI, and `docker-compose`

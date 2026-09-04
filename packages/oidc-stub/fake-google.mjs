@@ -2,17 +2,23 @@
  * A minimal OIDC provider that stands in for Google during e2e.
  *
  * Why this exists: Google actively blocks automated browsers, and there is no
- * way at all to test the case that matters most - a valid Google account that
- * is NOT on the allowlist being refused - with a real account. So the browser
- * stays real, the redirects stay real, the id_token stays a real signed JWT
- * verified against a real JWKS endpoint; only the issuer is local.
+ * way at all to test the cases that matter most - a valid Google account that
+ * is NOT on the back office allowlist being refused, an unverified address
+ * being refused everywhere - with a real account. So the browser stays real,
+ * the redirects stay real, the id_token stays a real signed JWT verified
+ * against a real JWKS endpoint; only the issuer is local.
  *
  * It speaks just enough of the spec for our flow:
  *   GET  /.well-known/jwks.json   public keys, fetched by the API
  *   GET  /o/oauth2/v2/auth        a consent screen with one button per account
  *   POST /token                   code -> id_token
  *
- * Run standalone with:  node e2e/fake-google.mjs
+ * It lives in packages/ rather than in either app's e2e folder because both
+ * suites drive it now - the storefront and the back office sign in through the
+ * same Google client, and testing them against two different stubs would be
+ * testing something the production system does not do.
+ *
+ * Run standalone with:  npm start -w @inkhaus/oidc-stub
  */
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
@@ -21,19 +27,32 @@ import { exportJWK, generateKeyPair, SignJWT } from "jose";
 const PORT = Number(process.env.FAKE_GOOGLE_PORT ?? 4399);
 const ISSUER = process.env.FAKE_GOOGLE_ISSUER ?? `http://localhost:${PORT}`;
 const AUDIENCE = process.env.FAKE_GOOGLE_CLIENT_ID ?? "inkhaus-e2e-client";
+/** what the consent screen says it is signing you in to */
+const APP_NAME = process.env.FAKE_GOOGLE_APP_NAME ?? "INKHAUS";
 
 /**
- * The accounts the consent screen offers. Two are seeded as staff rows, one
- * deliberately is not - that last one is the whole point.
+ * The accounts the consent screen offers, and what each one is for:
+ *
+ *   owner      seeded OWNER; a shopper too, since customers are not an allowlist
+ *   staff      seeded STAFF
+ *   outsider   a real Google account with no admin row - refused by the back
+ *              office, welcomed by the storefront as a brand new customer
+ *   unverified a Workspace-style account that never proved its address; refused
+ *              by both, even though the token itself is perfectly valid
  */
 export const ACCOUNTS = [
   { key: "owner", email: "hoangnguyenitvn@gmail.com", name: "Hoang Nguyen", verified: true },
   { key: "staff", email: "e2e-staff@inkhaus.test", name: "E2E Staff", verified: true },
   { key: "outsider", email: "not-on-the-list@gmail.com", name: "Random Person", verified: true },
-  // a Workspace-style account that never proved its address; must be refused
-  // even though it is otherwise a perfectly valid token
   { key: "unverified", email: "longnguyen.080400@gmail.com", name: "Unverified", verified: false },
+  // the address apps/api/prisma/seed-e2e.ts files storefront orders under, so
+  // the account page has a history to show on the very first sign-in
+  { key: "shopper", email: "e2e-shopper@inkhaus.test", name: "E2E Shopper", verified: true },
 ];
+
+/** a 1x1 transparent gif, so an avatar renders without leaving localhost */
+const AVATAR =
+  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 
 const { publicKey, privateKey } = await generateKeyPair("RS256", { extractable: true });
 const jwk = { ...(await exportJWK(publicKey)), kid: "fake-google-1", alg: "RS256", use: "sig" };
@@ -90,7 +109,7 @@ const server = createServer(async (req, res) => {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     return res.end(
       html(
-        `<h1>Choose an account</h1><p>to continue to INKHAUS Back Office</p>${buttons}
+        `<h1>Choose an account</h1><p>to continue to ${APP_NAME}</p>${buttons}
          <button type="button" data-testid="pick-cancel"
            onclick="location.href='${cancel.toString().replace(/'/g, "&#39;")}'">Cancel</button>`,
       ),
@@ -117,6 +136,10 @@ const server = createServer(async (req, res) => {
       email: account.email,
       email_verified: account.verified,
       name: account.name,
+      // Google sends one; the storefront header renders it as the avatar. A
+      // data: URI keeps the test offline - a lh3.googleusercontent.com URL
+      // would be a real network fetch from the browser under test.
+      picture: AVATAR,
     })
       .setProtectedHeader({ alg: "RS256", kid: jwk.kid })
       .setIssuer(ISSUER)

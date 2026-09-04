@@ -24,6 +24,11 @@ export default () => ({
   corsOrigin: (process.env.CORS_ORIGIN ?? 'http://localhost:4321').split(',').map((o) => o.trim()),
   /// how long an admin session token stays valid before a fresh sign-in
   adminSessionTtlHours: Number(process.env.ADMIN_SESSION_TTL_HOURS ?? 12),
+  /// Storefront sessions, in days rather than hours. A shopper coming back to
+  /// check an order next week should still be signed in; a session that can see
+  /// every order in the system should not be. Different blast radius, different
+  /// number.
+  customerSessionTtlDays: Number(process.env.CUSTOMER_SESSION_TTL_DAYS ?? 30),
   google: {
     /// the `aud` every admin id_token must carry - same client as apps/admin uses
     clientId: process.env.GOOGLE_CLIENT_ID ?? '',
