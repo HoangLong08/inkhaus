@@ -15,7 +15,10 @@ const devOnly = (value: string | undefined, fallback: string) =>
   !isProd && value ? value : fallback;
 
 export default () => ({
-  port: Number(process.env.PORT ?? 4000),
+  /// API_PORT, not PORT: the root .env is shared with two Next apps, and a bare
+  /// PORT there would send one of them at 4000. A platform-injected PORT still
+  /// works as the fallback.
+  port: Number(process.env.API_PORT ?? process.env.PORT ?? 4000),
   apiPrefix: process.env.API_PREFIX ?? 'api',
   databaseUrl: process.env.DATABASE_URL,
   corsOrigin: (process.env.CORS_ORIGIN ?? 'http://localhost:4321').split(',').map((o) => o.trim()),

@@ -17,7 +17,11 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, load: [configuration], cache: true }),
+    // `ignoreEnvFile`: the env is already in process.env by the time Nest
+    // starts - src/load-env.ts read the repo-root .env before this module was
+    // even imported. Leaving it on would have ConfigModule hunt for an
+    // apps/api/.env that no longer exists.
+    ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true, load: [configuration], cache: true }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     PrismaModule,
     HealthModule,

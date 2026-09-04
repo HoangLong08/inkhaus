@@ -14,6 +14,7 @@
     "images:check": "node scripts/sync-product-images.mjs --check"
   },
   "dependencies": {
+    "@inkhaus/env": "*",
     "@inkhaus/shared": "*",
     "@serwist/turbopack": "^9.5.12",
     "clsx": "^2.1.1",

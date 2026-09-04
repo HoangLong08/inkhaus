@@ -1,11 +1,17 @@
 import path from 'node:path';
-import 'dotenv/config';
+
+import { loadRootEnv } from '@inkhaus/env';
 import { defineConfig } from 'prisma/config';
 
 /**
  * Prisma 7 drops `package.json#prisma`, and a config file also turns off
- * Prisma's implicit .env loading - hence the explicit `dotenv/config` import.
+ * Prisma's implicit .env loading - hence the explicit load here. It reads the
+ * repo-root .env rather than an apps/api/.env, which is also what puts
+ * DATABASE_URL in front of the seed processes Prisma spawns: they inherit this
+ * process' environment.
  */
+loadRootEnv();
+
 export default defineConfig({
   schema: path.join('prisma', 'schema.prisma'),
   migrations: {

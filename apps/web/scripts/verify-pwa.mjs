@@ -18,6 +18,12 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import puppeteer from "puppeteer-core";
 
+import { loadRootEnv } from "@inkhaus/env";
+
+// SITE_ORIGIN, API_ORIGIN and CHROME_PATH live in the repo-root .env with
+// everything else; the defaults below still apply when it does not name them.
+loadRootEnv();
+
 const ORIGIN = process.env.SITE_ORIGIN ?? "http://localhost:4321";
 const CHROME = process.env.CHROME_PATH ?? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const OFFLINE_PHASE = process.argv.includes("--offline");

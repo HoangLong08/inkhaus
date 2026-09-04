@@ -8,6 +8,9 @@
  * bootstrap accounts are all OWNER, so without this there is nobody to be
  * refused. Also guarantees there is a PENDING_PAYMENT order to act on.
  */
+// first, and before @prisma/client: DATABASE_URL comes from the repo-root .env
+import '../src/load-env';
+
 import { AdminRole, OrderStatus, PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();

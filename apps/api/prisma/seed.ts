@@ -5,6 +5,9 @@
  *
  *   npm run db:seed -w @inkhaus/api
  */
+// first, and before @prisma/client: DATABASE_URL comes from the repo-root .env
+import '../src/load-env';
+
 import { AdminRole, PrismaClient, Prisma } from '@prisma/client';
 import {
   ALL_SIZE_CODES,

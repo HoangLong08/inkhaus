@@ -1,3 +1,7 @@
+// Must stay first: it fills process.env from the repo-root .env, and the
+// imports below read it while they are still being evaluated. See load-env.ts.
+import './load-env';
+
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -15,7 +19,7 @@ async function bootstrap() {
   // Object storage for previews is the proper fix (see README, "Not built yet").
   app.useBodyParser('json', { limit: process.env.JSON_BODY_LIMIT ?? '12mb' });
 
-  const port = Number(process.env.PORT ?? 4000);
+  const port = Number(process.env.API_PORT ?? process.env.PORT ?? 4000);
   const prefix = process.env.API_PREFIX ?? 'api';
   const origins = (process.env.CORS_ORIGIN ?? 'http://localhost:4321')
     .split(',')

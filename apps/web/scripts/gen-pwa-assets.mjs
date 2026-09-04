@@ -19,6 +19,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import puppeteer from "puppeteer-core";
 
+import { loadRootEnv } from "@inkhaus/env";
+
+// SITE_ORIGIN, API_ORIGIN and CHROME_PATH live in the repo-root .env with
+// everything else; the defaults below still apply when it does not name them.
+loadRootEnv();
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ICONS_DIR = path.join(root, "public", "icons");
 const SHOTS_DIR = path.join(root, "public", "screenshots");

@@ -1,4 +1,11 @@
+import { loadRootEnv } from "@inkhaus/env";
 import { defineConfig, devices } from "@playwright/test";
+
+// DATABASE_URL and CHROME_PATH come from the repo-root .env like everything
+// else. Every other value below is set per web server on purpose: the suite
+// needs a fake Google and dedicated ports, which is precisely what must NOT be
+// written into a file a developer also runs `npm run dev` from.
+loadRootEnv();
 
 /**
  * Real Chromium, real redirects, real signed JWTs - only the issuer is local.
@@ -83,7 +90,10 @@ export default defineConfig({
       stdout: "pipe",
       env: {
         NODE_ENV: "test",
-        PORT: String(API_PORT),
+        // API_PORT, not PORT: the API reads API_PORT first, and the root .env
+        // this config just loaded already has one. Setting only PORT here would
+        // leave the suite's API on 4000, fighting whatever dev server is there.
+        API_PORT: String(API_PORT),
         DATABASE_URL,
         CORS_ORIGIN: ADMIN_ORIGIN,
         ADMIN_SESSION_TTL_HOURS: "12",

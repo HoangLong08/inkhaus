@@ -17,6 +17,12 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import puppeteer from "puppeteer-core";
 
+import { loadRootEnv } from "@inkhaus/env";
+
+// SITE_ORIGIN, API_ORIGIN and CHROME_PATH live in the repo-root .env with
+// everything else; the defaults below still apply when it does not name them.
+loadRootEnv();
+
 const ORIGIN = process.env.SITE_ORIGIN ?? "http://localhost:4321";
 const API = process.env.API_ORIGIN ?? "http://localhost:4000/api/v1";
 const CHROME =

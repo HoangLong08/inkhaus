@@ -1,4 +1,12 @@
+import { loadRootEnv } from "@inkhaus/env";
 import { withSerwist } from "@serwist/turbopack";
+
+// There is no apps/web/.env - the whole monorepo shares the one at the repo
+// root. Next loads its own .env files before this file runs and then folds
+// anything the config added into its baseline (see `updateInitialEnv` in
+// next/dist/server/config.js), so NEXT_PUBLIC_* set here is still inlined at
+// build time and still survives a dev-server env reload.
+loadRootEnv();
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

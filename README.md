@@ -9,6 +9,8 @@ apps/
 packages/
   shared/     domain types, the volume-price ladder, and the demo catalog
               the seed loads — imported by both apps
+  env/        finds the repo root and loads the one .env — imported by every app
+.env                 every environment variable in the project
 docker-compose.yml   PostgreSQL 17
 ```
 
@@ -21,9 +23,7 @@ can never drift apart.
 ```bash
 npm run setup      # install + build shared + prisma generate
 npm run db:up      # PostgreSQL 17 in Docker on :5432
-cp apps/api/.env.example apps/api/.env
-cp apps/web/.env.example apps/web/.env.local
-cp apps/admin/.env.example apps/admin/.env.local
+cp .env.example .env   # one file, read by all three apps
 
 npm run db:migrate # apply prisma/migrations
 npm run db:seed    # the catalog, plus an OWNER row per ADMIN_BOOTSTRAP_EMAILS
@@ -41,6 +41,48 @@ Signing in to the admin app needs a Google OAuth client — see
 | http://localhost:4000/api/v1 | API |
 | http://localhost:4000/api/docs | Swagger UI |
 | `npm run db:studio` | Prisma Studio |
+
+## Environment
+
+**There is one `.env`, and it is at the repo root.** No `apps/api/.env`, no
+`apps/web/.env.local`, no third copy of the Google client id. `.env.example`
+documents every variable with the reason it exists; copy it once and edit that.
+
+`packages/env` is what makes that work. It walks up to the workspaces root and
+loads the cascade sitting there, so it does not matter which directory a process
+was started from — `npm run dev` at the root and `next dev` from inside
+`apps/web` read the same file. Each entry point calls it as early as it can:
+
+| Where | How |
+|---|---|
+| `apps/api` | `src/load-env.ts`, the first import in `main.ts` — before the modules that read `process.env` while they are still being evaluated |
+| `apps/api` Prisma | `prisma.config.ts`, which also hands the environment to the seed processes Prisma spawns |
+| `apps/web` · `apps/admin` | `next.config.mjs`. Next folds anything the config adds into its own baseline, so `NEXT_PUBLIC_*` is still inlined at build time |
+| `apps/admin` e2e | `playwright.config.ts`, for `DATABASE_URL` and `CHROME_PATH` |
+| `apps/web/scripts/*.mjs` | at the top of each script |
+
+Three rules are worth knowing before editing the file:
+
+- **The real environment always wins.** Anything already exported — by your
+  shell, by Docker, by a Playwright `webServer.env` — beats the file. That is
+  what lets the e2e suite aim one API process at a fake Google while the same
+  `.env` still names the real one.
+- **Values are literal; there is no `$VAR` expansion.** `dotenv-expand` would
+  quietly truncate a password like `pa$$w` to `pa`, and losing a secret is worse
+  than losing a convenience.
+- **`NODE_ENV` is not in there.** The tooling sets it — `next dev` means
+  development, `next build` means production, Playwright means test — and one
+  value pinned in a file shared by four processes would be wrong for at least one
+  of them.
+
+The API's port is `API_PORT`, not `PORT`: a bare `PORT` in a file the two Next
+apps also read would send one of them at 4000. A platform-injected `PORT` is
+still honoured as the fallback.
+
+One trade-off comes with the merge: every process can now read every value,
+`GOOGLE_CLIENT_SECRET` included. Nothing reaches a browser unless its name
+starts with `NEXT_PUBLIC_`, but a secret the storefront must not even be able to
+read would be the reason to give it its own file again.
 
 ## API
 
@@ -107,8 +149,10 @@ plain guard: `canSetStatus` in `@inkhaus/shared` is what both the dropdown and
 4. Under **Authorized redirect URIs** add every origin the app runs on:
    - `http://localhost:4322/auth/google/callback`
    - `https://admin.<your-domain>/auth/google/callback`
-5. Put the client id **and** secret in `apps/admin/.env.local`, and the client id
-   alone in `apps/api/.env` — the API only needs it to check the `aud` claim.
+5. Put `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in the root `.env`. Both
+   apps read the same pair from there — the admin app runs the OAuth dance and
+   needs both halves, the API only checks the `aud` claim and never sees the
+   secret it does not need.
 
 Scopes are `openid email profile`, which are default; no API needs enabling.
 

@@ -1,0 +1,27 @@
+{
+  "name": "@inkhaus/env",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Loads the single root .env for every app in the monorepo",
+  "main": "./index.cjs",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.mjs",
+      "require": "./index.cjs",
+      "default": "./index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["index.cjs", "index.mjs", "index.d.ts"],
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.2"
+  },
+  "engines": {
+    "node": ">=20.11"
+  }
+}
