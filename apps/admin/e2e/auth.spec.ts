@@ -4,6 +4,7 @@ import {
   API_ORIGIN,
   COOKIE_NAME,
   findActionableOrder,
+  openSignOutDialog,
   sessionCookie,
   sessionToken,
   signIn,
@@ -156,6 +157,19 @@ test.describe("admin sign-in", () => {
       headers: { authorization: `Bearer ${token}` },
     });
     expect(res.status, "the old token must be dead, not merely forgotten").toBe(401);
+  });
+
+  test("dismissing the sign-out confirmation leaves the session alone", async ({ page }) => {
+    await signIn(page, "owner");
+    await page.goto("/orders");
+    const before = await sessionCookie(page);
+
+    await openSignOutDialog(page);
+    await page.getByTestId("sign-out-cancel").click();
+
+    await expect(page.getByTestId("sign-out-dialog")).toBeHidden();
+    await expect(page).toHaveURL(/\/orders/);
+    expect(await sessionCookie(page)).toEqual(before);
   });
 
   test("a session revoked while browsing takes effect on the next navigation", async ({ page }) => {

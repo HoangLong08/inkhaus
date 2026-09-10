@@ -1,9 +1,19 @@
 "use client";
 
 import { ChevronsUpDown, LogOut } from "lucide-react";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 
 import { logout } from "@/app/actions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -31,6 +41,7 @@ function initials(user: AdminUser) {
 export function NavUser({ user }: { user: AdminUser }) {
   const { isMobile } = useSidebar();
   const [pending, startTransition] = useTransition();
+  const [confirming, setConfirming] = useState(false);
 
   return (
     <SidebarMenu>
@@ -67,6 +78,12 @@ export function NavUser({ user }: { user: AdminUser }) {
             side={isMobile ? "bottom" : "right"}
             align="end"
             sideOffset={4}
+            // Radix hands focus back to the trigger as the menu closes. When the
+            // close is the one that opens the confirmation, that fires after the
+            // dialog has mounted and steals focus out of it.
+            onCloseAutoFocus={(event) => {
+              if (confirming) event.preventDefault();
+            }}
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="grid gap-0.5 px-2 py-1.5 text-left text-sm leading-tight">
@@ -75,26 +92,58 @@ export function NavUser({ user }: { user: AdminUser }) {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {/* `onSelect` + a transition rather than <form action={logout}>:
-                Radix closes the menu on select and unmounts the portal, which can
-                cancel a submit mid-flight. Calling the "use server" function is a
-                plain RPC, and the redirect("/login") inside it still runs on the
-                server - the httpOnly cookie is cleared exactly as before. */}
-            <DropdownMenuItem
-              data-testid="sign-out"
-              disabled={pending}
-              onSelect={(event) => {
-                event.preventDefault();
-                startTransition(() => {
-                  void logout();
-                });
-              }}
-            >
+            {/* The item only asks the question; the answer runs from the dialog.
+                The dialog is a sibling of the menu, not a child of it: the menu
+                unmounts its portal on select, and anything inside it goes with
+                it - including a logout in flight. */}
+            <DropdownMenuItem data-testid="sign-out" onSelect={() => setConfirming(true)}>
               <LogOut />
               Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <AlertDialog
+          open={confirming}
+          // a sign-out already on its way is not cancellable
+          onOpenChange={(open) => {
+            if (!pending) setConfirming(open);
+          }}
+        >
+          <AlertDialogContent data-testid="sign-out-dialog">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Sign out?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This ends the session for {user.name ?? user.email} on this device. You will need to
+                sign in with Google again to get back in.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel data-testid="sign-out-cancel" disabled={pending}>
+                Stay signed in
+              </AlertDialogCancel>
+              {/* `onClick` + a transition rather than <form action={logout}>:
+                  calling the "use server" function is a plain RPC, and the
+                  redirect("/login") inside it still runs on the server - the
+                  httpOnly cookie is cleared exactly as before. preventDefault
+                  keeps the dialog up while the request is in flight, so the
+                  screen behind it is never briefly interactive. */}
+              <AlertDialogAction
+                data-testid="sign-out-confirm"
+                disabled={pending}
+                onClick={(event) => {
+                  event.preventDefault();
+                  startTransition(() => {
+                    void logout();
+                  });
+                }}
+              >
+                <LogOut />
+                {pending ? "Signing out…" : "Sign out"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </SidebarMenuItem>
     </SidebarMenu>
   );

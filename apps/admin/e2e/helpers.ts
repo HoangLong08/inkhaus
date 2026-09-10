@@ -35,12 +35,20 @@ export async function sessionToken(page: Page) {
  * Sign-out moved into the sidebar's user menu when the app adopted shadcn's
  * sidebar-07 shell. It is a Radix DropdownMenu, so the item is not merely
  * hidden - it does not exist in the DOM until the trigger is clicked, and its
- * role is `menuitem`, not `button`.
+ * role is `menuitem`, not `button`. The item now only opens an AlertDialog,
+ * which is a second portal: nothing signs out until `sign-out-confirm`.
  */
 export async function signOut(page: Page) {
+  await openSignOutDialog(page);
+  await page.getByTestId("sign-out-confirm").click();
+  await page.waitForURL(/\/login/);
+}
+
+/** the half of sign-out before the point of no return, for tests about the dialog itself */
+export async function openSignOutDialog(page: Page) {
   await page.getByTestId("user-menu").click();
   await page.getByTestId("sign-out").click();
-  await page.waitForURL(/\/login/);
+  await expect(page.getByTestId("sign-out-dialog")).toBeVisible();
 }
 
 /**

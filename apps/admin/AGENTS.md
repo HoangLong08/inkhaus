@@ -177,7 +177,7 @@ conventions are what keep it from being rewritten every time the UI moves.
   | area | ids |
   |---|---|
   | login | `google-form`, `google-signin`, `login-error` |
-  | chrome | `user-menu`, `current-user`, `sign-out`, `sidebar-toggle`, `breadcrumb-current`, `theme-toggle`, `theme-{light,dark,system}` |
+  | chrome | `user-menu`, `current-user`, `sign-out`, `sign-out-dialog`, `sign-out-{confirm,cancel}`, `sidebar-toggle`, `breadcrumb-current`, `theme-toggle`, `theme-{light,dark,system}` |
   | shared | `status-badge`, `status-filter`, `pager`, `pager-{previous,page,next}` |
   | overview | `stat-tile`, `recent-order` |
   | orders | `orders-meta`, `orders-search`, `orders-search-clear`, `order-row` |
