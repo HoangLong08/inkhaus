@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { cn } from "cn";
 
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -8,25 +9,20 @@ import {
   PaginationEllipsis,
   PaginationItem,
 } from "@/components/ui/pagination";
-import { cn } from "cn";
+import { hrefWith, type Params } from "@/lib/url";
 
 /**
- * One pager for both list pages; /orders and /quotes each had their own copy.
+ * One pager for every list page.
  *
  * shadcn's PaginationLink renders a bare <a> and takes no `asChild`, which would
  * mean a full document load on every page change. Rather than fork a generated
  * file, this composes the same look out of `buttonVariants` around a next/link -
  * public API either way, and the navigation stays client side.
+ *
+ * `params` is the page's parsed params, passed through whole: paging keeps the
+ * search, the filters, the sort and the page size. It used to know about
+ * `status` and `email` only.
  */
-function pageHref(base: string, params: Record<string, string | undefined>, page: number) {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== "") search.set(key, value);
-  }
-  if (page > 1) search.set("page", String(page));
-  const qs = search.toString();
-  return qs ? `${base}?${qs}` : base;
-}
 
 /**
  * First, last, and the current page with a neighbour either side. Anything more
@@ -49,11 +45,11 @@ export default function Pager({
   base: string;
   page: number;
   pages: number;
-  params?: Record<string, string | undefined>;
+  params?: Params;
 }) {
   if (pages <= 1) return null;
 
-  const link = (n: number) => pageHref(base, params, n);
+  const link = (n: number) => hrefWith(base, params, { page: n });
 
   return (
     <Pagination data-testid="pager">

@@ -8,10 +8,10 @@ import { humanize } from "@/lib/format";
  * Colour carries meaning here, so it is never the only signal - the label is
  * always spelled out beside it.
  *
- * The twelve entries below were already a variant table; cva only gives it a
- * type, so a status can no longer be pointed at a class string that does not
- * exist. The tones stay tied to the INKHAUS ramp rather than shadcn's Badge
- * variants: `destructive` would make a refund shout as loudly as an error.
+ * The entries below were already a variant table; cva only gives it a type, so
+ * a status can no longer be pointed at a class string that does not exist. The
+ * tones stay tied to the INKHAUS ramp rather than shadcn's Badge variants:
+ * `destructive` would make a refund shout as loudly as an error.
  */
 const tones = cva("rounded-full", {
   variants: {
@@ -45,6 +45,13 @@ const TONE: Record<string, Tone> = {
   CONTACTED: "info",
   WON: "goodStrong",
   LOST: "muted",
+  // reviews - a pending one is waiting on somebody, like a new quote
+  PENDING: "warn",
+  PUBLISHED: "good",
+  REJECTED: "muted",
+  // anything that can be switched off: products, colours, staff
+  ACTIVE: "good",
+  INACTIVE: "muted",
 };
 
 /**

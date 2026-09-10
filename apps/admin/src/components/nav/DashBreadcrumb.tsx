@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Fragment } from "react";
 
+import { breadcrumbFor } from "@/components/nav/nav-config";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -13,64 +15,47 @@ import {
 } from "@/components/ui/breadcrumb";
 
 /**
- * Deliberately dumb: a switch on the first segment, not a general-purpose
- * segment humanizer. An order number like INK-2024-0001 must never be
- * title-cased, and there are exactly three sections to name.
+ * section › sub-section › record, read off `nav-config.ts` - never a
+ * general-purpose segment humanizer. An order number like INK-2024-0001 must
+ * never be title-cased, and a customer's cuid is not worth printing at all.
  *
  * A client component rather than a `@breadcrumb` parallel route because the
- * latter needs a default.tsx in every segment - five new files to print a string
- * the URL already contains, and one more thing to forget when a route is added.
+ * latter needs a default.tsx in every segment - a file per route to print a
+ * string the URL already contains, and one more thing to forget.
  *
  * BreadcrumbPage renders role="link" aria-current="page", not a heading, so this
- * never competes with a page's own <h1>.
+ * never competes with a page's own <h1>. On a phone only that last crumb shows.
  */
-const SECTIONS: Record<string, string> = {
-  orders: "Orders",
-  quotes: "Bulk quotes",
-};
-
 export function DashBreadcrumb() {
-  const segments = usePathname().split("/").filter(Boolean);
-
-  if (segments.length === 0) {
-    return (
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbPage data-testid="breadcrumb-current">Overview</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-    );
-  }
-
-  const [section, ...rest] = segments;
-  const sectionLabel = SECTIONS[section] ?? section;
-  const record = rest.length > 0 ? decodeURIComponent(rest.join("/")) : null;
+  const crumbs = breadcrumbFor(usePathname());
 
   return (
     <Breadcrumb>
       <BreadcrumbList>
-        <BreadcrumbItem className="hidden sm:block">
-          {record ? (
-            <BreadcrumbLink asChild>
-              <Link href={`/${section}`}>{sectionLabel}</Link>
-            </BreadcrumbLink>
-          ) : (
-            <BreadcrumbPage data-testid="breadcrumb-current">{sectionLabel}</BreadcrumbPage>
-          )}
-        </BreadcrumbItem>
-
-        {record ? (
-          <>
-            <BreadcrumbSeparator className="hidden sm:block" />
-            <BreadcrumbItem>
-              <BreadcrumbPage className="font-mono" data-testid="breadcrumb-current">
-                {record}
-              </BreadcrumbPage>
-            </BreadcrumbItem>
-          </>
-        ) : null}
+        {crumbs.map((crumb, i) => {
+          const last = i === crumbs.length - 1;
+          return (
+            <Fragment key={`${i}-${crumb.href}`}>
+              {i > 0 ? <BreadcrumbSeparator className="hidden sm:block" /> : null}
+              <BreadcrumbItem className={last ? undefined : "hidden sm:block"}>
+                {last ? (
+                  <BreadcrumbPage
+                    className={crumb.mono ? "font-mono" : undefined}
+                    data-testid="breadcrumb-current"
+                  >
+                    {crumb.label}
+                  </BreadcrumbPage>
+                ) : (
+                  <BreadcrumbLink asChild>
+                    <Link href={crumb.href} className={crumb.mono ? "font-mono" : undefined}>
+                      {crumb.label}
+                    </Link>
+                  </BreadcrumbLink>
+                )}
+              </BreadcrumbItem>
+            </Fragment>
+          );
+        })}
       </BreadcrumbList>
     </Breadcrumb>
   );

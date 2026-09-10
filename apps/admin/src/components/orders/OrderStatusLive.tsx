@@ -14,7 +14,7 @@ import { queryKeys } from "@/lib/query-keys";
 export default function OrderStatusLive({ number }: { number: string }) {
   const { data: order } = useQuery({
     queryKey: queryKeys.orders.detail(number),
-    queryFn: () => clientApi.order(number),
+    queryFn: () => clientApi.order.get(number),
   });
 
   // The page prefetched this key and wrapped us in a HydrationBoundary, so the

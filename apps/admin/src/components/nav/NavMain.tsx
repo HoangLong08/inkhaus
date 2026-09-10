@@ -1,10 +1,12 @@
 "use client";
 
-import { ORDER_STATUSES, QUOTE_STATUSES } from "@inkhaus/shared/orders";
-import { ChevronRight, FileText, LayoutDashboard, Package } from "lucide-react";
+import type { AdminRoleCode } from "@inkhaus/shared/orders";
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { useMemo } from "react";
 
+import { activeChildren, ownsPath, visibleNav } from "@/components/nav/nav-config";
 import {
   Collapsible,
   CollapsibleContent,
@@ -21,70 +23,73 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import { humanize } from "@/lib/format";
 
 /**
- * The four an operator actually works from. The other four order statuses -
- * DRAFT, DELIVERED, CANCELLED, REFUNDED - are archive states: real, filterable
- * from the list page, but not a queue anybody starts their morning in.
+ * The sidebar, drawn from `nav-config.ts` and filtered by `can()` - the UI third
+ * of the capability rule. Staff never see Staff; the page would tell them
+ * "owners only" anyway, but a link that always leads there is noise.
  */
-const ORDER_QUEUES = ORDER_STATUSES.filter((status) =>
-  (["PENDING_PAYMENT", "PAID", "IN_PRODUCTION", "SHIPPED"] as string[]).includes(status),
-);
-
-const NAV = [
-  { title: "Overview", href: "/", icon: LayoutDashboard, statuses: [] as readonly string[] },
-  { title: "Orders", href: "/orders", icon: Package, statuses: ORDER_QUEUES },
-  { title: "Bulk quotes", href: "/quotes", icon: FileText, statuses: QUOTE_STATUSES },
-];
-
-export function NavMain() {
+export function NavMain({ role }: { role: AdminRoleCode }) {
   const pathname = usePathname();
-  // Reading the query string is what lets a status child light up. Note this
+  // Reading the query string is what lets a filter child light up. Note this
   // needs a <Suspense> boundary in a prerendered tree - safe here only because
   // (dash) is force-dynamic, so nothing in this subtree is ever prerendered.
-  const status = useSearchParams().get("status");
+  const searchParams = useSearchParams();
+  const sections = useMemo(() => visibleNav(role), [role]);
 
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Back office</SidebarGroupLabel>
       <SidebarMenu>
-        {NAV.map((item) => {
-          // "/" would prefix-match everything, so Overview is exact. Orders stays
-          // lit on /orders/INK-2024-0001, which is where an operator spends most
-          // of their time and would otherwise lose their place in the nav.
-          const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        {sections.map((section) => {
+          const inSection = ownsPath(section.href, pathname);
+          const lit = activeChildren(section, pathname, searchParams);
+          const children = section.children ?? [];
 
           return (
-            <Collapsible key={item.href} asChild defaultOpen={active} className="group/collapsible">
+            <Collapsible
+              key={section.id}
+              asChild
+              defaultOpen={inSection}
+              className="group/collapsible"
+            >
               <SidebarMenuItem>
-                {/* A link, not a collapsible trigger: all three of these are real
-                    destinations, and sidebar-07's stock markup makes the parent
+                {/* A link, not a collapsible trigger: every section is a real
+                    destination, and sidebar-07's stock markup makes the parent
                     unclickable. The chevron gets its own hit target below. */}
-                <SidebarMenuButton asChild tooltip={item.title} isActive={active && !status}>
-                  <Link href={item.href}>
-                    <item.icon />
-                    <span>{item.title}</span>
+                <SidebarMenuButton
+                  asChild
+                  tooltip={section.title}
+                  isActive={inSection && lit.size === 0}
+                >
+                  <Link href={section.href} data-testid="nav-link" data-section={section.id}>
+                    <section.icon />
+                    <span>{section.title}</span>
                   </Link>
                 </SidebarMenuButton>
 
-                {item.statuses.length > 0 ? (
+                {children.length > 0 ? (
                   <>
                     <CollapsibleTrigger asChild>
                       <SidebarMenuAction
                         className="data-[state=open]:rotate-90"
-                        aria-label={`Show ${item.title.toLowerCase()} by status`}
+                        aria-label={`Show ${section.title.toLowerCase()} shortcuts`}
                       >
                         <ChevronRight className="transition-transform duration-200" />
                       </SidebarMenuAction>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <SidebarMenuSub>
-                        {item.statuses.map((code) => (
-                          <SidebarMenuSubItem key={code}>
-                            <SidebarMenuSubButton asChild isActive={active && status === code}>
-                              <Link href={`${item.href}?status=${code}`} data-status={code}>
-                                <span>{humanize(code)}</span>
+                        {children.map((child) => (
+                          <SidebarMenuSubItem key={child.value}>
+                            <SidebarMenuSubButton asChild isActive={lit.has(child.value)}>
+                              <Link
+                                href={child.href}
+                                data-testid="nav-sub-link"
+                                data-section={section.id}
+                                data-value={child.value}
+                              >
+                                <span>{child.title}</span>
                               </Link>
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>

@@ -27,7 +27,7 @@ export default defineConfig([
     // The BFF client is a plain module, not a component, so there is no router
     // to reach for - and a hard navigation is what we want here anyway. See the
     // comment at the call site.
-    files: ["src/lib/client-api.ts"],
+    files: ["src/lib/client-api/core.ts"],
     rules: {
       "@next/next/no-location-assign-relative-destination": "off",
     },

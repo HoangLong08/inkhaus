@@ -1,3 +1,5 @@
+import { cn } from "cn";
+
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -52,44 +54,75 @@ export function LatestOrdersSkeleton() {
   );
 }
 
-export function OrdersTableSkeleton({ rows = 10 }: { rows?: number }) {
+export type SkeletonColumn = {
+  /** the real column's heading, so the header row does not move either */
+  label: string;
+  align?: "left" | "right";
+  /** the placeholder bar; `h-5 w-24 rounded-full` for a status badge */
+  bar?: string;
+};
+
+/**
+ * Any list page's table. Pass the real page's columns - headings, alignment,
+ * roughly how wide each value runs - and the skeleton lines up with it.
+ */
+export function TableSkeleton({
+  columns,
+  rows = 10,
+}: {
+  columns: readonly SkeletonColumn[];
+  rows?: number;
+}) {
   return (
     <Card className="overflow-hidden p-0">
       <Table>
         <TableHeader>
           <TableRow>
-            {["Order", "Status", "Customer", "Items", "Total", "Placed"].map((head) => (
-              <TableHead key={head}>{head}</TableHead>
+            {columns.map((column) => (
+              <TableHead
+                key={column.label}
+                className={column.align === "right" ? "text-right" : undefined}
+              >
+                {column.label}
+              </TableHead>
             ))}
           </TableRow>
         </TableHeader>
         <TableBody>
           {Array.from({ length: rows }, (_, i) => (
             <TableRow key={i}>
-              <TableCell>
-                <Skeleton className="h-4 w-28" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-5 w-24 rounded-full" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-40" />
-              </TableCell>
-              <TableCell className="text-right">
-                <Skeleton className="ml-auto h-4 w-8" />
-              </TableCell>
-              <TableCell className="text-right">
-                <Skeleton className="ml-auto h-4 w-16" />
-              </TableCell>
-              <TableCell className="text-right">
-                <Skeleton className="ml-auto h-4 w-20" />
-              </TableCell>
+              {columns.map((column) => (
+                <TableCell
+                  key={column.label}
+                  className={column.align === "right" ? "text-right" : undefined}
+                >
+                  <Skeleton
+                    className={cn(
+                      column.bar ?? "h-4 w-24",
+                      column.align === "right" && "ml-auto",
+                    )}
+                  />
+                </TableCell>
+              ))}
             </TableRow>
           ))}
         </TableBody>
       </Table>
     </Card>
   );
+}
+
+const ORDER_COLUMNS: SkeletonColumn[] = [
+  { label: "Order", bar: "h-4 w-28" },
+  { label: "Status", bar: "h-5 w-24 rounded-full" },
+  { label: "Customer", bar: "h-4 w-40" },
+  { label: "Units", align: "right", bar: "h-4 w-8" },
+  { label: "Total", align: "right", bar: "h-4 w-16" },
+  { label: "Placed", align: "right", bar: "h-4 w-20" },
+];
+
+export function OrdersTableSkeleton({ rows = 10 }: { rows?: number }) {
+  return <TableSkeleton columns={ORDER_COLUMNS} rows={rows} />;
 }
 
 export function OrderDetailSkeleton() {
@@ -132,19 +165,21 @@ export function QuoteListSkeleton({ cards = 5 }: { cards?: number }) {
   );
 }
 
-/** heading + meta line, shared by both list pages' loading.tsx */
-export function ListHeaderSkeleton() {
+/** heading + meta line + a row of filter chips, shared by every list page's loading.tsx */
+export function ListHeaderSkeleton({ chips = 6 }: { chips?: number }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <Skeleton className="h-8 w-40" />
         <Skeleton className="h-4 w-48" />
       </div>
-      <div className="flex flex-wrap gap-1.5">
-        {Array.from({ length: 6 }, (_, i) => (
-          <Skeleton key={i} className="h-7 w-20 rounded-full" />
-        ))}
-      </div>
+      {chips > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {Array.from({ length: chips }, (_, i) => (
+            <Skeleton key={i} className="h-7 w-20 rounded-full" />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

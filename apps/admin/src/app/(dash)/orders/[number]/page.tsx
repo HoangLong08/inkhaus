@@ -43,7 +43,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   const order = await queryClient
     .fetchQuery({
       queryKey: queryKeys.orders.detail(number),
-      queryFn: () => adminApi.order(number),
+      queryFn: () => adminApi.order.get(number),
     })
     .catch((err: unknown) => {
       if (err instanceof ApiError && err.status === 404) notFound();

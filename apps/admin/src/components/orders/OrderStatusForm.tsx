@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   canSetStatus,
+  ORDER_NOTE_MAX,
   ORDER_TRANSITIONS,
   type AdminRoleCode,
   type OrderStatusCode,
@@ -54,7 +55,7 @@ export default function OrderStatusForm({
   // HydrationBoundary; the fallback is for the type, not a state that occurs.
   const { data: order } = useQuery({
     queryKey: queryKeys.orders.detail(number),
-    queryFn: () => clientApi.order(number),
+    queryFn: () => clientApi.order.get(number),
   });
   const currentStatus: OrderStatusCode = order?.status ?? "DRAFT";
 
@@ -73,7 +74,7 @@ export default function OrderStatusForm({
   });
 
   const mutation = useMutation({
-    mutationFn: (input: OrderStatusInput) => clientApi.setOrderStatus(number, input),
+    mutationFn: (input: OrderStatusInput) => clientApi.order.setStatus(number, input),
 
     // Optimistic, because the operator is looking at three parts of this page
     // that all depend on the answer - the badge, the timeline, and this very
@@ -188,11 +189,12 @@ export default function OrderStatusForm({
                     <FormControl>
                       {/* A textarea, not an input: a note is a tracking number
                           OR a refund reason, and the second one does not fit on
-                          one line. The 500 limit is enforced here, by zod, and
-                          again in the route handler. */}
+                          one line. ORDER_NOTE_MAX is the shared limit - the same
+                          number zod enforces here, the route handler enforces,
+                          and the API validates with. */}
                       <Textarea
                         rows={3}
-                        maxLength={500}
+                        maxLength={ORDER_NOTE_MAX}
                         placeholder="Tracking number, reason…"
                         data-testid="status-note"
                         {...field}
@@ -200,7 +202,7 @@ export default function OrderStatusForm({
                       />
                     </FormControl>
                     <FormDescription className="tabular-nums">
-                      {field.value?.length ?? 0}/500
+                      {field.value?.length ?? 0}/{ORDER_NOTE_MAX}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

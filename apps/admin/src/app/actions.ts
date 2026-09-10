@@ -13,12 +13,12 @@ import { clearSession } from "@/lib/session";
 // are Radix Selects - a button plus a portalled listbox, which submit nothing
 // with JavaScript off. Keeping the actions as a "fallback" would have left a
 // second authorization path that nothing could reach and no test could cover.
-// The rules those actions enforced live in src/lib/mutations.ts, which the route
+// The rules those actions enforced live in src/lib/mutations/, which the route
 // handlers call, so there is one place to audit rather than two.
 
 export async function logout() {
   // best effort: kill the session server side, then drop the cookie regardless
-  await adminApi.logout().catch(() => {});
+  await adminApi.auth.logout().catch(() => {});
   await clearSession();
   redirect("/login");
 }

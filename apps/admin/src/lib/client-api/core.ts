@@ -1,13 +1,9 @@
 import { z } from "zod";
 
-import {
-  adminUserSchema,
-  bulkQuoteSchema,
-  orderSchema,
-  paginatedSchema,
-} from "./schemas/api";
-import type { OrderStatusInput, QuoteStatusInput } from "./schemas/forms";
-import type { OrdersQuery, QuotesQuery } from "./schemas/params";
+/**
+ * FROZEN after Phase 0. Feature files beside this one build their calls from
+ * `call` and `query`; none of them calls `fetch` itself.
+ */
 
 export class ClientApiError extends Error {
   constructor(
@@ -21,15 +17,16 @@ export class ClientApiError extends Error {
 }
 
 /**
- * The only module in this app that calls `fetch` from a browser, and every path
- * it touches is relative. That is the whole point: the request goes to this
+ * The only function in this app that calls `fetch` from a browser, and every
+ * path it touches is relative. That is the whole point: the request goes to this
  * app's own origin, a route handler under /api/admin reads the httpOnly session
  * cookie, and the INKHAUS API is reached server to server. The browser never
  * holds a token and never learns the API's address.
  *
- * Generic over the SCHEMA rather than its output - see paginatedSchema for why.
+ * `path` is relative to /api/admin. Generic over the SCHEMA rather than its
+ * output - see paginatedSchema for why.
  */
-async function call<S extends z.ZodType>(
+export async function call<S extends z.ZodType>(
   path: string,
   schema: S,
   init?: RequestInit,
@@ -71,36 +68,17 @@ async function call<S extends z.ZodType>(
   return schema.parse(body);
 }
 
-/** same rules as the server-side helper in api.ts: drop empties, keep order */
-function query(params: Record<string, string | number | undefined>) {
+/** `JSON.stringify` for a request body, so a feature file never builds `init` by hand */
+export function json(method: "POST" | "PUT" | "PATCH" | "DELETE", body?: unknown): RequestInit {
+  return { method, body: body === undefined ? undefined : JSON.stringify(body) };
+}
+
+/** same rules as the server-side helper in lib/api/core.ts: drop empties, keep order */
+export function query(params: Record<string, string | number | boolean | null | undefined>) {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== "") search.set(key, String(value));
+    if (value !== undefined && value !== null && value !== "") search.set(key, String(value));
   }
   const s = search.toString();
   return s ? `?${s}` : "";
 }
-
-export const clientApi = {
-  me: () => call("/me", adminUserSchema),
-
-  orders: (params: OrdersQuery) =>
-    call(`/orders${query(params)}`, paginatedSchema(orderSchema)),
-
-  order: (number: string) => call(`/orders/${encodeURIComponent(number)}`, orderSchema),
-
-  setOrderStatus: (number: string, input: OrderStatusInput) =>
-    call(`/orders/${encodeURIComponent(number)}/status`, orderSchema, {
-      method: "PATCH",
-      body: JSON.stringify(input),
-    }),
-
-  quotes: (params: QuotesQuery) =>
-    call(`/quotes${query(params)}`, paginatedSchema(bulkQuoteSchema)),
-
-  setQuoteStatus: (id: string, input: QuoteStatusInput) =>
-    call(`/quotes/${encodeURIComponent(id)}`, bulkQuoteSchema, {
-      method: "PATCH",
-      body: JSON.stringify(input),
-    }),
-};

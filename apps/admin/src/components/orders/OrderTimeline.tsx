@@ -18,7 +18,7 @@ import { queryKeys } from "@/lib/query-keys";
 export default function OrderTimeline({ number }: { number: string }) {
   const { data: order } = useQuery({
     queryKey: queryKeys.orders.detail(number),
-    queryFn: () => clientApi.order(number),
+    queryFn: () => clientApi.order.get(number),
   });
 
   // warm from the page's HydrationBoundary; the guard is for the type

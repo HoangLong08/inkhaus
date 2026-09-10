@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { adminApi } from "@/lib/api";
-import { requireAdminApi } from "@/lib/api-guard";
+import { requireCapability } from "@/lib/api-guard";
 import { route } from "@/lib/api-response";
 import { ordersQuerySchema } from "@/lib/schemas/params";
 
@@ -12,7 +12,7 @@ import { ordersQuerySchema } from "@/lib/schemas/params";
  * API server to server. See AGENTS.md, "The BFF rule".
  */
 export const GET = route(async (request: NextRequest) => {
-  await requireAdminApi();
+  await requireCapability("orders.view");
   const params = ordersQuerySchema.parse(Object.fromEntries(request.nextUrl.searchParams));
-  return NextResponse.json(await adminApi.orders(params));
+  return NextResponse.json(await adminApi.orders.list(params));
 });

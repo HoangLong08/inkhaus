@@ -2,18 +2,12 @@ import "server-only";
 
 import { z } from "zod";
 
-import {
-  adminUserSchema,
-  bulkQuoteSchema,
-  okSchema,
-  orderSchema,
-  paginatedSchema,
-  sessionSchema,
-  type OrderStatus,
-  type QuoteStatus,
-} from "./schemas/api";
-import type { OrdersQuery, QuotesQuery } from "./schemas/params";
-import { readToken } from "./session";
+import { readToken } from "@/lib/session";
+
+/**
+ * The transport every `adminApi` call goes through. FROZEN after Phase 0: a
+ * feature adds calls to its own file beside this one, never a second fetch.
+ */
 
 const BASE = process.env.API_INTERNAL_URL ?? "http://localhost:4000/api/v1";
 
@@ -42,10 +36,17 @@ async function readError(res: Response, path: string, method: string) {
   return new ApiError(res.status, detail[0] ?? `${method} ${path} failed: ${res.status}`, detail);
 }
 
-type Options<S extends z.ZodType> = {
+type SendOptions = {
   method?: string;
   body?: unknown;
+  /** defaults to the caller's session cookie; `""` sends no token at all */
   token?: string;
+  headers?: Record<string, string>;
+  /** covers the whole response, body included - see requestRaw */
+  timeoutMs?: number;
+};
+
+type Options<S extends z.ZodType> = SendOptions & {
   /**
    * Optional because `request` also serves the two auth endpoints, whose shapes
    * are ad hoc. Everything that reaches a page passes one.
@@ -99,11 +100,11 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  * has been away on a consent screen, which is easily long enough for a dev API
  * to have bounced under `nest start --watch`; without a retry that race costs
  * them the entire round trip through Google for a gap of a second or two.
+ *
+ * Resolves with the Response whatever its status; the two callers below decide
+ * what a non-2xx means.
  */
-async function request<S extends z.ZodType>(
-  path: string,
-  opts: Options<S> = {},
-): Promise<z.infer<S>> {
+async function send(path: string, opts: SendOptions): Promise<Response> {
   const method = opts.method ?? "GET";
   const token = opts.token ?? (await readToken());
   const url = `${BASE}${path}`;
@@ -120,11 +121,12 @@ async function request<S extends z.ZodType>(
         headers: {
           "content-type": "application/json",
           ...(token ? { authorization: `Bearer ${token}` } : {}),
+          ...opts.headers,
         },
         body,
         cache: "no-store",
         // a fresh signal per attempt: an aborted one stays aborted
-        signal: AbortSignal.timeout(15_000),
+        signal: AbortSignal.timeout(opts.timeoutMs ?? 15_000),
       });
     } catch (err) {
       lastErr = err;
@@ -143,6 +145,17 @@ async function request<S extends z.ZodType>(
     );
     throw new ApiError(0, timedOut ? "The API took too long to answer." : unreachable(code));
   }
+
+  return res;
+}
+
+/** a JSON call, parsed with `schema` before anything downstream sees it */
+export async function request<S extends z.ZodType>(
+  path: string,
+  opts: Options<S> = {},
+): Promise<z.infer<S>> {
+  const method = opts.method ?? "GET";
+  const res = await send(path, opts);
 
   if (!res.ok) throw await readError(res, path, method);
   if (res.status === 204) return undefined as z.infer<S>;
@@ -165,74 +178,32 @@ async function request<S extends z.ZodType>(
   return parsed.data;
 }
 
-/* ------------------------------------------------------------------ shapes */
-
 /**
- * Re-exported, not declared. These used to be hand-written mirrors of the API's
- * DTOs kept in sync by hope; they are now inferred from the zod schemas that
- * parse the responses at runtime, so a shape and its checker cannot drift.
- * Import sites are unchanged - `import { type Order } from "@/lib/api"` still
- * resolves, and still means the same thing.
+ * The upstream Response itself, body unread, for what must not be buffered and
+ * is not JSON - a CSV export, an image. A route handler hands `res.body` straight
+ * to its own Response, so a 10,000-row export streams through instead of sitting
+ * in memory.
+ *
+ * A non-2xx still throws ApiError, so `route()` answers with the usual JSON
+ * error rather than piping an error page into a download. The default timeout is
+ * longer than `request`'s because it covers the whole body, not just the
+ * headers. Only what YOU forward reaches the browser: copy the content type and
+ * disposition you mean to send, never the upstream headers wholesale.
  */
-export type {
-  AdminRole,
-  AdminUser,
-  BulkQuote,
-  Order,
-  OrderStatus,
-  Paginated,
-  QuoteStatus,
-} from "./schemas/api";
+export async function requestRaw(path: string, opts: SendOptions = {}): Promise<Response> {
+  const method = opts.method ?? "GET";
+  const res = await send(path, { timeoutMs: 120_000, ...opts });
+  if (!res.ok) throw await readError(res, path, method);
+  return res;
+}
 
-/* ------------------------------------------------------------------- calls */
+export type QueryValue = string | number | boolean | null | undefined;
 
-export const adminApi = {
-  /**
-   * Hands Google's id_token to the API, which verifies its signature against
-   * Google's JWKS itself. The admin app is never trusted to vouch for an
-   * identity - it only drives the browser end of the flow.
-   */
-  loginWithGoogle: (idToken: string) =>
-    request("/admin/auth/google", {
-      method: "POST",
-      body: { idToken },
-      // no session cookie exists yet at this point
-      token: "",
-      schema: sessionSchema,
-    }),
-
-  me: (token?: string) => request("/admin/auth/me", { token, schema: adminUserSchema }),
-
-  logout: () => request("/admin/auth/logout", { method: "POST", schema: okSchema }),
-
-  orders: (params: Partial<OrdersQuery> = {}) =>
-    request(`/orders${query(params)}`, { schema: paginatedSchema(orderSchema) }),
-
-  order: (number: string) =>
-    request(`/orders/${encodeURIComponent(number)}`, { schema: orderSchema }),
-
-  setOrderStatus: (number: string, status: OrderStatus, note?: string) =>
-    request(`/orders/${encodeURIComponent(number)}/status`, {
-      method: "PATCH",
-      body: { status, ...(note ? { note } : {}) },
-      schema: orderSchema,
-    }),
-
-  quotes: (params: Partial<QuotesQuery> = {}) =>
-    request(`/bulk-quotes${query(params)}`, { schema: paginatedSchema(bulkQuoteSchema) }),
-
-  setQuoteStatus: (id: string, status: QuoteStatus) =>
-    request(`/bulk-quotes/${encodeURIComponent(id)}`, {
-      method: "PATCH",
-      body: { status },
-      schema: bulkQuoteSchema,
-    }),
-};
-
-function query(params: Record<string, string | number | undefined>) {
+/** `?a=1&b=2` from a params object, dropping empties and keeping key order */
+export function query(params: Record<string, QueryValue>) {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== "") search.set(key, String(value));
+    if (value !== undefined && value !== null && value !== "") search.set(key, String(value));
   }
   const s = search.toString();
   return s ? `?${s}` : "";

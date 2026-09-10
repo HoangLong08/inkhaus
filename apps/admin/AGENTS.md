@@ -27,7 +27,8 @@ your way, change the rule here in the same commit — do not work around it.
 - **Add components with the CLI, one at a time**, from `apps/admin`:
   `npx shadcn@latest add <name>`. Never hand-copy a component off the website and
   never `npm install @radix-ui/*` yourself — the CLI installs the exact primitive
-  version the component was generated against.
+  version the component was generated against. Never pass `--overwrite` as a
+  side effect of adding something else.
 - **`src/components/ui/*` and `src/hooks/use-mobile.ts` are generated code.**
   `shadcn add` rewrites them verbatim, so they are excluded from lint in
   `eslint.config.mjs`. Style through `className` at the call site or through the
@@ -46,7 +47,15 @@ your way, change the rule here in the same commit — do not work around it.
   `w-4 h-4`.
 - **Your own components live in `src/components/<area>/`** in PascalCase
   (`orders/OrderStatusForm.tsx`, `nav/NavUser.tsx`). Lowercase-kebab is reserved
-  for `ui/*`, so a generated file is recognisable at a glance.
+  for `ui/*`, so a generated file is recognisable at a glance. A plain module
+  that is not a component (`nav/nav-config.ts`) is lowercase.
+- **List controls are shared, not rebuilt per page.** `components/common/` has
+  `ListHeader`, `UrlSearchBox`, `FilterLinks`, `SortableHead`, `PageSizeLinks`,
+  `DateRangePicker` and `OwnersOnly`; `Pager` and `StatusBadge` sit one level up.
+  Every one of them takes the page's zod-parsed params and builds its links with
+  `hrefWith()` from `src/lib/url.ts`: keep every other param, drop `page`. A
+  control that assembles its own query string from the one key it knows about is
+  how the status chips used to throw away the search.
 
 ## 2. Colour comes from the token map, never from a raw hex.
 
@@ -62,8 +71,11 @@ that file is the computed conversion of the hex above it, not an approximation.
 - **Never add a hex literal in a component.** Add or reuse a `@theme` variable.
 - **Never introduce a Tailwind colour outside the ramp** — no `bg-slate-50`, no
   `text-gray-500`, no `border-zinc-200`. The palette is the brand.
+- **Chart colours are `--chart-1` … `--chart-5`**, already defined for light and
+  dark. In a `ChartConfig` write `color: "var(--chart-1)"` and let `ui/chart.tsx`
+  expose it as `var(--color-<key>)` to the series. A hex in a chart is still a hex.
 - The one legitimate inline colour is product data:
-  `style={{ background: item.color.hex }}` on the swatch in the order detail.
+  `style={{ background: item.color.hex }}` on a swatch.
 - `acid` is an accent, not a surface. It is the brand chip in the sidebar and the
   selection highlight, and it is `--primary` in dark mode. It is never a
   background for body text.
@@ -73,43 +85,93 @@ that file is the computed conversion of the hex above it, not an approximation.
 
 ## 3. zod at four boundaries. No exceptions.
 
-Schemas live in `src/lib/schemas/{api,params,forms}.ts` and are shared between
-the form that collects a value, the route handler that receives it, and the
-parser that reads it back. A schema written twice is a schema that drifts.
+Schemas live in `src/lib/schemas/{api,params,forms}/`, one file per feature, and
+are shared between the form that collects a value, the route handler that
+receives it, and the parser that reads it back. A schema written twice is a
+schema that drifts.
+
+- **Import from the folder** (`@/lib/schemas/api`), never from a feature file.
+  Each `index.ts` is `export *` of every file beside it, so a name two files
+  export is a typecheck error rather than a silent shadow — which is why every
+  export carries its feature's prefix (`adminOrderListItemSchema`,
+  `statsOverviewSchema`).
+- `schemas/api/core.ts` is the shared vocabulary (status and role enums,
+  pagination, user, session); `schemas/params/common.ts` has the URL building
+  blocks (`pageParam`, `limitParam` — 20/50/100 only — `isoDayParam`,
+  `searchParam`). Compose them; never redefine them.
 
 1. **`searchParams`** — parse before use, with `.catch()` outermost so a
    hand-typed URL degrades instead of 500ing. `ordersQuerySchema.parse()` cannot
    throw, which is why pages call it with no try/catch. Never
-   `params.status as OrderStatus`: a cast is not a check.
+   `params.status as OrderStatus`: a cast is not a check. Dates in a URL are
+   `from`/`to` as UTC `YYYY-MM-DD`, both inclusive.
 2. **Form input** — `useForm({ resolver: zodResolver(schema) })`, always, even
    for one field. The resolver is what wires messages into `<FormMessage />`.
+   Length limits are the shared constants the API validates with
+   (`ORDER_NOTE_MAX`), never a number typed twice — the note limit was 500 here
+   and 300 in the API.
 3. **Route-handler input** — every handler under `src/app/api/admin/*` parses its
    query or body with a schema. The client is not trusted, including our own.
-4. **API responses** — `src/lib/api.ts` parses what the NestJS API returns before
-   handing it to a page, and `client-api.ts` does the same for the BFF. The API
-   is a separate deployment on its own release cadence; `res.json() as Promise<T>`
-   is a claim nothing verifies.
+4. **API responses** — `src/lib/api/` parses what the NestJS API returns before
+   handing it to a page, and `src/lib/client-api/` does the same for the BFF.
+   The API is a separate deployment on its own release cadence;
+   `res.json() as Promise<T>` is a claim nothing verifies. Response schemas are
+   plain `z.object`s: an unknown key is stripped, not rejected, so the API can
+   add a field before the admin reads it. A field the API added later is
+   `.optional()` until every deployed API sends it.
 
 Enum values come from `@inkhaus/shared/orders` (`ORDER_STATUSES`,
-`QUOTE_STATUSES`, `ORDER_TRANSITIONS`, `canSetStatus`). Do not retype a status
-list — there used to be three copies of `OrderStatus` in this app and they
-drifted. The exported TS types (`Order`, `AdminUser`, …) are `z.infer` of those
-schemas and are re-exported from `api.ts`; add a field to the schema, not to a
-type.
+`QUOTE_STATUSES`, `ORDER_TRANSITIONS`, `canSetStatus`, `CARRIERS`) and
+`@inkhaus/shared/admin` (`REVIEW_STATUSES`, `ADMIN_CAPABILITIES`, `can`). Always a
+subpath — the package root drags the whole catalog into a client bundle. Do not
+retype a status list — there used to be three copies of `OrderStatus` in this
+app and they drifted. The exported TS types (`Order`, `AdminUser`, …) are
+`z.infer` of those schemas and are re-exported from `@/lib/api`; add a field to
+the schema, not to a type.
 
 ## 4. Data: server by default, TanStack Query in the browser.
 
-**Server Components fetch with `adminApi` from `src/lib/api.ts`.** That module is
+**Server Components fetch with `adminApi` from `@/lib/api`.** That folder is
 `server-only`; it reads the session cookie and calls the API with the caller's
 own token. A page whose content is a pure function of the URL — the orders list,
 the quotes list, the overview — stays fully server-rendered. Do not turn a page
 into a client component to add a spinner.
 
+**The data layer is one folder per concern and one file per feature.** Import
+paths never change (`@/lib/api`, `@/lib/client-api`, `@/lib/query-keys`, …);
+`index.ts` composes the files beside it. The `index.ts` and `core.ts` files are
+**frozen** — a contract every workstream builds on, changed only in a commit of
+its own. A feature grows by editing its own file, which `index.ts` already
+mounts.
+
+| folder | frozen | per feature |
+|---|---|---|
+| `lib/api/` — `adminApi` | `index.ts`, `core.ts` (`request`, `requestRaw`, `query`), `auth.ts`, `lookups.ts` | `orders.ts` (the list), `order.ts` (one order), `quotes.ts`, `customers.ts`, `catalog.ts`, `reviews.ts`, `staff.ts`, `stats.ts` |
+| `lib/client-api/` — `clientApi` | `index.ts`, `core.ts` (`call`, `json`, `query`) | `order.ts`, `quotes.ts`, `customers.ts`, `catalog.ts`, `reviews.ts`, `staff.ts` |
+| `lib/schemas/api/` | `index.ts`, `core.ts`, `lookups.ts`, `orders.ts` (the legacy order) | `orders-list.ts`, `order-detail.ts`, `quotes.ts`, `customers.ts`, `catalog.ts`, `reviews.ts`, `staff.ts`, `stats.ts` |
+| `lib/schemas/params/` | `index.ts`, `common.ts` | one per feature |
+| `lib/schemas/forms/` | `index.ts` | one per feature |
+| `lib/query-keys/` — `queryKeys` | `index.ts` | one per feature |
+| `lib/mutations/` | `index.ts` | one per feature |
+
+Also frozen: `lib/{api-guard,api-response,dal,format,session,query-client,url}.ts`,
+`components/{common,nav,providers,ui}/**`, `StatusBadge`, `StatusFilterLinks`,
+`Pager`, `skeletons` (use `TableSkeleton` with your own columns).
+
+- `adminApi.lookups` (`staffDirectory`, `catalogOptions`) is shared reference
+  data. Read it from there; do not add a second copy to a feature file.
+- `requestRaw(path)` returns the upstream `Response` unread, for a body that must
+  stream rather than parse — an export, an image. A non-2xx still throws
+  `ApiError`. Forward the body and the headers you mean to send, never the
+  upstream headers wholesale.
+
 **Anything that fetches in the browser goes through TanStack Query.** No bare
 `fetch` in a `useEffect`, no `useState` + `useEffect` data loading, ever.
 
-- **Query keys come from `src/lib/query-keys.ts`. Never write one inline** — an
-  inline key is an `invalidateQueries` that silently does nothing.
+- **Query keys come from `@/lib/query-keys`. Never write one inline** — an
+  inline key is an `invalidateQueries` that silently does nothing. Every key the
+  back office needs is already declared; a feature changes the params type its
+  key takes in its own file.
 - **The key's params object must be the zod-parsed one on both sides.** The page
   parses `searchParams`, builds the key from the result, and passes that same
   object down as a prop. Hand-assembled params are the usual cause of
@@ -120,8 +182,8 @@ into a client component to add a spinner.
   flash. Do not pass the same object down as `initialData` as well — that
   serialises it into the payload a second time per leaf.
 - **Keep client leaves small.** The order detail page is server-rendered except
-  for three leaves that share one cache entry, because only three regions can
-  change from that screen.
+  for the few leaves that change from that screen, and they share one cache
+  entry.
 - `staleTime` is 30s and `refetchOnWindowFocus` is on, set in `query-client.ts`.
   Hydrated data must not refetch on mount.
 - **Every write is a `useMutation`** with `onMutate` (optimistic), `onError`
@@ -142,25 +204,43 @@ into a client component to add a spinner.
 an HttpOnly cookie and stays that way.
 
 - Client queries and mutations call **same-origin route handlers** under
-  `src/app/api/admin/*`, through `src/lib/client-api.ts` — the only module in
-  this app that may call `fetch` from a browser, and every path it uses is
-  relative.
+  `src/app/api/admin/*`, through `@/lib/client-api` — `client-api/core.ts` is
+  the only module in this app that may call `fetch` from a browser, and every
+  path it uses is relative.
 - **Never** put an API URL in a client component, and never expose one through
   `NEXT_PUBLIC_*`.
-- Every BFF handler starts with `await requireAdminApi()` from
-  `src/lib/api-guard.ts`, **not** `requireAdmin()`. The latter calls `redirect()`,
+- **A same-origin download link or image is allowed**, and is the right tool for
+  a body that is not JSON: `<a href="/api/admin/exports/orders.csv?…">` or
+  `<img src="/api/admin/designs/…/preview/front">`. The browser sends the cookie
+  to our own origin, the route handler checks the capability and streams the
+  body through with `requestRaw`. The `<img>` trips `@next/next/no-img-element`;
+  disable it on that line with the reason (`-- same-origin BFF image; this app
+  runs no image optimizer`). Never point either at the API's origin.
+- Every BFF handler starts with `await requireCapability(action)` from
+  `src/lib/api-guard.ts` — or `requireAdminApi()` for `/me`, which is about the
+  session itself — **not** `requireAdmin()`. The latter calls `redirect()`,
   which in a Route Handler is a 307 to an HTML page; `fetch` follows it and
   reports a 200 with a login document in the body. `proxy.ts` answers `/api/*`
   with a 401 for the same reason.
 - Wrap every handler in `route()` from `src/lib/api-response.ts` so a throw
   becomes JSON with a sane status instead of Next's HTML error page. It never
   leaks a stack trace or the API's address.
-- The authorization rule itself lives in `src/lib/mutations.ts`, apart from the
-  transport, so a second caller cannot reimplement it differently.
-- **Role rules are enforced in three places and all three are load-bearing:** the
-  UI hides what you may not do (`canSetStatus` filtering the transition list),
-  the route handler refuses it with a 403, and the API refuses it again with
-  `@Roles`. Removing any one of them is a security change, not a refactor.
+- The authorization rule for a write lives in `src/lib/mutations/<feature>.ts`,
+  apart from the transport, so a second caller cannot reimplement it
+  differently.
+- **Permissions are one table, enforced three times, and all three are
+  load-bearing.** `ADMIN_CAPABILITIES` and `can(role, action)` in
+  `@inkhaus/shared/admin` are the only source. The UI hides what you may not do
+  with `can()` (the nav filters on it, controls disable on it); the route handler
+  refuses it with `requireCapability(action)` → 403; the API refuses it again
+  with `@Can(action)`. Removing any one of them is a security change, not a
+  refactor. `canSetStatus` stays as the value-level rule for order statuses —
+  cancelling shares an endpoint with every other move, so no route-level
+  capability can express it — and is checked in `mutations/orders.ts`.
+- **A page a role may not see renders `<OwnersOnly title="…" />`** — the page's
+  own `<h1>` and an `Empty` explaining why, `data-testid="owners-only"`. Never
+  redirect away and never add a `?error=`; there is no `requireOwner()`. Check
+  `can(user.role, action)` against `await requireAdmin()` in the page.
 
 `e2e/auth.spec.ts` asserts the browser makes **zero** requests to the API origin
 across a sign-in and four navigations, including the one page that runs client
@@ -172,21 +252,35 @@ queries. Any direct call fails the suite, and that is the point.
 conventions are what keep it from being rewritten every time the UI moves.
 
 - **Every interactive control gets a `data-testid`.** Tests must never match on
-  visible copy, because copy is the thing designers change. Currently asserted:
+  visible copy, because copy is the thing designers change. The contract — ids
+  asserted today and ids reserved for the screens being built:
 
   | area | ids |
   |---|---|
   | login | `google-form`, `google-signin`, `login-error` |
-  | chrome | `user-menu`, `current-user`, `sign-out`, `sign-out-dialog`, `sign-out-{confirm,cancel}`, `sidebar-toggle`, `breadcrumb-current`, `theme-toggle`, `theme-{light,dark,system}` |
-  | shared | `status-badge`, `status-filter`, `pager`, `pager-{previous,page,next}` |
-  | overview | `stat-tile`, `recent-order` |
-  | orders | `orders-meta`, `orders-search`, `orders-search-clear`, `order-row` |
-  | order detail | `status-select`, `status-option`, `status-note`, `status-save`, `no-moves`, `order-timeline` |
-  | quotes | `quotes-meta`, `quote-card`, `quote-select`, `quote-option` |
+  | chrome | `user-menu`, `current-user`, `sign-out`, `sign-out-dialog`, `sign-out-{confirm,cancel}`, `sidebar-toggle`, `breadcrumb-current`, `theme-toggle`, `theme-{light,dark,system}`, `nav-link` (data-section), `nav-sub-link` (data-section, data-value), `owners-only` |
+  | shared | `status-badge` (data-status), `status-filter` (data-status), `pager`, `pager-{previous,page,next}`, `filter-link` (data-param, data-value), `sort-head` (data-sort, data-active), `page-size` (data-limit), `{prefix}-date-{trigger,apply,clear,preset}` |
+  | overview | `stat-tile` (data-status), `recent-order` (data-number), `range-link` (data-range), `revenue-total`, `revenue-chart`, `series-table`, `top-product` (data-slug), `quote-funnel`, `attention-item` (data-kind) |
+  | orders | `orders-meta`, `orders-search`, `orders-search-clear`, `order-row` (data-number, data-status, data-total), `order-row-link`, `order-customer-link`, `orders-export` |
+  | order detail | `status-select`, `status-option` (data-status), `status-note`, `status-save`, `no-moves`, `order-timeline`, `status-confirm-dialog`, `status-confirm`, `status-confirm-cancel`, `status-tracking-carrier`, `status-tracking-number`, `tracking-carrier`, `tracking-carrier-option`, `tracking-number`, `tracking-save`, `tracking-link`, `order-note-input`, `order-note-save`, `timeline-event` (data-kind, data-status), `timeline-actor`, `customer-link`, `design-preview` (data-design, data-side), `quote-origin-link`, `packing-slip-link`, `packing-slip`, `packing-slip-print` |
+  | quotes | `quotes-meta`, `quote-card` (data-id), `quote-select`, `quote-option` (data-status), `quotes-search`, `quotes-search-clear`, `quote-row` (data-id, data-status), `quote-row-link`, `quote-assignee-select`, `quote-assignee-option`, `quote-follow-up-trigger`, `quote-follow-up-clear`, `quote-note-input`, `quote-note-save`, `quote-timeline`, `quote-event` (data-kind), `quote-convert-open`, `quote-convert-dialog`, `convert-product`, `convert-product-option` (data-slug), `convert-color`, `convert-color-option`, `convert-method`, `convert-method-option`, `convert-size-qty` (data-size), `convert-estimate`, `convert-submit`, `quote-order-link`, `quote-customer-link` |
+  | customers | `customers-meta`, `customers-search`, `customers-search-clear`, `customer-row` (data-id, data-email), `customer-profile`, `customer-edit-open`, `customer-edit-dialog`, `customer-{name,phone,company,note}`, `customer-save`, `customer-stat` (data-stat), `customer-tab` (data-tab), `customer-order-row` (data-number), `customer-quote-row`, `customer-design` (data-design) |
+  | catalog | `products-meta`, `products-search`, `products-search-clear`, `product-row` (data-slug, data-active), `product-new`, `product-{name,slug,type,category,blurb,fabric,tag,price,bulk-price,sort-order,active,save}`, `product-{type,category}-option`, `product-method` (data-method), `product-size` (data-size), `product-color` (data-color), `product-print-{x,y,w,h}`, `product-inches-{w,h}`, `product-history`, `color-row` (data-slug), `color-{new,name,slug,hex,dark,active,save}`, `size-row` (data-code), `size-{new,code,label,upcharge,save,delete,delete-confirm}`, `tier-row` (data-min), `tier-{min,off,add,remove}`, `tiers-save`, `tiers-preview`, `price-sync-warning` |
+  | reviews | `reviews-meta`, `reviews-search`, `review-row` (data-id, data-status, data-rating), `review-select`, `review-select-all`, `review-actions`, `review-{publish,reject,pending,delete}`, `review-delete-dialog`, `review-delete-confirm`, `bulk-publish`, `bulk-reject` |
+  | staff | `staff-row` (data-email, data-role, data-active, data-self), `staff-invite-{open,dialog,email,name,role,role-option,submit}`, `staff-role-select`, `staff-role-option`, `staff-active`, `staff-deactivate-confirm`, `staff-revoke-sessions`, `staff-revoke-dialog`, `staff-revoke-confirm` |
   | errors | `segment-error` |
 
   Renaming or removing one is a change to `apps/admin/e2e` in the **same commit**.
-  A new interactive control means a new id.
+  A new interactive control means a new id, added to this table in the commit
+  whose spec first uses it.
+- A few ids need their shape spelled out. `filter-link` also mirrors its value
+  onto `data-<param>` (which is how `status-filter` keeps `data-status`) and uses
+  `ALL` for the link that clears the filter. `sort-head` is the link inside the
+  `<th>`; `aria-sort` sits on the `<th>` itself. `nav-sub-link`'s `data-value` is
+  the status code for a filter child, `mine` for "Mine", and
+  `products` / `colors` / `sizes` / `pricing` in the catalog.
+  `{prefix}-date-trigger` carries the applied range as `data-from` / `data-to`;
+  a preset applies at once and carries `data-days`.
 - **Machine-readable values go on a `data-*` attribute, not in the label** —
   `data-status="PENDING_PAYMENT"` beside the text "Pending payment", so a test
   never has to know about `humanize()`.
@@ -197,11 +291,13 @@ conventions are what keep it from being rewritten every time the UI moves.
   `signOut(page)` and `allowedTransitions(page)` for exactly this. Add a helper
   rather than repeating the open-read-escape dance.
 - **Every page keeps an `<h1>`.** A breadcrumb is not a heading; `BreadcrumbPage`
-  renders `role="link" aria-current="page"`.
+  renders `role="link" aria-current="page"`. `ListHeader` and `OwnersOnly` both
+  render one, which is most of the reason they exist.
 - **Link-based filters keep `aria-current="page"`.** Do not replace them with
   `Tabs` or `ToggleGroup`: those are client-only, lose the deep link that the
   overview tiles navigate through, and lose `aria-current`. Filter state belongs
-  in the URL.
+  in the URL. `Tabs` is for switching content on a detail page (a customer's
+  orders / quotes / designs), never for filtering a list.
 - **`/login` must render and function with JavaScript disabled, and must contain
   exactly one `<form>`.** No `Providers`, no `<Toaster />`, no `"use client"`
   anywhere in its tree. Every shadcn component it uses is plain markup or a Slot.

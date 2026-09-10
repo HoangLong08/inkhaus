@@ -3,8 +3,8 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 
-import { adminApi, ApiError, type AdminUser } from "./api";
-import { readToken } from "./session";
+import { adminApi, ApiError, type AdminUser } from "@/lib/api";
+import { readToken } from "@/lib/session";
 
 /**
  * The real authorization check.
@@ -20,7 +20,7 @@ export const verifySession = cache(async (): Promise<AdminUser | null> => {
   if (!token) return null;
 
   try {
-    return await adminApi.me(token);
+    return await adminApi.auth.me(token);
   } catch (err) {
     // 401 means the session was revoked or expired. Anything else (API down,
     // 500) is not the operator's fault, but there is no safe way to render a
@@ -30,20 +30,16 @@ export const verifySession = cache(async (): Promise<AdminUser | null> => {
   }
 });
 
-/** use in any layout, page or action that must not render for a stranger */
+/**
+ * Use in any layout, page or action that must not render for a stranger.
+ *
+ * There is deliberately no `requireOwner()`. A page a role may not see renders
+ * `<OwnersOnly />` - its own heading and an explanation - instead of bouncing
+ * the operator somewhere else with an error in the query string. Check
+ * `can(user.role, action)` against the user this returns.
+ */
 export async function requireAdmin() {
   const user = await verifySession();
   if (!user) redirect("/login");
-  return user;
-}
-
-/**
- * Owner-only pages and actions. Note this is a convenience for the UI, not the
- * defence: the API enforces the same rule with `@Roles('OWNER')` and would
- * refuse a hand-made request regardless of what this app rendered.
- */
-export async function requireOwner() {
-  const user = await requireAdmin();
-  if (user.role !== "OWNER") redirect("/?error=" + encodeURIComponent("Owners only."));
   return user;
 }

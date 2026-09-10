@@ -42,7 +42,7 @@ export default function QuoteStatusControl({
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: (next: QuoteStatusCode) => clientApi.setQuoteStatus(id, { status: next }),
+    mutationFn: (next: QuoteStatusCode) => clientApi.quotes.setStatus(id, { status: next }),
     onError: (error) => {
       if (error instanceof ClientApiError && error.status === 401) return;
       toast.error("Could not update the quote", { description: error.message });

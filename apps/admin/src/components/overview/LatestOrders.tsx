@@ -14,8 +14,11 @@ import {
 import { adminApi } from "@/lib/api";
 import { on, usd } from "@/lib/format";
 
+/** exactly as many as the strip shows - it used to fetch a whole page and slice */
+const SHOWN = 8;
+
 export default async function LatestOrders() {
-  const recent = await adminApi.orders({ page: 1 });
+  const recent = await adminApi.orders.list({ limit: SHOWN });
 
   return (
     <Card className="gap-0 overflow-hidden p-0">
@@ -48,7 +51,7 @@ export default async function LatestOrders() {
         // table would force a horizontal scroll at the narrowest width anyone
         // actually opens this app at.
         <ul className="divide-y">
-          {recent.data.slice(0, 8).map((order) => (
+          {recent.data.slice(0, SHOWN).map((order) => (
             <li key={order.number}>
               <Link
                 href={`/orders/${order.number}`}
@@ -65,7 +68,7 @@ export default async function LatestOrders() {
                   {usd(order.total)}
                 </span>
                 <span className="text-muted-foreground w-24 text-right text-xs">
-                  {on(order.createdAt)}
+                  {on(order.placedAt ?? order.createdAt)}
                 </span>
               </Link>
             </li>

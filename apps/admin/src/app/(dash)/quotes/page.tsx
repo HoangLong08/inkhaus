@@ -1,6 +1,7 @@
 import { QUOTE_STATUSES } from "@inkhaus/shared/orders";
 import { SearchX } from "lucide-react";
 
+import ListHeader from "@/components/common/ListHeader";
 import Pager from "@/components/Pager";
 import QuoteStatusControl from "@/components/quotes/QuoteStatusControl";
 import StatusFilterLinks from "@/components/StatusFilterLinks";
@@ -25,18 +26,22 @@ export default async function QuotesPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = quotesQuerySchema.parse(await searchParams);
-  const { data, meta } = await adminApi.quotes(params);
+  const { data, meta } = await adminApi.quotes.list(params);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-2xl font-bold tracking-tight">Bulk quotes</h1>
-        <p className="text-muted-foreground text-sm" data-testid="quotes-meta">
-          {meta.total} total · page {meta.page} of {meta.pages}
-        </p>
-      </div>
+      <ListHeader
+        title="Bulk quotes"
+        meta={`${meta.total} total · page ${meta.page} of ${meta.pages}`}
+        metaTestId="quotes-meta"
+      />
 
-      <StatusFilterLinks base="/quotes" statuses={QUOTE_STATUSES} active={params.status} />
+      <StatusFilterLinks
+        base="/quotes"
+        statuses={QUOTE_STATUSES}
+        active={params.status}
+        params={params}
+      />
 
       {data.length === 0 ? (
         <Card>
@@ -107,12 +112,7 @@ export default async function QuotesPage({
         </ul>
       )}
 
-      <Pager
-        base="/quotes"
-        page={meta.page}
-        pages={meta.pages}
-        params={{ status: params.status }}
-      />
+      <Pager base="/quotes" page={meta.page} pages={meta.pages} params={params} />
     </div>
   );
 }

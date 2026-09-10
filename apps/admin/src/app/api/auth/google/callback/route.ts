@@ -41,9 +41,9 @@ export async function GET(request: NextRequest) {
     fail("Could not complete sign-in with Google. Please try again.");
   }
 
-  let session: Awaited<ReturnType<typeof adminApi.loginWithGoogle>>;
+  let session: Awaited<ReturnType<typeof adminApi.auth.loginWithGoogle>>;
   try {
-    session = await adminApi.loginWithGoogle(idToken);
+    session = await adminApi.auth.loginWithGoogle(idToken);
   } catch (err) {
     if (err instanceof ApiError) {
       // 403 is the allowlist refusing a perfectly valid Google account, which
