@@ -133,3 +133,49 @@ export function quote(
 }
 
 export const round = (n: number) => Math.round(n * 100) / 100;
+
+// ------------------------------------------------------------- the ladder
+
+/** bounds on a ladder the back office may save */
+export const TIER_LIMITS = {
+  maxTiers: 12,
+  /** the database column is Decimal(4,3) and a 90%+ discount is a typo */
+  maxOff: 0.9,
+  maxMin: 100_000,
+} as const;
+
+/**
+ * Why a tier ladder cannot be saved, or null when it can. Shared so the tier
+ * editor shows the same sentence the API refuses with.
+ *
+ * A ladder starts at one unit with no discount, quantities strictly increase,
+ * and a bigger order never gets a smaller discount - `tierFor` walks the ladder
+ * from the top, so an unordered one would silently price the wrong tier.
+ */
+export function validateTiers(tiers: Tier[]): string | null {
+  if (tiers.length < 1 || tiers.length > TIER_LIMITS.maxTiers) {
+    return `A ladder needs between 1 and ${TIER_LIMITS.maxTiers} tiers.`;
+  }
+  if (tiers[0].min !== 1 || tiers[0].off !== 0) {
+    return "The first tier must start at 1 unit with no discount.";
+  }
+
+  for (const [i, t] of tiers.entries()) {
+    const n = i + 1;
+    if (!Number.isInteger(t.min) || t.min < 1 || t.min > TIER_LIMITS.maxMin) {
+      return `Tier ${n}: the quantity must be a whole number from 1 to ${TIER_LIMITS.maxMin}.`;
+    }
+    if (!Number.isFinite(t.off) || t.off < 0 || t.off > TIER_LIMITS.maxOff) {
+      return `Tier ${n}: the discount must be between 0% and ${TIER_LIMITS.maxOff * 100}%.`;
+    }
+    if (Math.abs(Math.round(t.off * 1000) - t.off * 1000) > 1e-6) {
+      return `Tier ${n}: the discount can have at most one decimal place as a percentage.`;
+    }
+    if (i > 0) {
+      const prev = tiers[i - 1];
+      if (t.min <= prev.min) return "Quantities must increase from one tier to the next.";
+      if (t.off < prev.off) return "A bigger order can never get a smaller discount.";
+    }
+  }
+  return null;
+}

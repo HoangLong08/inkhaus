@@ -72,3 +72,110 @@ export const OWNER_ONLY_ORDER_STATUSES: OrderStatusCode[] = ["CANCELLED", "REFUN
 export function canSetStatus(role: AdminRoleCode, to: OrderStatusCode) {
   return role === "OWNER" || !OWNER_ONLY_ORDER_STATUSES.includes(to);
 }
+
+// ------------------------------------------------------------ the timeline
+
+/**
+ * What an order event records. STATUS and TRACKING are the customer's own
+ * history and show on the public order page; NOTE is staff talking to staff and
+ * never leaves the back office. Who made a change is never public either.
+ */
+export const ORDER_EVENT_KINDS = ["STATUS", "NOTE", "TRACKING"] as const;
+
+export type OrderEventKindCode = (typeof ORDER_EVENT_KINDS)[number];
+
+export const PUBLIC_ORDER_EVENT_KINDS: readonly OrderEventKindCode[] = ["STATUS", "TRACKING"];
+
+/** a note on a status move - shown to the customer */
+export const ORDER_NOTE_MAX = 500;
+
+/** an internal note - staff only */
+export const ORDER_INTERNAL_NOTE_MAX = 1000;
+
+/** the statuses that count as money in: paid and not given back */
+export const REVENUE_STATUSES: OrderStatusCode[] = ["PAID", "IN_PRODUCTION", "SHIPPED", "DELIVERED"];
+
+export const ORDER_SORTS = [
+  "placed_desc",
+  "placed_asc",
+  "total_desc",
+  "total_asc",
+  "number_desc",
+  "number_asc",
+] as const;
+
+export type OrderSort = (typeof ORDER_SORTS)[number];
+
+// ---------------------------------------------------------------- shipping
+
+export const CARRIERS = ["USPS", "UPS", "FEDEX", "DHL", "OTHER"] as const;
+
+export type CarrierCode = (typeof CARRIERS)[number];
+
+export const CARRIER_LABEL: Record<CarrierCode, string> = {
+  USPS: "USPS",
+  UPS: "UPS",
+  FEDEX: "FedEx",
+  DHL: "DHL",
+  OTHER: "Other",
+};
+
+export const TRACKING_NUMBER_MAX = 64;
+
+/** letters, digits, spaces and dashes - what every carrier above prints */
+export const TRACKING_NUMBER_PATTERN = /^[A-Za-z0-9 -]{4,64}$/;
+
+/** the carrier's public tracking page, or null when we do not know one */
+export function trackingUrl(carrier: CarrierCode, number: string): string | null {
+  const n = encodeURIComponent(number.trim());
+  switch (carrier) {
+    case "USPS":
+      return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${n}`;
+    case "UPS":
+      return `https://www.ups.com/track?tracknum=${n}`;
+    case "FEDEX":
+      return `https://www.fedex.com/fedextrack/?trknbr=${n}`;
+    case "DHL":
+      return `https://www.dhl.com/us-en/home/tracking/tracking-express.html?tracking-id=${n}`;
+    default:
+      return null;
+  }
+}
+
+/**
+ * An order cannot be marked shipped without saying how. The customer is told
+ * their tracking number arrives by email, and a SHIPPED order with nothing to
+ * send is a support ticket waiting to happen.
+ */
+export function requiresTracking(to: OrderStatusCode) {
+  return to === "SHIPPED";
+}
+
+// ---------------------------------------------------------- quote workflow
+
+export const QUOTE_EVENT_KINDS = ["STATUS", "NOTE", "ASSIGNED", "FOLLOW_UP", "CONVERTED"] as const;
+
+export type QuoteEventKindCode = (typeof QUOTE_EVENT_KINDS)[number];
+
+export const QUOTE_NOTE_MAX = 1000;
+
+export const QUOTE_SORTS = ["created_desc", "created_asc", "followup_asc", "quantity_desc"] as const;
+
+export type QuoteSort = (typeof QUOTE_SORTS)[number];
+
+/**
+ * Quotes still move freely - with one exception. Once a quote has become an
+ * order it is WON for good: marking it LOST would leave a live order pointing
+ * at a quote that says the deal fell through.
+ */
+export function canSetQuoteStatus(
+  quote: { convertedOrderId: string | null },
+  to: QuoteStatusCode,
+) {
+  return !quote.convertedOrderId || to === "WON";
+}
+
+/** a quote becomes an order at most once, and never from LOST */
+export function canConvertQuote(quote: { status: QuoteStatusCode; convertedOrderId: string | null }) {
+  return !quote.convertedOrderId && quote.status !== "LOST";
+}

@@ -3,71 +3,11 @@
 import { ONE_SIZE } from "./pricing";
 import { PRODUCT_IMAGES } from "./product-images";
 
-/**
- * Which blank shape to draw. Every value needs an entry in the web app's
- * `PATHS` table — the `Record<GarmentType, Shape>` there is exhaustive on
- * purpose, so adding a value here fails typecheck until it has been drawn.
- */
-export type GarmentType =
-  // apparel
-  | "tee"
-  | "hoodie"
-  | "ziphoodie"
-  | "longsleeve"
-  | "tank"
-  | "crewneck"
-  // headwear
-  | "cap"
-  | "beanie"
-  // bags
-  | "tote"
-  // drinkware
-  | "mug"
-  | "tumbler"
-  // home
-  | "blanket"
-  | "pillow"
-  | "apron"
-  | "mousepad"
-  | "ornament"
-  // paper & tech
-  | "phonecase"
-  | "sticker"
-  | "poster";
+import type { GarmentType, ProductCategory } from "./taxonomy";
 
-/**
- * How the shop is merchandised. Deliberately a second axis: `type` says which
- * blank shape to draw, `category` says which aisle it lives in — a tote and a
- * canvas apron draw nothing alike but a beanie and a cap belong together.
- */
-export type ProductCategory =
-  | "apparel"
-  | "headwear"
-  | "bags"
-  | "drinkware"
-  | "home"
-  | "paper"
-  | "tech";
-
-export const CATEGORIES: ProductCategory[] = [
-  "apparel",
-  "headwear",
-  "bags",
-  "drinkware",
-  "home",
-  "paper",
-  "tech",
-];
-
-export const CATEGORY_LABEL: Record<ProductCategory, string> = {
-  apparel: "Apparel",
-  headwear: "Headwear",
-  bags: "Bags",
-  drinkware: "Drinkware",
-  home: "Home",
-  paper: "Paper & print",
-  tech: "Tech",
-};
+// The taxonomy lives in its own module so the back office can import it without
+// this file's 24 products. Re-exported, so every existing import keeps working.
+export { CATEGORIES, CATEGORY_LABEL, type GarmentType, type ProductCategory } from "./taxonomy";
 
 export type Colorway = { name: string; hex: string; dark?: boolean };
 

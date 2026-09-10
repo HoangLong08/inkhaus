@@ -12,6 +12,18 @@
     "./orders": {
       "types": "./dist/orders.d.ts",
       "default": "./dist/orders.js"
+    },
+    "./admin": {
+      "types": "./dist/admin.d.ts",
+      "default": "./dist/admin.js"
+    },
+    "./taxonomy": {
+      "types": "./dist/taxonomy.d.ts",
+      "default": "./dist/taxonomy.js"
+    },
+    "./pricing": {
+      "types": "./dist/pricing.d.ts",
+      "default": "./dist/pricing.js"
     }
   },
   "files": ["dist"],
