@@ -31,6 +31,17 @@ const DATABASE_URL =
   process.env.DATABASE_URL ?? "postgresql://inkhaus:inkhaus@localhost:5432/inkhaus?schema=public";
 
 /**
+ * Reuse an installed Chrome when CHROME_PATH is set, matching the convention in
+ * apps/web/scripts/*.mjs; otherwise Playwright's own Chromium, which is already
+ * cached on this machine. Shared by both projects - the setup project signs in
+ * through the same browser the specs run in.
+ */
+const chrome = {
+  ...devices["Desktop Chrome"],
+  ...(process.env.CHROME_PATH ? { launchOptions: { executablePath: process.env.CHROME_PATH } } : {}),
+};
+
+/**
  * Both apps run in development mode on purpose, and not only for speed: the
  * OIDC overrides these tests depend on are refused when NODE_ENV is production,
  * and a production build would also mark the session cookie `Secure`, which a
@@ -39,7 +50,6 @@ const DATABASE_URL =
  */
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: /.*\.spec\.ts/,
   fullyParallel: false, // the suite shares one database
   workers: 1,
   forbidOnly: !!process.env.CI,
@@ -61,16 +71,18 @@ export default defineConfig({
 
   projects: [
     {
+      // Signs in once as owner and once as staff and saves the browser state to
+      // e2e/.auth/, so specs that are not about signing in start signed in -
+      // see OWNER_STATE / STAFF_STATE in e2e/helpers.ts.
+      name: "setup",
+      testMatch: /auth\.setup\.ts/,
+      use: chrome,
+    },
+    {
       name: "chromium",
-      use: {
-        ...devices["Desktop Chrome"],
-        // Reuse an installed Chrome when CHROME_PATH is set, matching the
-        // convention in apps/web/scripts/*.mjs; otherwise Playwright's own
-        // Chromium, which is already cached on this machine.
-        ...(process.env.CHROME_PATH
-          ? { launchOptions: { executablePath: process.env.CHROME_PATH } }
-          : {}),
-      },
+      testMatch: /.*\.spec\.ts/,
+      dependencies: ["setup"],
+      use: chrome,
     },
   ],
 
@@ -109,6 +121,11 @@ export default defineConfig({
         GOOGLE_CLIENT_ID: CLIENT_ID,
         GOOGLE_ISSUER: FAKE_GOOGLE,
         GOOGLE_JWKS_URL: `${FAKE_GOOGLE}/.well-known/jwks.json`,
+        // Off by default until the storefront reads prices from the API (see
+        // CATALOG_PRICE_EDITS in .env.example). On here so the catalog tests can
+        // exercise price, tier and product-create edits end to end; the "off"
+        // branch has its own unit test in the API.
+        CATALOG_PRICE_EDITS: "true",
       },
     },
     {

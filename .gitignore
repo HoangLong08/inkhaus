@@ -14,3 +14,5 @@ coverage
 test-results
 playwright-report
 blob-report
+# signed-in browser state the admin e2e setup project writes - live session tokens
+apps/admin/e2e/.auth/
