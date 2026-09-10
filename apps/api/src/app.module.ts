@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import configuration from './config/configuration';
+import { AuditModule } from './common/audit/audit.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { AdminAuthModule } from './modules/admin-auth/admin-auth.module';
 import { AssetsModule } from './modules/assets/assets.module';
@@ -15,6 +16,8 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { QuotesModule } from './modules/quotes/quotes.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
+import { StaffModule } from './modules/staff/staff.module';
+import { StatsModule } from './modules/stats/stats.module';
 
 @Module({
   imports: [
@@ -25,6 +28,7 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
     ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true, load: [configuration], cache: true }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     PrismaModule,
+    AuditModule,
     HealthModule,
     AdminAuthModule,
     CustomerAuthModule,
@@ -35,6 +39,8 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
     OrdersModule,
     QuotesModule,
     ReviewsModule,
+    StaffModule,
+    StatsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

@@ -1,14 +1,34 @@
 /**
- * Seeds PostgreSQL from the data the storefront used to hard-code.
- * `packages/shared` stays the source of truth for the demo catalog, so re-running
- * this after editing a price there brings the database back in line.
+ * Bootstraps an empty PostgreSQL database from the data the storefront used to
+ * hard-code.
+ *
+ * The database is the source of truth for the catalog - the back office edits
+ * products, colours, sizes and the price ladder in place. `packages/shared` only
+ * bootstraps a database that does not have them yet, so the catalog half of this
+ * script is create-only:
+ *
+ *   - a product whose slug already exists is skipped entirely - its fields, its
+ *     colour links and its photos are all left as the back office has them
+ *   - a colour or size that already exists is left alone; only missing ones are
+ *     created
+ *   - the price ladder is only written into an empty table
+ *
+ * So re-running the seed never overwrites a back-office edit, and editing a
+ * price in `packages/shared` no longer changes the database - change it on the
+ * back office's catalog screens instead.
+ *
+ * Two deliberate exceptions:
+ *   - the studio assets (clipart, fonts, ink colours) are still synced from
+ *     `packages/shared` on every run, because no screen edits them
+ *   - `seedAdmins()` still restores every ADMIN_BOOTSTRAP_EMAILS address to an
+ *     active OWNER - the break-glass; see its comment
  *
  *   npm run db:seed -w @inkhaus/api
  */
 // first, and before @prisma/client: DATABASE_URL comes from the repo-root .env
 import '../src/load-env';
 
-import { AdminRole, PrismaClient, Prisma } from '@prisma/client';
+import { AdminRole, PrismaClient, Prisma, ReviewStatus } from '@prisma/client';
 import {
   ALL_SIZE_CODES,
   CLIPART,
@@ -33,6 +53,8 @@ const slugify = (s: string) =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
+
+const tally = (created: number, kept: number) => `created ${created}, kept ${kept}`;
 
 /** hex -> colour slug, so a product's colour array can be looked up by value */
 const COLOR_SLUG_BY_HEX = new Map(
@@ -65,34 +87,37 @@ const REVIEWS = [
 
 async function seedColors() {
   const entries = Object.entries(COLORS);
-  for (const [slug, c] of entries) {
+  const before = await prisma.color.count({ where: { slug: { in: entries.map(([slug]) => slug) } } });
+
+  for (const [i, [slug, c]] of entries.entries()) {
+    // `update: {}` - a colour the back office renamed, re-hexed or archived keeps
+    // its edits; only a missing one is created
     await prisma.color.upsert({
       where: { slug },
-      update: { name: c.name, hex: c.hex, dark: c.dark ?? false, sortOrder: entries.findIndex(([s]) => s === slug) },
+      update: {},
       create: {
         slug,
         name: c.name,
         hex: c.hex,
         dark: c.dark ?? false,
-        sortOrder: entries.findIndex(([s]) => s === slug),
+        sortOrder: i,
       },
     });
   }
-  return entries.length;
+  return tally(entries.length - before, before);
 }
 
 async function seedSizes() {
   // ALL_SIZE_CODES, not SIZES: `PricingService` builds its upcharge map from this
   // table and `OrdersService` rejects any line whose size is missing from it, so
   // a one-size blank that never gets an "OS" row here 400s at checkout.
+  const before = await prisma.size.count({ where: { code: { in: [...ALL_SIZE_CODES] } } });
+
   for (const [i, code] of ALL_SIZE_CODES.entries()) {
+    // `update: {}` - an upcharge an owner changed stays changed
     await prisma.size.upsert({
       where: { code },
-      update: {
-        label: SIZE_LABEL[code] ?? code,
-        upcharge: new Prisma.Decimal(SIZE_UPCHARGE[code] ?? 0),
-        sortOrder: i,
-      },
+      update: {},
       create: {
         code,
         label: SIZE_LABEL[code] ?? code,
@@ -101,55 +126,66 @@ async function seedSizes() {
       },
     });
   }
-  return ALL_SIZE_CODES.length;
+  return tally(ALL_SIZE_CODES.length - before, before);
 }
 
 async function seedTiers() {
-  for (const t of TIERS) {
-    await prisma.priceTier.upsert({
-      where: { minQty: t.min },
-      update: { discount: new Prisma.Decimal(t.off) },
-      create: { minQty: t.min, discount: new Prisma.Decimal(t.off) },
-    });
-  }
-  return TIERS.length;
+  // All or nothing, never upserted by minQty: the back office replaces the
+  // ladder as a whole, and upserting would resurrect a tier an owner deleted.
+  const have = await prisma.priceTier.count();
+  if (have > 0) return tally(0, have);
+
+  await prisma.priceTier.createMany({
+    data: TIERS.map((t) => ({ minQty: t.min, discount: new Prisma.Decimal(t.off) })),
+  });
+  return tally(TIERS.length, 0);
 }
 
 async function seedProducts() {
-  for (const [i, p] of PRODUCTS.entries()) {
-    const data = {
-      name: p.name,
-      type: SLUG_TO_GARMENT_TYPE[p.type],
-      category: p.category,
-      blurb: p.blurb,
-      fabric: p.fabric,
-      tag: p.tag ?? null,
-      sizes: p.sizes ? [...p.sizes] : [],
-      price: new Prisma.Decimal(p.price),
-      bulkPrice: new Prisma.Decimal(p.bulkPrice),
-      methods: p.method.map((m) => {
-        const enumValue = LABEL_TO_METHOD[m];
-        if (!enumValue) throw new Error(`Unmapped print method "${m}" on ${p.slug}`);
-        return enumValue;
-      }),
-      printAreaX: p.printArea.x,
-      printAreaY: p.printArea.y,
-      printAreaW: p.printArea.w,
-      printAreaH: p.printArea.h,
-      printInchesW: new Prisma.Decimal(p.printInches.w),
-      printInchesH: new Prisma.Decimal(p.printInches.h),
-      active: true,
-      sortOrder: i,
-    };
+  let created = 0;
+  let kept = 0;
 
-    const product = await prisma.product.upsert({
+  for (const [i, p] of PRODUCTS.entries()) {
+    // Skipped entirely, not updated: price, copy, colour links, photos and the
+    // active flag may all have been edited in the back office since this row
+    // was created, and the database is the one that is right.
+    const existing = await prisma.product.findUnique({
       where: { slug: p.slug },
-      update: data,
-      create: { slug: p.slug, ...data },
+      select: { id: true },
+    });
+    if (existing) {
+      kept++;
+      continue;
+    }
+
+    const product = await prisma.product.create({
+      data: {
+        slug: p.slug,
+        name: p.name,
+        type: SLUG_TO_GARMENT_TYPE[p.type],
+        category: p.category,
+        blurb: p.blurb,
+        fabric: p.fabric,
+        tag: p.tag ?? null,
+        sizes: p.sizes ? [...p.sizes] : [],
+        price: new Prisma.Decimal(p.price),
+        bulkPrice: new Prisma.Decimal(p.bulkPrice),
+        methods: p.method.map((m) => {
+          const enumValue = LABEL_TO_METHOD[m];
+          if (!enumValue) throw new Error(`Unmapped print method "${m}" on ${p.slug}`);
+          return enumValue;
+        }),
+        printAreaX: p.printArea.x,
+        printAreaY: p.printArea.y,
+        printAreaW: p.printArea.w,
+        printAreaH: p.printArea.h,
+        printInchesW: new Prisma.Decimal(p.printInches.w),
+        printInchesH: new Prisma.Decimal(p.printInches.h),
+        active: true,
+        sortOrder: i,
+      },
     });
 
-    // colour list is authoritative - drop links that are no longer stocked
-    await prisma.productColor.deleteMany({ where: { productId: product.id } });
     for (const [order, c] of p.colors.entries()) {
       const slug = COLOR_SLUG_BY_HEX.get(c.hex.toLowerCase());
       if (!slug) throw new Error(`Colour ${c.hex} on ${p.slug} is not in COLORS`);
@@ -159,9 +195,6 @@ async function seedProducts() {
       });
     }
 
-    // same shape as the colour rebuild: product-images.ts is generated from what
-    // is on disk, so a photo deleted there has to disappear from the table too
-    await prisma.productImage.deleteMany({ where: { productId: product.id } });
     for (const [order, img] of (p.images ?? []).entries()) {
       const color = img.color
         ? await prisma.color.findUnique({ where: { slug: img.color } })
@@ -179,8 +212,10 @@ async function seedProducts() {
         },
       });
     }
+
+    created++;
   }
-  return PRODUCTS.length;
+  return tally(created, kept);
 }
 
 async function seedStudioAssets() {
@@ -230,7 +265,7 @@ async function seedReviews() {
         rating: 5,
         body: r.body,
         productId: product?.id,
-        published: true,
+        status: ReviewStatus.PUBLISHED,
       },
     });
   }
@@ -246,6 +281,15 @@ async function seedReviews() {
  * Upsert rather than skip-if-present, so adding an address to
  * ADMIN_BOOTSTRAP_EMAILS and re-seeding actually grants access, and so an
  * account demoted by hand is restored to OWNER on the next run.
+ *
+ * This is the one place the seed deliberately overrides the back office, and
+ * it is on purpose: it is the break-glass. The Staff screen refuses to remove
+ * the last active owner, but if every owner is still somehow demoted,
+ * deactivated or locked out, putting an address in ADMIN_BOOTSTRAP_EMAILS and
+ * running `npm run db:seed` makes it an active OWNER again - no SQL, no support
+ * ticket. The flip side: an owner deactivated on the Staff screen whose address
+ * is still in ADMIN_BOOTSTRAP_EMAILS comes back on the next seed, so take an
+ * address out of that variable before deactivating it.
  */
 async function seedAdmins() {
   const emails = (process.env.ADMIN_BOOTSTRAP_EMAILS ?? '')
@@ -260,7 +304,9 @@ async function seedAdmins() {
       where: { email },
       // `name` and `googleSub` are left alone: Google fills them in on first
       // sign-in and re-seeding must not unbind an account
-      update: { role: AdminRole.OWNER, isActive: true },
+      // clearing `deactivatedAt` too, so a restored owner does not show a stale
+      // deactivation date on the Staff screen
+      update: { role: AdminRole.OWNER, isActive: true, deactivatedAt: null },
       create: { email, role: AdminRole.OWNER },
     });
   }

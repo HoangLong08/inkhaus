@@ -42,4 +42,10 @@ export default () => ({
     freeShippingOver: Number(process.env.FREE_SHIPPING_OVER ?? FREE_SHIPPING_OVER),
     taxRate: Number(process.env.TAX_RATE ?? 0),
   },
+  /// Price edits in the back office (decision D13) - price, bulk price, size
+  /// upcharges, tiers, and creating a product. Off until the storefront reads
+  /// prices from the API: until then it shows prices from packages/shared while
+  /// checkout charges the database, and an edit would make the two disagree.
+  /// Only the exact string "true" turns it on. See PriceEditsPolicy.
+  catalogPriceEdits: process.env.CATALOG_PRICE_EDITS === 'true',
 });

@@ -1,10 +1,11 @@
 import { GarmentType, PrintMethod, type Prisma } from '@prisma/client';
-import type {
-  Colorway,
-  GarmentType as GarmentTypeLiteral,
-  Product,
-  ProductCategory,
-  ProductImage,
+import {
+  PRINT_METHOD_LABEL,
+  type Colorway,
+  type GarmentType as GarmentTypeLiteral,
+  type Product,
+  type ProductCategory,
+  type ProductImage,
 } from '@inkhaus/shared';
 
 import { num } from '../../common/decimal';
@@ -40,17 +41,12 @@ export const SLUG_TO_GARMENT_TYPE = Object.fromEntries(
   Object.entries(GARMENT_TYPE_TO_SLUG).map(([k, v]) => [v, k as GarmentType]),
 ) as Record<GarmentTypeLiteral, GarmentType>;
 
-export const METHOD_TO_LABEL: Record<PrintMethod, string> = {
-  DTG: 'DTG',
-  SCREEN_PRINT: 'Screen print',
-  EMBROIDERY: 'Embroidery',
-  PUFF: 'Puff',
-  LEATHER_PATCH: 'Leather patch',
-  SUBLIMATION: 'Sublimation',
-  UV_PRINT: 'UV print',
-  ENGRAVING: 'Engraving',
-  DIGITAL_PRINT: 'Digital print',
-};
+/**
+ * The shared label table itself, not a copy: the back office reads
+ * PRINT_METHOD_LABEL too, and two copies would disagree the first time a label
+ * is reworded. `shared-contract.spec` keeps its keys equal to the Prisma enum.
+ */
+export const METHOD_TO_LABEL: Record<PrintMethod, string> = PRINT_METHOD_LABEL;
 
 export const LABEL_TO_METHOD = Object.fromEntries(
   Object.entries(METHOD_TO_LABEL).map(([k, v]) => [v, k as PrintMethod]),

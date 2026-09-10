@@ -11,6 +11,7 @@ import { PricingService } from '../pricing/pricing.service';
 import type { CreateBulkQuoteDto } from './dto/create-quote.dto';
 import type { ListBulkQuotesDto } from './dto/list-quotes.dto';
 import type { UpdateBulkQuoteDto } from './dto/update-quote.dto';
+import { QuoteWorkflowService, type QuoteActor } from './quote-workflow.service';
 
 @Injectable()
 export class QuotesService {
@@ -19,6 +20,7 @@ export class QuotesService {
     private readonly catalog: CatalogService,
     private readonly pricing: PricingService,
     private readonly customers: CustomersService,
+    private readonly workflow: QuoteWorkflowService,
   ) {}
 
   /** the /bulk calculator lead form - snapshots the price it was quoted at */
@@ -75,15 +77,22 @@ export class QuotesService {
     return paginate(rows.map((r) => this.toDto(r)), total, query);
   }
 
-  async update(id: string, dto: UpdateBulkQuoteDto) {
-    const existing = await this.prisma.bulkQuote.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException(`No quote "${id}"`);
+  /**
+   * The legacy back-office PATCH. `message` used to overwrite what the customer
+   * wrote; it is now a staff note on the quote's history, and the customer's
+   * words stay put. The response shape is unchanged.
+   */
+  async update(id: string, dto: UpdateBulkQuoteDto, actor: QuoteActor) {
+    await this.workflow.setStatus(id, dto.status, actor);
 
-    const quote = await this.prisma.bulkQuote.update({
+    const note = dto.message?.trim();
+    if (note) await this.workflow.addNote(id, note, actor);
+
+    const quote = await this.prisma.bulkQuote.findUnique({
       where: { id },
-      data: { status: dto.status, message: dto.message ?? undefined },
       include: { product: true },
     });
+    if (!quote) throw new NotFoundException(`No quote "${id}"`);
     return this.toDto(quote);
   }
 

@@ -7,7 +7,9 @@ export class UpdateBulkQuoteDto {
   @IsEnum(QuoteStatus)
   status!: QuoteStatus;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: "added to the quote's history as a staff note - the customer's own message is never overwritten",
+  })
   @IsOptional()
   @IsString()
   @MaxLength(2000)

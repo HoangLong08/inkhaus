@@ -69,12 +69,12 @@ export class PricingService {
     return { subtotal, shipping, tax, total: round2(subtotal + shipping + tax) };
   }
 
-  /** tiers and size upcharges straight from the database */
-  async ladder(): Promise<{ tiers: Tier[]; upcharges: Record<string, number> }> {
-    const [tiers, sizes] = await Promise.all([this.catalog.listTiers(), this.catalog.listSizes()]);
-    return {
-      tiers,
-      upcharges: Object.fromEntries(sizes.map((s) => [s.code, s.upcharge])),
-    };
+  /**
+   * Tiers and size upcharges straight from the database. Lives in
+   * CatalogService, which the admin's catalog options also read it from; this
+   * stays so pricing callers do not have to know that.
+   */
+  ladder(): Promise<{ tiers: Tier[]; upcharges: Record<string, number> }> {
+    return this.catalog.ladder();
   }
 }

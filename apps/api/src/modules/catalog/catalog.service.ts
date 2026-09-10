@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { GarmentType, PrintMethod } from '@prisma/client';
+import { SIZES, type Tier } from '@inkhaus/shared';
 
 import { num } from '../../common/decimal';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -12,14 +13,35 @@ import {
 } from './catalog.mapper';
 import type { ListProductsDto } from './dto/list-products.dto';
 
+export type PriceLadder = { tiers: Tier[]; upcharges: Record<string, number> };
+
+/** GET /admin/catalog/options, minus the price-edit flag - the admin app parses exactly this */
+export type CatalogOptions = {
+  products: {
+    slug: string;
+    name: string;
+    methods: PrintMethod[];
+    /** the size run it stocks - the product's own, or the default apparel run */
+    sizes: string[];
+    /** active colours only, in the product's own order */
+    colors: { slug: string; name: string; hex: string }[];
+  }[];
+  ladder: PriceLadder;
+};
+
 @Injectable()
 export class CatalogService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * The storefront's product grid - active blanks only. There used to be an
+   * `includeInactive` switch here for the back office; it was public, so anyone
+   * could list archived blanks. The admin has its own endpoints now.
+   */
   async listProducts(query: ListProductsDto): Promise<ProductDto[]> {
     const products = await this.prisma.product.findMany({
       where: {
-        active: query.includeInactive ? undefined : true,
+        active: true,
         type: query.type as GarmentType | undefined,
         ...(query.q
           ? {
@@ -79,6 +101,56 @@ export class CatalogService {
   async listTiers() {
     const tiers = await this.prisma.priceTier.findMany({ orderBy: { minQty: 'asc' } });
     return tiers.map((t) => ({ min: t.minQty, off: num(t.discount) }));
+  }
+
+  /** tiers and size upcharges straight from the database - what every price is computed from */
+  async ladder(): Promise<PriceLadder> {
+    const [tiers, sizes] = await Promise.all([this.listTiers(), this.listSizes()]);
+    return {
+      tiers,
+      upcharges: Object.fromEntries(sizes.map((s) => [s.code, s.upcharge])),
+    };
+  }
+
+  /**
+   * What a back-office form needs to build an order line or preview a price:
+   * every product on sale, with the methods, sizes and colours it can be
+   * ordered in, plus the ladder to price it with. Archived products are left
+   * out because checkout refuses them; archived colours because nothing new
+   * may be made in one.
+   */
+  async adminOptions(): Promise<CatalogOptions> {
+    const [rows, ladder] = await Promise.all([
+      this.prisma.product.findMany({
+        where: { active: true },
+        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+        select: {
+          slug: true,
+          name: true,
+          methods: true,
+          sizes: true,
+          colors: {
+            where: { color: { active: true } },
+            orderBy: { sortOrder: 'asc' },
+            select: { color: { select: { slug: true, name: true, hex: true } } },
+          },
+        },
+      }),
+      this.ladder(),
+    ]);
+
+    return {
+      products: rows.map((p) => ({
+        slug: p.slug,
+        name: p.name,
+        methods: p.methods,
+        // the same fallback as `sizesFor` in @inkhaus/shared: empty means the
+        // apparel run
+        sizes: p.sizes.length ? p.sizes : [...SIZES],
+        colors: p.colors.map(({ color }) => color),
+      })),
+      ladder,
+    };
   }
 
   /**
