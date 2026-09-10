@@ -116,6 +116,16 @@ export default defineConfig({
       timeout: 120_000,
       env: {
         NODE_ENV: "development",
+        // Its own build dir, not just its own port: Next's dev lockfile lives
+        // in distDir, so sharing `.next` with a running `npm run dev` makes the
+        // second server exit rather than start. See next.config.mjs.
+        //
+        // Side effect worth knowing: Next rewrites the generated `next-env.d.ts`
+        // to point at whichever distDir last ran, so a run leaves that one file
+        // dirty. The next `npm run dev` points it back. Do not commit it aimed
+        // at `.next-e2e` - that path is gitignored and would fail `typecheck`
+        // on a checkout that has never run this suite.
+        NEXT_DIST_DIR: ".next-e2e",
         API_INTERNAL_URL: API_ORIGIN,
         SESSION_COOKIE_NAME: "inkhaus_admin",
         ADMIN_PUBLIC_URL: ADMIN_ORIGIN,

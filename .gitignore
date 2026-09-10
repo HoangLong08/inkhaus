@@ -1,6 +1,8 @@
 node_modules
 dist
 .next
+# the e2e suite's own build dir - see each app's next.config.mjs
+.next-e2e
 out
 coverage
 *.tsbuildinfo

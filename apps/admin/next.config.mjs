@@ -7,6 +7,12 @@ loadRootEnv();
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Next holds a lockfile inside distDir and refuses a second `next dev` in the
+  // same directory, so the e2e suite's own server needs its own build dir - a
+  // dedicated port is not enough. Without this the suite cannot run at all
+  // while a developer has `npm run dev` open, which is precisely when they
+  // reach for it. Unset in normal dev, so that stays plain `.next`.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   // Deliberately no PWA, no service worker and no image optimizer here. The
   // storefront is a customer-facing installable app; this is a staff tool on its
   // own origin, and every one of those features would be cost or cache to

@@ -10,6 +10,12 @@ loadRootEnv();
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Next holds a lockfile inside distDir and refuses a second `next dev` in the
+  // same directory, so the e2e suite's own server needs its own build dir - a
+  // dedicated port is not enough. Without this the suite cannot run at all
+  // while a developer has `npm run dev` open, which is precisely when they
+  // reach for it. Unset in normal dev, so that stays plain `.next`.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   images: {
     remotePatterns: [{ protocol: 'https', hostname: '**' }],
     // Product photography is local and committed, so every variant is billed as
