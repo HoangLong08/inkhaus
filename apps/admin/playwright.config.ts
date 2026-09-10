@@ -47,7 +47,10 @@ export default defineConfig({
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : [["list"]],
   globalSetup: "./e2e/global-setup.ts",
 
-  timeout: 30_000,
+  // The admin dev server now compiles Radix, react-hook-form and TanStack
+  // Query on the first navigation into each route, which lands squarely in
+  // the first test that visits it.
+  timeout: 45_000,
   expect: { timeout: 7_000 },
 
   use: {
@@ -113,7 +116,7 @@ export default defineConfig({
       port: ADMIN_PORT,
       reuseExistingServer: !process.env.CI,
       stdout: "pipe",
-      timeout: 120_000,
+      timeout: 180_000,
       env: {
         NODE_ENV: "development",
         // Its own build dir, not just its own port: Next's dev lockfile lives

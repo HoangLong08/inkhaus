@@ -6,8 +6,9 @@
  *
  * Adds one STAFF account, which is what makes the back office role tests
  * meaningful - the bootstrap accounts are all OWNER, so without this there is
- * nobody to be refused. Also guarantees there is a PENDING_PAYMENT order to act
- * on, and one order belonging to the storefront's test shopper.
+ * nobody to be refused. Also guarantees there are PENDING_PAYMENT orders to act
+ * on - the suite spends them and cannot put them back - and one order belonging
+ * to the storefront's test shopper.
  *
  * That last fixture carries the claim the storefront account page makes: the
  * order is filed under the shopper's ADDRESS before that person has ever signed
@@ -38,23 +39,63 @@ async function main() {
   });
 
   await seedShopperOrder();
-
-  const actionable = await prisma.order.count({
-    where: { status: OrderStatus.PENDING_PAYMENT },
-  });
+  const actionable = await ensureActionableOrders();
 
   console.log(
     [
       `  staff account   ${E2E_STAFF_EMAIL}`,
       `  shopper account ${E2E_SHOPPER_EMAIL} with order ${E2E_SHOPPER_ORDER}`,
       `  actionable orders (PENDING_PAYMENT)  ${actionable}`,
-      actionable === 0
-        ? '  WARNING: no PENDING_PAYMENT order - the status tests will skip'
+      actionable < ACTIONABLE_NEEDED
+        ? `  WARNING: fewer than ${ACTIONABLE_NEEDED} PENDING_PAYMENT orders - the status tests will fail`
         : '',
     ]
       .filter(Boolean)
       .join('\n'),
   );
+}
+
+/**
+ * How many the admin suite spends per run: one in `rbac.spec.ts` (staff advance
+ * to PAID) and one in `ui.spec.ts` (the optimistic-update test), plus a spare.
+ */
+const ACTIONABLE_NEEDED = 3;
+
+/**
+ * Puts back what the suite spends.
+ *
+ * The status tests advance orders out of PENDING_PAYMENT and nothing moves them
+ * back - the transition table has no route from PAID to PENDING_PAYMENT, which
+ * is correct for the product and unhelpful for a fixture. `seed.ts` upserts
+ * orders by number without touching their status, so the well ran dry after two
+ * or three runs and the failure looked like "seed a PENDING_PAYMENT order
+ * first", pointing at the seed that had in fact just run.
+ *
+ * Reaches past the API on purpose: this is the one place allowed to make a
+ * transition the domain forbids, because it is resetting a fixture rather than
+ * running a business. The shopper order is excluded - the storefront suite
+ * asserts it is SHIPPED.
+ */
+async function ensureActionableOrders() {
+  const have = await prisma.order.count({ where: { status: OrderStatus.PENDING_PAYMENT } });
+  if (have >= ACTIONABLE_NEEDED) return have;
+
+  const spent = await prisma.order.findMany({
+    where: {
+      number: { not: E2E_SHOPPER_ORDER },
+      status: { not: OrderStatus.PENDING_PAYMENT },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: ACTIONABLE_NEEDED - have,
+    select: { id: true },
+  });
+
+  await prisma.order.updateMany({
+    where: { id: { in: spent.map((order) => order.id) } },
+    data: { status: OrderStatus.PENDING_PAYMENT },
+  });
+
+  return prisma.order.count({ where: { status: OrderStatus.PENDING_PAYMENT } });
 }
 
 /**

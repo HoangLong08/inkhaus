@@ -31,6 +31,34 @@ export async function sessionToken(page: Page) {
   return cookie!.value;
 }
 
+/**
+ * Sign-out moved into the sidebar's user menu when the app adopted shadcn's
+ * sidebar-07 shell. It is a Radix DropdownMenu, so the item is not merely
+ * hidden - it does not exist in the DOM until the trigger is clicked, and its
+ * role is `menuitem`, not `button`.
+ */
+export async function signOut(page: Page) {
+  await page.getByTestId("user-menu").click();
+  await page.getByTestId("sign-out").click();
+  await page.waitForURL(/\/login/);
+}
+
+/**
+ * The labels of the status transitions the current user is offered.
+ *
+ * The control is a Radix Select, not a native <select>: the trigger is a button
+ * and the options live in a portal that only exists while it is open, as
+ * `[role="option"]` rather than `<option>`. Escape at the end releases the
+ * scroll lock, so a caller can keep interacting with the page.
+ */
+export async function allowedTransitions(page: Page) {
+  await page.getByTestId("status-select").click();
+  await expect(page.getByTestId("status-option").first()).toBeVisible();
+  const labels = await page.getByTestId("status-option").allTextContents();
+  await page.keyboard.press("Escape");
+  return labels.map((label) => label.trim());
+}
+
 /** an order sitting in PENDING_PAYMENT, which every transition test starts from */
 export async function findActionableOrder(token: string) {
   const res = await fetch(`${API_ORIGIN}/orders?status=PENDING_PAYMENT&limit=1`, {

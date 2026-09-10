@@ -14,6 +14,15 @@ import { COOKIE_NAME } from "@/lib/session";
 export function proxy(request: NextRequest) {
   if (request.cookies.has(COOKIE_NAME)) return NextResponse.next();
 
+  // A fetch() from the dashboard needs a status it can act on. Redirecting it to
+  // /login hands it a 200 with an HTML body - `res.ok` is true and the failure
+  // only surfaces when res.json() throws, far from the actual cause. The BFF
+  // handlers under /api/admin do the real check themselves and answer 401 too;
+  // this is the same answer for the case where no cookie exists at all.
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
   const login = new URL("/login", request.url);
   // so a bookmarked deep link still lands where it was going after signing in
   login.searchParams.set("next", request.nextUrl.pathname + request.nextUrl.search);

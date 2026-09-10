@@ -1,155 +1,128 @@
+import { ORDER_STATUSES } from "@inkhaus/shared/orders";
+import { SearchX } from "lucide-react";
 import Link from "next/link";
 
+import OrdersToolbar from "@/components/orders/OrdersToolbar";
+import Pager from "@/components/Pager";
 import StatusBadge from "@/components/StatusBadge";
-import { adminApi, type OrderStatus } from "@/lib/api";
+import StatusFilterLinks from "@/components/StatusFilterLinks";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { adminApi } from "@/lib/api";
 import { on, usd } from "@/lib/format";
+import { ordersQuerySchema } from "@/lib/schemas/params";
 
 export const metadata = { title: "Orders — INKHAUS Back Office" };
 
-const STATUSES: OrderStatus[] = [
-  "DRAFT",
-  "PENDING_PAYMENT",
-  "PAID",
-  "IN_PRODUCTION",
-  "SHIPPED",
-  "DELIVERED",
-  "CANCELLED",
-  "REFUNDED",
-];
-
+/**
+ * Fully server rendered: the table is a pure projection of the URL, so there is
+ * nothing here for a client cache to hold that the server does not already know.
+ * Only the search box is a client component, and it navigates rather than
+ * fetches.
+ */
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; page?: string; email?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const params = await searchParams;
-  // an unknown ?status= would be a 400 from the API's validation pipe, so drop
-  // anything that is not a real enum value rather than passing it through
-  const status = STATUSES.includes(params.status as OrderStatus)
-    ? (params.status as OrderStatus)
-    : undefined;
-  const page = Math.max(1, Number(params.page ?? 1) || 1);
-
-  const { data, meta } = await adminApi.orders({ page, status, email: params.email });
+  // The schema replaces the hand-rolled guards this page used to carry, and
+  // keeps their behaviour: an unknown ?status= is dropped rather than passed to
+  // the API, which would answer 400, and a junk ?page= falls back to 1. Every
+  // field ends in .catch(), so this cannot throw.
+  const params = ordersQuerySchema.parse(await searchParams);
+  const { data, meta } = await adminApi.orders(params);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-2xl font-bold tracking-tight">Orders</h1>
-        <p className="text-sm text-ink-3">
+        <p className="text-muted-foreground text-sm" data-testid="orders-meta">
           {meta.total} total · page {meta.page} of {meta.pages}
         </p>
       </div>
 
-      <nav className="flex flex-wrap gap-1.5">
-        <FilterChip href="/orders" active={!status}>
-          All
-        </FilterChip>
-        {STATUSES.map((s) => (
-          <FilterChip key={s} href={`/orders?status=${s}`} active={status === s}>
-            <StatusBadge status={s} />
-          </FilterChip>
-        ))}
-      </nav>
+      <OrdersToolbar />
+
+      <StatusFilterLinks base="/orders" statuses={ORDER_STATUSES} active={params.status} />
 
       {data.length === 0 ? (
-        <p className="rounded-lg border border-line bg-paper p-6 text-sm text-ink-3">
-          No orders match this filter.
-        </p>
+        <Card>
+          <Empty className="py-10">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <SearchX />
+              </EmptyMedia>
+              <EmptyTitle>No orders match this filter</EmptyTitle>
+              <EmptyDescription>
+                Try a different status, or clear the customer email.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </Card>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-line bg-paper">
-          <table className="w-full min-w-[46rem] text-sm">
-            <thead className="border-b border-line bg-paper-2 text-left text-xs uppercase tracking-wide text-ink-3">
-              <tr>
-                <th className="px-4 py-2.5 font-semibold">Order</th>
-                <th className="px-4 py-2.5 font-semibold">Status</th>
-                <th className="px-4 py-2.5 font-semibold">Customer</th>
-                <th className="px-4 py-2.5 text-right font-semibold">Items</th>
-                <th className="px-4 py-2.5 text-right font-semibold">Total</th>
-                <th className="px-4 py-2.5 text-right font-semibold">Placed</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
+        <Card className="overflow-hidden p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Order</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead className="text-right">Items</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead className="text-right">Placed</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {data.map((order) => (
-                <tr key={order.number} className="transition hover:bg-paper-2">
-                  <td className="px-4 py-2.5">
-                    <Link
-                      href={`/orders/${order.number}`}
-                      className="font-mono font-semibold text-sky hover:underline"
-                    >
-                      {order.number}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-2.5">
+                <TableRow key={order.number} data-testid="order-row" data-number={order.number}>
+                  <TableCell>
+                    <Button asChild variant="link" size="sm" className="h-auto p-0 font-mono">
+                      <Link href={`/orders/${order.number}`}>{order.number}</Link>
+                    </Button>
+                  </TableCell>
+                  <TableCell>
                     <StatusBadge status={order.status} />
-                  </td>
-                  <td className="max-w-[16rem] truncate px-4 py-2.5 text-ink-2">
+                  </TableCell>
+                  <TableCell className="text-muted-foreground max-w-64 truncate">
                     {order.customer.email}
-                  </td>
-                  <td className="px-4 py-2.5 text-right tabular-nums text-ink-2">
-                    {order.items.reduce((n, i) => n + i.quantity, 0)}
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-semibold tabular-nums">
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-right tabular-nums">
+                    {order.items.reduce((n, item) => n + item.quantity, 0)}
+                  </TableCell>
+                  <TableCell className="text-right font-semibold tabular-nums">
                     {usd(order.total)}
-                  </td>
-                  <td className="px-4 py-2.5 text-right text-xs text-ink-3">
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-right text-xs">
                     {on(order.placedAt ?? order.createdAt)}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </Card>
       )}
 
-      <Pager page={meta.page} pages={meta.pages} status={status} />
-    </div>
-  );
-}
-
-function FilterChip({
-  href,
-  active,
-  children,
-}: {
-  href: string;
-  active: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      aria-current={active ? "page" : undefined}
-      className={`rounded-full border px-2 py-1 text-xs font-semibold transition ${
-        active ? "border-ink bg-ink text-paper" : "border-line bg-paper hover:bg-paper-2"
-      }`}
-    >
-      {children}
-    </Link>
-  );
-}
-
-function Pager({ page, pages, status }: { page: number; pages: number; status?: string }) {
-  if (pages <= 1) return null;
-  const qs = (n: number) =>
-    `/orders?${new URLSearchParams({ ...(status ? { status } : {}), page: String(n) })}`;
-
-  return (
-    <div className="flex items-center justify-between text-sm">
-      {page > 1 ? (
-        <Link href={qs(page - 1)} className="font-medium text-sky hover:underline">
-          ← Previous
-        </Link>
-      ) : (
-        <span />
-      )}
-      {page < pages ? (
-        <Link href={qs(page + 1)} className="font-medium text-sky hover:underline">
-          Next →
-        </Link>
-      ) : (
-        <span />
-      )}
+      <Pager
+        base="/orders"
+        page={meta.page}
+        pages={meta.pages}
+        params={{ status: params.status, email: params.email }}
+      />
     </div>
   );
 }

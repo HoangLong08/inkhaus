@@ -1,6 +1,13 @@
 import { expect, test } from "@playwright/test";
 
-import { API_ORIGIN, findActionableOrder, sessionToken, signIn } from "./helpers";
+import {
+  allowedTransitions,
+  API_ORIGIN,
+  findActionableOrder,
+  sessionToken,
+  signIn,
+  signOut,
+} from "./helpers";
 
 /** PATCH an order status straight at the API, bypassing the UI entirely */
 async function patchStatus(token: string, number: string, status: string) {
@@ -18,7 +25,7 @@ test.describe("roles", () => {
     const number = await findActionableOrder(token);
 
     await page.goto(`/orders/${number}`);
-    const options = await page.locator('select[name="status"] option').allTextContents();
+    const options = await allowedTransitions(page);
 
     expect(options).toContain("Paid");
     expect(options).toContain("Cancelled");
@@ -28,12 +35,11 @@ test.describe("roles", () => {
     await signIn(page, "owner");
     const number = await findActionableOrder(await sessionToken(page));
 
-    await page.getByRole("button", { name: "Sign out" }).click();
-    await page.waitForURL(/\/login/);
+    await signOut(page);
     await signIn(page, "staff");
 
     await page.goto(`/orders/${number}`);
-    const options = await page.locator('select[name="status"] option').allTextContents();
+    const options = await allowedTransitions(page);
 
     expect(options, "staff still run production").toContain("Paid");
     expect(options, "but may not cancel").not.toContain("Cancelled");
@@ -64,8 +70,7 @@ test.describe("roles", () => {
     expect((await ok.json()).status).toBe("PAID");
 
     // an owner can then take it somewhere staff could not
-    await page.getByRole("button", { name: "Sign out" }).click();
-    await page.waitForURL(/\/login/);
+    await signOut(page);
     await signIn(page, "owner");
 
     const ownerToken = await sessionToken(page);
@@ -82,8 +87,7 @@ test.describe("roles", () => {
     });
     expect(asStaff.status).toBe(403);
 
-    await page.getByRole("button", { name: "Sign out" }).click();
-    await page.waitForURL(/\/login/);
+    await signOut(page);
     await signIn(page, "owner");
 
     const asOwner = await fetch(`${API_ORIGIN}/designs?email=nobody@example.com`, {
@@ -92,9 +96,10 @@ test.describe("roles", () => {
     expect(asOwner.status).toBe(200);
   });
 
-  test("the header names the signed-in user and role", async ({ page }) => {
+  test("the sidebar names the signed-in user and role", async ({ page }) => {
     await signIn(page, "staff");
-    // the header shows `name ?? email`, and Google supplied a display name
-    await expect(page.getByText("E2E Staff · staff")).toBeVisible();
+    // NavUser's one line is `name ?? email` plus the role, and Google supplied
+    // a display name. Located by testid so a copy tweak is not a test failure.
+    await expect(page.getByTestId("current-user")).toHaveText("E2E Staff · staff");
   });
 });

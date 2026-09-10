@@ -1,6 +1,14 @@
 import { expect, test } from "@playwright/test";
 
-import { API_ORIGIN, COOKIE_NAME, sessionCookie, sessionToken, signIn } from "./helpers";
+import {
+  API_ORIGIN,
+  COOKIE_NAME,
+  findActionableOrder,
+  sessionCookie,
+  sessionToken,
+  signIn,
+  signOut,
+} from "./helpers";
 
 test.describe("admin sign-in", () => {
   test("an anonymous visitor is sent to the login page, keeping where they were going", async ({
@@ -19,7 +27,7 @@ test.describe("admin sign-in", () => {
     await expect(page.locator('input[name="email"]')).toHaveCount(0);
 
     // a plain form POST to the Route Handler, not a client-side action
-    const form = page.locator("form");
+    const form = page.getByTestId("google-form");
     await expect(form).toHaveAttribute("method", /post/i);
     await expect(form).toHaveAttribute("action", "/api/auth/google/start");
 
@@ -38,7 +46,7 @@ test.describe("admin sign-in", () => {
 
     await expect(page).toHaveURL(new RegExp("/$"));
     await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
-    await expect(page.getByText("owner", { exact: false }).first()).toBeVisible();
+    await expect(page.getByTestId("current-user")).toContainText("owner");
     expect(await sessionCookie(page)).not.toBeNull();
   });
 
@@ -128,6 +136,12 @@ test.describe("admin sign-in", () => {
     await page.goto("/orders");
     await page.goto("/quotes");
 
+    // The order detail is the one page that runs TanStack Query in the browser,
+    // so it is the one that could regress this. Wait for the client island to be
+    // interactive, not merely present, or the check races the hydration.
+    await page.goto(`/orders/${await findActionableOrder(await sessionToken(page))}`);
+    await expect(page.getByTestId("status-select")).toBeEnabled();
+
     expect(direct, "every API call must be server-to-server").toEqual([]);
   });
 
@@ -135,8 +149,7 @@ test.describe("admin sign-in", () => {
     await signIn(page, "owner");
     const token = await sessionToken(page);
 
-    await page.getByRole("button", { name: "Sign out" }).click();
-    await page.waitForURL(/\/login/);
+    await signOut(page);
     expect(await sessionCookie(page)).toBeNull();
 
     const res = await fetch(`${API_ORIGIN}/orders`, {

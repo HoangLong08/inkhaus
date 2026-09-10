@@ -38,6 +38,21 @@ export function canTransition(from: OrderStatusCode, to: OrderStatusCode) {
   return from === to || ORDER_TRANSITIONS[from].includes(to);
 }
 
+// ----------------------------------------------------------- bulk quotes
+
+/**
+ * The other lifecycle the back office drives. It lives beside the order one
+ * rather than in a file of its own because the two are always needed together -
+ * the sidebar lists both, and a client bundle should not pay for two imports to
+ * get four strings.
+ *
+ * There is no transition table: a quote may move anywhere at any time. Triage is
+ * a human changing their mind, not a production line.
+ */
+export const QUOTE_STATUSES = ["NEW", "CONTACTED", "WON", "LOST"] as const;
+
+export type QuoteStatusCode = (typeof QUOTE_STATUSES)[number];
+
 // ------------------------------------------------------------ authorization
 
 export const ADMIN_ROLES = ["OWNER", "STAFF"] as const;

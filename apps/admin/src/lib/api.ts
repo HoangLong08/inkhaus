@@ -1,5 +1,18 @@
 import "server-only";
 
+import { z } from "zod";
+
+import {
+  adminUserSchema,
+  bulkQuoteSchema,
+  okSchema,
+  orderSchema,
+  paginatedSchema,
+  sessionSchema,
+  type OrderStatus,
+  type QuoteStatus,
+} from "./schemas/api";
+import type { OrdersQuery, QuotesQuery } from "./schemas/params";
 import { readToken } from "./session";
 
 const BASE = process.env.API_INTERNAL_URL ?? "http://localhost:4000/api/v1";
@@ -29,7 +42,16 @@ async function readError(res: Response, path: string, method: string) {
   return new ApiError(res.status, detail[0] ?? `${method} ${path} failed: ${res.status}`, detail);
 }
 
-type Options = { method?: string; body?: unknown; token?: string };
+type Options<S extends z.ZodType> = {
+  method?: string;
+  body?: unknown;
+  token?: string;
+  /**
+   * Optional because `request` also serves the two auth endpoints, whose shapes
+   * are ad hoc. Everything that reaches a page passes one.
+   */
+  schema?: S;
+};
 
 /**
  * Errors that prove the request never reached the API: nothing was listening on
@@ -78,7 +100,10 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  * to have bounced under `nest start --watch`; without a retry that race costs
  * them the entire round trip through Google for a gap of a second or two.
  */
-async function request<T>(path: string, opts: Options = {}): Promise<T> {
+async function request<S extends z.ZodType>(
+  path: string,
+  opts: Options<S> = {},
+): Promise<z.infer<S>> {
   const method = opts.method ?? "GET";
   const token = opts.token ?? (await readToken());
   const url = `${BASE}${path}`;
@@ -120,88 +145,44 @@ async function request<T>(path: string, opts: Options = {}): Promise<T> {
   }
 
   if (!res.ok) throw await readError(res, path, method);
-  if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
+  if (res.status === 204) return undefined as z.infer<S>;
+
+  const json: unknown = await res.json();
+  if (!opts.schema) return json as z.infer<S>;
+
+  const parsed = opts.schema.safeParse(json);
+  if (!parsed.success) {
+    // The API changed shape under us. Staff get a fact they can report; the
+    // issue list is for whoever ships the API, and a raw zod dump rendered at
+    // someone triaging orders would be worse than useless. 502 because this is
+    // an upstream fault, not the caller's.
+    console.error(
+      `[admin api] ${method} ${path} response did not match:`,
+      JSON.stringify(z.treeifyError(parsed.error)),
+    );
+    throw new ApiError(502, "The INKHAUS API returned something unexpected.");
+  }
+  return parsed.data;
 }
 
 /* ------------------------------------------------------------------ shapes */
 
-export type AdminUser = {
-  id: string;
-  email: string;
-  name: string | null;
-  role: "OWNER" | "STAFF";
-  lastLoginAt: string | null;
-};
-
-export type OrderStatus =
-  | "DRAFT"
-  | "PENDING_PAYMENT"
-  | "PAID"
-  | "IN_PRODUCTION"
-  | "SHIPPED"
-  | "DELIVERED"
-  | "CANCELLED"
-  | "REFUNDED";
-
-export type QuoteStatus = "NEW" | "CONTACTED" | "WON" | "LOST";
-
-/** mirrors OrdersService.toDto in apps/api */
-export type Order = {
-  number: string;
-  status: OrderStatus;
-  currency: string;
-  customer: { email: string; name: string | null };
-  items: {
-    productSlug: string;
-    productName: string;
-    color: { slug: string; name: string; hex: string };
-    method: string;
-    designId: string | null;
-    unitPrice: number;
-    quantity: number;
-    lineTotal: number;
-    sizes: { size: string; qty: number; upcharge: number }[];
-  }[];
-  subtotal: number;
-  discount: number;
-  shipping: number;
-  tax: number;
-  total: number;
-  shippingAddress: {
-    name: string | null;
-    line1: string | null;
-    line2: string | null;
-    city: string | null;
-    state: string | null;
-    postal: string | null;
-    country: string | null;
-  };
-  notes: string | null;
-  timeline: { status: OrderStatus; note: string | null; at: string }[];
-  placedAt: string | null;
-  createdAt: string;
-};
-
-/** mirrors QuotesService.toDto in apps/api */
-export type BulkQuote = {
-  id: string;
-  email: string;
-  name: string | null;
-  company: string | null;
-  productSlug: string | null;
-  quantity: number;
-  method: string | null;
-  message: string | null;
-  estimated: number | null;
-  status: QuoteStatus;
-  createdAt: string;
-};
-
-export type Paginated<T> = {
-  data: T[];
-  meta: { page: number; limit: number; total: number; pages: number };
-};
+/**
+ * Re-exported, not declared. These used to be hand-written mirrors of the API's
+ * DTOs kept in sync by hope; they are now inferred from the zod schemas that
+ * parse the responses at runtime, so a shape and its checker cannot drift.
+ * Import sites are unchanged - `import { type Order } from "@/lib/api"` still
+ * resolves, and still means the same thing.
+ */
+export type {
+  AdminRole,
+  AdminUser,
+  BulkQuote,
+  Order,
+  OrderStatus,
+  Paginated,
+  QuoteStatus,
+} from "./schemas/api";
 
 /* ------------------------------------------------------------------- calls */
 
@@ -212,35 +193,39 @@ export const adminApi = {
    * identity - it only drives the browser end of the flow.
    */
   loginWithGoogle: (idToken: string) =>
-    request<{ token: string; expiresAt: string; user: AdminUser }>("/admin/auth/google", {
+    request("/admin/auth/google", {
       method: "POST",
       body: { idToken },
       // no session cookie exists yet at this point
       token: "",
+      schema: sessionSchema,
     }),
 
-  me: (token?: string) => request<AdminUser>("/admin/auth/me", { token }),
+  me: (token?: string) => request("/admin/auth/me", { token, schema: adminUserSchema }),
 
-  logout: () => request<{ ok: true }>("/admin/auth/logout", { method: "POST" }),
+  logout: () => request("/admin/auth/logout", { method: "POST", schema: okSchema }),
 
-  orders: (params: { page?: number; status?: OrderStatus; email?: string } = {}) =>
-    request<Paginated<Order>>(`/orders${query(params)}`),
+  orders: (params: Partial<OrdersQuery> = {}) =>
+    request(`/orders${query(params)}`, { schema: paginatedSchema(orderSchema) }),
 
-  order: (number: string) => request<Order>(`/orders/${encodeURIComponent(number)}`),
+  order: (number: string) =>
+    request(`/orders/${encodeURIComponent(number)}`, { schema: orderSchema }),
 
   setOrderStatus: (number: string, status: OrderStatus, note?: string) =>
-    request<Order>(`/orders/${encodeURIComponent(number)}/status`, {
+    request(`/orders/${encodeURIComponent(number)}/status`, {
       method: "PATCH",
       body: { status, ...(note ? { note } : {}) },
+      schema: orderSchema,
     }),
 
-  quotes: (params: { page?: number; status?: QuoteStatus } = {}) =>
-    request<Paginated<BulkQuote>>(`/bulk-quotes${query(params)}`),
+  quotes: (params: Partial<QuotesQuery> = {}) =>
+    request(`/bulk-quotes${query(params)}`, { schema: paginatedSchema(bulkQuoteSchema) }),
 
   setQuoteStatus: (id: string, status: QuoteStatus) =>
-    request<BulkQuote>(`/bulk-quotes/${encodeURIComponent(id)}`, {
+    request(`/bulk-quotes/${encodeURIComponent(id)}`, {
       method: "PATCH",
       body: { status },
+      schema: bulkQuoteSchema,
     }),
 };
 

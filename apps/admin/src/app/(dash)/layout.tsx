@@ -1,6 +1,11 @@
-import Link from "next/link";
+import { cookies } from "next/headers";
 
-import { logout } from "@/app/actions";
+import { AppSidebar } from "@/components/nav/AppSidebar";
+import { DashBreadcrumb } from "@/components/nav/DashBreadcrumb";
+import { ThemeToggle } from "@/components/nav/ThemeToggle";
+import { Providers } from "@/components/providers/Providers";
+import { Separator } from "@/components/ui/separator";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { requireAdmin } from "@/lib/dal";
 
 /**
@@ -9,6 +14,9 @@ import { requireAdmin } from "@/lib/dal";
  * URL twice returned the first render - including after the session had been
  * revoked - because the auth check never ran the second time. Applies to the
  * whole segment subtree.
+ *
+ * It is also what makes NavMain's useSearchParams() safe: nothing in this
+ * subtree is prerendered, so that hook needs no Suspense boundary of its own.
  */
 export const dynamic = "force-dynamic";
 
@@ -16,51 +24,38 @@ export const dynamic = "force-dynamic";
  * The real gate for everything in this route group. `proxy.ts` only checked that
  * a cookie exists; this asks the API whether it is still a live session, and
  * redirects to /login if not.
+ *
+ * Keep requireAdmin() as the only data this layout awaits. A layout that reads
+ * runtime data is not covered by a sibling loading.tsx - navigation blocks on it
+ * - and requireAdmin is React-cached, so the page below pays nothing for it.
+ * Fetching a list here would cost every page in the group its loading skeleton.
  */
 export default async function DashLayout({ children }: { children: React.ReactNode }) {
-  const user = await requireAdmin();
+  const [user, cookieStore] = await Promise.all([requireAdmin(), cookies()]);
+
+  // Read `!== "false"`, not `=== "true"`. shadcn's own example does the latter,
+  // which leaves a first-time visitor with the nav collapsed; a back office
+  // should show its navigation until told otherwise. Resolving this server side
+  // is also what stops the sidebar flashing open and snapping shut on load.
+  const defaultOpen = cookieStore.get("sidebar_state")?.value !== "false";
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-10 border-b border-line bg-paper/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3">
-          <Link href="/" className="text-sm font-black uppercase tracking-tight">
-            INKHAUS<span className="ml-1.5 font-medium text-ink-3">back office</span>
-          </Link>
+    <Providers>
+      <SidebarProvider defaultOpen={defaultOpen}>
+        <AppSidebar user={user} />
+        <SidebarInset>
+          <header className="bg-background/90 sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b backdrop-blur">
+            <div className="flex w-full items-center gap-2 px-4">
+              <SidebarTrigger className="-ml-1" data-testid="sidebar-toggle" />
+              <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
+              <DashBreadcrumb />
+              <ThemeToggle className="ml-auto" />
+            </div>
+          </header>
 
-          <nav className="flex items-center gap-1 text-sm">
-            <NavLink href="/orders">Orders</NavLink>
-            <NavLink href="/quotes">Bulk quotes</NavLink>
-          </nav>
-
-          <div className="ml-auto flex items-center gap-3">
-            <span className="hidden text-xs text-ink-3 sm:inline">
-              {user.name ?? user.email} · {user.role.toLowerCase()}
-            </span>
-            <form action={logout}>
-              <button
-                type="submit"
-                className="rounded-md border border-line px-3 py-1.5 text-xs font-semibold transition hover:bg-paper-2"
-              >
-                Sign out
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
-    </div>
-  );
-}
-
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <Link
-      href={href}
-      className="rounded-md px-2.5 py-1.5 font-medium text-ink-2 transition hover:bg-paper-2 hover:text-ink"
-    >
-      {children}
-    </Link>
+          <main className="flex-1 px-4 py-8 md:px-8">{children}</main>
+        </SidebarInset>
+      </SidebarProvider>
+    </Providers>
   );
 }

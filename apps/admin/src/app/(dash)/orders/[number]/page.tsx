@@ -1,242 +1,207 @@
-import { canSetStatus, ORDER_TRANSITIONS, type OrderStatusCode } from "@inkhaus/shared";
+import { HydrationBoundary, dehydrate } from "@tanstack/react-query";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { setOrderStatus } from "@/app/actions";
-import StatusBadge from "@/components/StatusBadge";
+import OrderStatusForm from "@/components/orders/OrderStatusForm";
+import OrderStatusLive from "@/components/orders/OrderStatusLive";
+import OrderTimeline from "@/components/orders/OrderTimeline";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { adminApi, ApiError } from "@/lib/api";
 import { requireAdmin } from "@/lib/dal";
 import { at, humanize, usd } from "@/lib/format";
+import { getQueryClient } from "@/lib/query-client";
+import { queryKeys } from "@/lib/query-keys";
 
 export async function generateMetadata({ params }: { params: Promise<{ number: string }> }) {
   const { number } = await params;
   return { title: `${number} — INKHAUS Back Office` };
 }
 
-export default async function OrderPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ number: string }>;
-  searchParams: Promise<{ error?: string }>;
-}) {
-  const [{ number }, { error }, user] = await Promise.all([
+/**
+ * The one page where a client cache earns its place: a single status write
+ * changes three regions that sit in two different grid columns - the badge by
+ * the heading, the timeline, and the set of moves still available.
+ *
+ * So: one server fetch, dehydrated into the client cache, and three small client
+ * leaves reading that same entry. Everything else - line items, totals, the
+ * shipping address - cannot change from this screen and stays server rendered,
+ * which keeps the client bundle for this route down to those three leaves.
+ */
+export default async function OrderPage({ params }: { params: Promise<{ number: string }> }) {
+  const [{ number }, user] = await Promise.all([
     params,
-    searchParams,
     // cached by the DAL, so this costs nothing beyond the layout's own call
     requireAdmin(),
   ]);
 
-  const order = await adminApi.order(number).catch((err) => {
-    if (err instanceof ApiError && err.status === 404) notFound();
-    throw err;
-  });
+  const queryClient = getQueryClient();
 
-  // Two filters, and both matter: the transition table says what is reachable
-  // from here, the role says what this person may reach. Staff simply never see
-  // Cancel or Refund - offering a button that always 403s is worse than none.
-  const next = (ORDER_TRANSITIONS[order.status as OrderStatusCode] ?? []).filter((s) =>
-    canSetStatus(user.role, s),
-  );
+  // fetchQuery, not prefetchQuery: the server render needs the value too, for
+  // the two thirds of this page that are not client components.
+  const order = await queryClient
+    .fetchQuery({
+      queryKey: queryKeys.orders.detail(number),
+      queryFn: () => adminApi.order(number),
+    })
+    .catch((err: unknown) => {
+      if (err instanceof ApiError && err.status === 404) notFound();
+      throw err;
+    });
+
   const ship = order.shippingAddress;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Link href="/orders" className="text-sm font-medium text-sky hover:underline">
-          ← Orders
-        </Link>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="font-mono text-2xl font-bold tracking-tight">{order.number}</h1>
-          <StatusBadge status={order.status} />
-        </div>
-        <p className="mt-1 text-sm text-ink-3">
-          {order.customer.name ? `${order.customer.name} · ` : ""}
-          {order.customer.email} · placed {at(order.placedAt ?? order.createdAt)}
-        </p>
-      </div>
-
-      {error ? (
-        <p
-          role="alert"
-          className="rounded-lg border border-flame/30 bg-flame/10 px-4 py-3 text-sm text-flame"
-        >
-          {error}
-        </p>
-      ) : null}
-
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <div className="space-y-6">
-          <section className="overflow-hidden rounded-lg border border-line bg-paper">
-            <h2 className="border-b border-line bg-paper-2 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink-3">
-              Items
-            </h2>
-            <ul className="divide-y divide-line">
-              {order.items.map((item, i) => (
-                <li key={i} className="space-y-2 px-4 py-3">
-                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <span className="font-semibold">{item.productName}</span>
-                    <span className="inline-flex items-center gap-1.5 text-sm text-ink-3">
-                      <span
-                        aria-hidden
-                        className="inline-block size-3 rounded-full border border-line"
-                        style={{ background: item.color.hex }}
-                      />
-                      {item.color.name}
-                    </span>
-                    <span className="text-sm text-ink-3">{humanize(item.method)}</span>
-                    <span className="ml-auto text-sm font-semibold tabular-nums">
-                      {usd(item.lineTotal)}
-                    </span>
-                  </div>
-
-                  <p className="text-sm text-ink-2">
-                    {item.sizes.map((s) => `${s.size}×${s.qty}`).join("  ")}
-                    <span className="text-ink-3">
-                      {" "}
-                      · {item.quantity} units @ {usd(item.unitPrice)}
-                    </span>
-                  </p>
-
-                  {item.designId ? (
-                    <p className="font-mono text-xs text-ink-3">design {item.designId}</p>
-                  ) : (
-                    <p className="text-xs text-ink-3">blank, no artwork</p>
-                  )}
-                </li>
-              ))}
-            </ul>
-
-            <dl className="space-y-1 border-t border-line bg-paper-2 px-4 py-3 text-sm">
-              <Row label="Subtotal" value={usd(order.subtotal)} />
-              {order.discount > 0 ? <Row label="Discount" value={`−${usd(order.discount)}`} /> : null}
-              <Row label="Shipping" value={order.shipping === 0 ? "Free" : usd(order.shipping)} />
-              {order.tax > 0 ? <Row label="Tax" value={usd(order.tax)} /> : null}
-              <div className="flex justify-between border-t border-line pt-1.5 font-semibold">
-                <dt>Total</dt>
-                <dd className="tabular-nums">{usd(order.total)}</dd>
-              </div>
-            </dl>
-          </section>
-
-          <section className="overflow-hidden rounded-lg border border-line bg-paper">
-            <h2 className="border-b border-line bg-paper-2 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink-3">
-              Timeline
-            </h2>
-            <ol className="divide-y divide-line">
-              {order.timeline.map((event, i) => (
-                <li key={i} className="flex flex-wrap items-center gap-3 px-4 py-2.5 text-sm">
-                  <StatusBadge status={event.status} />
-                  {event.note ? <span className="text-ink-2">{event.note}</span> : null}
-                  <span className="ml-auto text-xs text-ink-3">{at(event.at)}</span>
-                </li>
-              ))}
-            </ol>
-          </section>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <div className="space-y-6">
+        <div>
+          <Button asChild variant="link" size="sm" className="h-auto p-0">
+            <Link href="/orders">
+              <ArrowLeft />
+              Orders
+            </Link>
+          </Button>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <h1 className="font-mono text-2xl font-bold tracking-tight">{order.number}</h1>
+            <OrderStatusLive number={order.number} />
+          </div>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {order.customer.name ? `${order.customer.name} · ` : ""}
+            {order.customer.email} · placed {at(order.placedAt ?? order.createdAt)}
+          </p>
         </div>
 
-        <div className="space-y-6">
-          <section className="rounded-lg border border-line bg-paper p-4">
-            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-3">
-              Advance status
-            </h2>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <div className="space-y-6">
+            <Card className="gap-0 overflow-hidden p-0">
+              <CardHeader className="bg-muted/50 border-b px-4 py-2.5">
+                <CardTitle className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+                  Items
+                </CardTitle>
+              </CardHeader>
 
-            {next.length === 0 ? (
-              // An empty list has two very different causes, and telling staff
-              // an order is "final" when it is really "not yours to cancel"
-              // would send them hunting for a bug.
-              <p className="text-sm text-ink-3" data-testid="no-moves">
-                {(ORDER_TRANSITIONS[order.status as OrderStatusCode] ?? []).length === 0
-                  ? `${humanize(order.status)} is a final state — nothing left to do here.`
-                  : `Moving an order out of ${humanize(order.status)} is limited to owners.`}
-              </p>
-            ) : (
-              <form action={setOrderStatus} className="space-y-3">
-                <input type="hidden" name="number" value={order.number} />
+              <ul className="divide-y">
+                {order.items.map((item, i) => (
+                  <li key={i} className="space-y-2 px-4 py-3">
+                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                      <span className="font-semibold">{item.productName}</span>
+                      <span className="text-muted-foreground inline-flex items-center gap-1.5 text-sm">
+                        {/* the one legitimate inline colour in this app: it is
+                            product data, not a design token */}
+                        <span
+                          aria-hidden
+                          className="inline-block size-3 rounded-full border"
+                          style={{ background: item.color.hex }}
+                        />
+                        {item.color.name}
+                      </span>
+                      <span className="text-muted-foreground text-sm">
+                        {humanize(item.method)}
+                      </span>
+                      <span className="ml-auto text-sm font-semibold tabular-nums">
+                        {usd(item.lineTotal)}
+                      </span>
+                    </div>
 
-                <label className="block">
-                  <span className="mb-1.5 block text-xs font-medium text-ink-3">Move to</span>
-                  <select
-                    name="status"
-                    defaultValue={next[0]}
-                    className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm"
-                  >
-                    {next.map((s) => (
-                      <option key={s} value={s}>
-                        {humanize(s)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    <p className="text-muted-foreground text-sm">
+                      {item.sizes.map((s) => `${s.size}×${s.qty}`).join("  ")}
+                      <span> · {item.quantity} units @ {usd(item.unitPrice)}</span>
+                    </p>
 
-                <label className="block">
-                  <span className="mb-1.5 block text-xs font-medium text-ink-3">
-                    Note <span className="font-normal">(optional)</span>
-                  </span>
-                  <input
-                    name="note"
-                    maxLength={500}
-                    placeholder="Tracking number, reason…"
-                    className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm"
+                    {item.designId ? (
+                      <p className="text-muted-foreground font-mono text-xs">
+                        design {item.designId}
+                      </p>
+                    ) : (
+                      <p className="text-muted-foreground text-xs">blank, no artwork</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+
+              <CardFooter className="bg-muted/50 flex-col items-stretch gap-1 border-t px-4 py-3 text-sm">
+                <dl className="space-y-1">
+                  <Row label="Subtotal" value={usd(order.subtotal)} />
+                  {order.discount > 0 ? (
+                    <Row label="Discount" value={`−${usd(order.discount)}`} />
+                  ) : null}
+                  <Row
+                    label="Shipping"
+                    value={order.shipping === 0 ? "Free" : usd(order.shipping)}
                   />
-                </label>
+                  {order.tax > 0 ? <Row label="Tax" value={usd(order.tax)} /> : null}
+                  <div className="flex justify-between border-t pt-1.5 font-semibold">
+                    <dt>Total</dt>
+                    <dd className="tabular-nums">{usd(order.total)}</dd>
+                  </div>
+                </dl>
+              </CardFooter>
+            </Card>
 
-                <button
-                  type="submit"
-                  className="w-full rounded-md bg-ink px-4 py-2 text-sm font-semibold text-paper transition hover:bg-ink-2"
-                >
-                  Save
-                </button>
-              </form>
-            )}
-          </section>
+            <OrderTimeline number={order.number} />
+          </div>
 
-          <section className="rounded-lg border border-line bg-paper p-4">
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-3">
-              Ship to
-            </h2>
-            {ship.line1 ? (
-              <address className="text-sm not-italic leading-relaxed text-ink-2">
-                {ship.name ? (
-                  <>
-                    {ship.name}
+          <div className="space-y-6">
+            <OrderStatusForm number={order.number} role={user.role} />
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+                  Ship to
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {ship.line1 ? (
+                  <address className="text-muted-foreground text-sm not-italic leading-relaxed">
+                    {ship.name ? (
+                      <>
+                        {ship.name}
+                        <br />
+                      </>
+                    ) : null}
+                    {ship.line1}
                     <br />
-                  </>
-                ) : null}
-                {ship.line1}
-                <br />
-                {ship.line2 ? (
-                  <>
-                    {ship.line2}
+                    {ship.line2 ? (
+                      <>
+                        {ship.line2}
+                        <br />
+                      </>
+                    ) : null}
+                    {[ship.city, ship.state, ship.postal].filter(Boolean).join(", ")}
                     <br />
-                  </>
-                ) : null}
-                {[ship.city, ship.state, ship.postal].filter(Boolean).join(", ")}
-                <br />
-                {ship.country}
-              </address>
-            ) : (
-              <p className="text-sm text-ink-3">No address on this order.</p>
-            )}
-          </section>
+                    {ship.country}
+                  </address>
+                ) : (
+                  <p className="text-muted-foreground text-sm">No address on this order.</p>
+                )}
+              </CardContent>
+            </Card>
 
-          {order.notes ? (
-            <section className="rounded-lg border border-line bg-paper p-4">
-              <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-3">
-                Customer notes
-              </h2>
-              <p className="whitespace-pre-wrap text-sm text-ink-2">{order.notes}</p>
-            </section>
-          ) : null}
+            {order.notes ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+                    Customer notes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground whitespace-pre-wrap text-sm">
+                    {order.notes}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : null}
+          </div>
         </div>
       </div>
-    </div>
+    </HydrationBoundary>
   );
 }
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between text-ink-2">
+    <div className="text-muted-foreground flex justify-between">
       <dt>{label}</dt>
       <dd className="tabular-nums">{value}</dd>
     </div>

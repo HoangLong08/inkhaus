@@ -1,5 +1,16 @@
+import { AlertCircle } from "lucide-react";
 import type { Metadata } from "next";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { safeNext } from "@/lib/safe-next";
 
 export const metadata: Metadata = { title: "Sign in — INKHAUS Back Office" };
@@ -8,6 +19,14 @@ export const metadata: Metadata = { title: "Sign in — INKHAUS Back Office" };
  * Entirely server-rendered: a plain HTML form posting to a Route Handler, with
  * no client component anywhere in the tree. Sign-in is the one page that has to
  * work when everything else has gone wrong, and nothing here needs JavaScript.
+ *
+ * Every shadcn component used below is plain markup or a Slot - none of them
+ * carry "use client" - which is why this page can adopt them without giving that
+ * up. The query provider and the toaster are mounted in (dash)/layout.tsx
+ * precisely so they never reach here.
+ *
+ * Two constraints an e2e test enforces: this page must work with scripting off,
+ * and it must contain exactly one <form>.
  */
 export default async function LoginPage({
   searchParams,
@@ -17,41 +36,49 @@ export default async function LoginPage({
   const { next, error } = await searchParams;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-paper-2 px-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-6">
+    <main className="bg-muted flex min-h-screen items-center justify-center px-4">
+      <div className="w-full max-w-sm space-y-6">
+        <div>
           <p className="text-lg font-black uppercase tracking-tight">INKHAUS</p>
-          <p className="text-sm text-ink-3">Back office</p>
+          <p className="text-muted-foreground text-sm">Back office</p>
         </div>
 
-        <div className="rounded-lg border border-line bg-paper p-6 shadow-sm">
-          {error ? (
-            <p
-              role="alert"
-              data-testid="login-error"
-              className="mb-4 rounded-md border border-flame/30 bg-flame/10 px-3 py-2 text-sm text-flame"
-            >
-              {error}
+        <Card>
+          <CardHeader>
+            <CardTitle>Sign in</CardTitle>
+            <CardDescription>Staff accounts only.</CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            {/* Alert already sets role="alert" */}
+            {error ? (
+              <Alert variant="destructive" data-testid="login-error">
+                <AlertCircle />
+                <AlertTitle>Sign-in failed</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+
+            <form method="POST" action="/api/auth/google/start" data-testid="google-form">
+              <input type="hidden" name="next" value={safeNext(next)} />
+              <Button
+                type="submit"
+                variant="outline"
+                className="w-full"
+                data-testid="google-signin"
+              >
+                <GoogleMark />
+                Sign in with Google
+              </Button>
+            </form>
+          </CardContent>
+
+          <CardFooter>
+            <p className="text-muted-foreground text-xs">
+              Only the addresses already on the allowlist. Sessions last 12 hours.
             </p>
-          ) : null}
-
-          <form method="POST" action="/api/auth/google/start">
-            <input type="hidden" name="next" value={safeNext(next)} />
-            <button
-              type="submit"
-              data-testid="google-signin"
-              className="flex w-full items-center justify-center gap-2.5 rounded-md border border-line bg-paper px-4 py-2.5 text-sm font-semibold transition hover:bg-paper-2"
-            >
-              <GoogleMark />
-              Sign in with Google
-            </button>
-          </form>
-        </div>
-
-        <p className="mt-4 text-xs text-ink-3">
-          Staff accounts only, and only the addresses already on the allowlist. Sessions last 12
-          hours.
-        </p>
+          </CardFooter>
+        </Card>
       </div>
     </main>
   );
