@@ -17,6 +17,6 @@ export const GET = route(async () => {
  */
 export const PUT = route(async (request: Request) => {
   await requireCapability("catalog.price");
-  const input = tiersInputSchema.parse(await request.json());
+  const input = tiersInputSchema.parse(await request.json().catch(() => null));
   return NextResponse.json(await applyTiersReplace(input));
 });

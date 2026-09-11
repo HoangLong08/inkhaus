@@ -19,6 +19,6 @@ export const GET = route(async () => {
 /** invite: puts an address on the sign-in allowlist */
 export const POST = route(async (request: Request) => {
   await requireCapability("staff.manage");
-  const input = staffInviteInputSchema.parse(await request.json());
+  const input = staffInviteInputSchema.parse(await request.json().catch(() => null));
   return NextResponse.json(await applyStaffInvite(input), { status: 201 });
 });

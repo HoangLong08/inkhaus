@@ -8,6 +8,6 @@ import { productInputSchema } from "@/lib/schemas/forms";
 /** A new blank: owners only (`catalog.create`), and refused while price edits are off. */
 export const POST = route(async (request: Request) => {
   await requireCapability("catalog.create");
-  const input = productInputSchema.parse(await request.json());
+  const input = productInputSchema.parse(await request.json().catch(() => null));
   return NextResponse.json(await applyProductCreate(input), { status: 201 });
 });
