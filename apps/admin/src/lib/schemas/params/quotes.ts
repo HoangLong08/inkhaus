@@ -5,8 +5,10 @@ import {
 } from "@inkhaus/shared/orders";
 import { z } from "zod";
 
+import type { Params } from "@/lib/url";
+
 import { quoteStatusSchema } from "../api";
-import { limitParam, pageParam, searchParam } from "./common";
+import { DEFAULT_PAGE_SIZE, limitParam, pageParam, searchParam } from "./common";
 
 /**
  * A quote id as it arrives in a URL segment. Ids are cuids; anything else
@@ -16,13 +18,13 @@ import { limitParam, pageParam, searchParam } from "./common";
 export const quoteIdSchema = z.string().regex(/^[a-z0-9]{20,40}$/i);
 
 /**
- * `/quotes`. Every field ends in its own `.catch()`, so `.parse()` cannot throw:
- * an unknown status or sort is dropped, a junk page falls back to 1.
+ * `/quotes`. Every field ends in its own `.catch()`: an unknown status or sort
+ * is dropped, a junk page falls back to 1.
  *
  * `sort` stays undefined unless the URL sets it (the API's default is newest
  * first), so the links this page builds do not all grow a `sort=` for nothing.
  */
-export const quotesQuerySchema = z.object({
+const quotesQueryShape = z.object({
   q: searchParam,
   status: quoteStatusSchema.optional().catch(undefined),
   assignee: z
@@ -35,4 +37,16 @@ export const quotesQuerySchema = z.object({
   limit: limitParam,
 });
 
+/** the outer `.catch()` covers input that is not an object, so `.parse()` cannot throw */
+export const quotesQuerySchema = quotesQueryShape.catch(() => quotesQueryShape.parse({}));
+
 export type QuotesQuery = z.infer<typeof quotesQuerySchema>;
+
+/**
+ * The parsed params as the list's own links carry them, the default page size
+ * left out: a status chip reads `/quotes?status=NEW`, not
+ * `/quotes?status=NEW&limit=20`. Parsing either gives the same params back.
+ */
+export function quotesLinkParams(params: QuotesQuery): Params {
+  return { ...params, limit: params.limit === DEFAULT_PAGE_SIZE ? undefined : params.limit };
+}

@@ -1,10 +1,10 @@
 import { can } from "@inkhaus/shared/admin";
-import { PRINT_METHOD_LABEL, type PrintMethodCode } from "@inkhaus/shared/taxonomy";
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { methodLabel } from "@/components/order-detail/format";
 import AssigneeSelect from "@/components/quotes/AssigneeSelect";
 import ConvertQuoteDialog from "@/components/quotes/ConvertQuoteDialog";
 import FollowUpPicker from "@/components/quotes/FollowUpPicker";
@@ -16,7 +16,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Separator } from "@/components/ui/separator";
 import { adminApi, ApiError } from "@/lib/api";
 import { requireAdmin } from "@/lib/dal";
-import { at, count, humanize, usd } from "@/lib/format";
+import { at, count, usd } from "@/lib/format";
 import { getQueryClient } from "@/lib/query-client";
 import { queryKeys } from "@/lib/query-keys";
 import { quoteIdSchema } from "@/lib/schemas/params";
@@ -119,7 +119,7 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
                   </Fact>
                   <Fact label="Method">
                     {quote.method ? (
-                      (PRINT_METHOD_LABEL[quote.method as PrintMethodCode] ?? humanize(quote.method))
+                      methodLabel(quote.method)
                     ) : (
                       <Muted>Not chosen</Muted>
                     )}

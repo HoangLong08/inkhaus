@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/table";
 import { adminApi } from "@/lib/api";
 import { at, humanize, relative, usd } from "@/lib/format";
-import { quotesQuerySchema } from "@/lib/schemas/params";
+import { quotesLinkParams, quotesQuerySchema } from "@/lib/schemas/params";
 
 export const metadata = { title: "Bulk quotes — INKHAUS Back Office" };
 
@@ -56,6 +56,8 @@ export default async function QuotesPage({
   const params = quotesQuerySchema.parse(await searchParams);
   const { data, meta } = await adminApi.quotes.list(params);
   const today = todayUtc();
+  // what every control's link keeps: the parsed params, defaults left unspelled
+  const linkParams = quotesLinkParams(params);
 
   return (
     <div className="space-y-6">
@@ -63,7 +65,7 @@ export default async function QuotesPage({
         title="Bulk quotes"
         meta={`${meta.total} total · page ${meta.page} of ${meta.pages}`}
         metaTestId="quotes-meta"
-        actions={<PageSizeLinks base="/quotes" params={params} active={params.limit} />}
+        actions={<PageSizeLinks base="/quotes" params={linkParams} active={params.limit} />}
       />
 
       <UrlSearchBox
@@ -78,7 +80,7 @@ export default async function QuotesPage({
           base="/quotes"
           statuses={QUOTE_STATUSES}
           active={params.status}
-          params={params}
+          params={linkParams}
         />
         <div className="flex flex-wrap gap-x-6 gap-y-3">
           <FilterLinks
@@ -86,7 +88,7 @@ export default async function QuotesPage({
             param="assignee"
             values={QUOTE_ASSIGNEE_KEYWORDS}
             active={params.assignee}
-            params={params}
+            params={linkParams}
             ariaLabel="Filter by assignee"
             allLabel="Anyone"
             label={assigneeLabel}
@@ -96,7 +98,7 @@ export default async function QuotesPage({
             param="followUp"
             values={QUOTE_FOLLOW_UP_FILTERS}
             active={params.followUp}
-            params={params}
+            params={linkParams}
             ariaLabel="Filter by follow-up"
             allLabel="Any follow-up"
             label={humanize}
@@ -228,7 +230,7 @@ export default async function QuotesPage({
         </Card>
       )}
 
-      <Pager base="/quotes" page={meta.page} pages={meta.pages} params={params} />
+      <Pager base="/quotes" page={meta.page} pages={meta.pages} params={linkParams} />
     </div>
   );
 }

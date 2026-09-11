@@ -691,42 +691,52 @@ function CheckboxGroup({
     <FormField
       control={form.control}
       name={name}
-      render={() => (
+      render={({ fieldState }) => (
         <FormItem>
-          <FormLabel>{label}</FormLabel>
-          {description ? <FormDescription>{description}</FormDescription> : null}
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
-            {options.map((option) => (
-              <FormField
-                key={option.value}
-                control={form.control}
-                name={name}
-                render={({ field }) => {
-                  const values = field.value as string[];
-                  return (
-                    <FormItem className="flex flex-row items-center gap-2">
-                      <FormControl>
-                        <Checkbox
-                          checked={values.includes(option.value)}
-                          onCheckedChange={(checked) =>
-                            field.onChange(
-                              checked === true
-                                ? order([...values, option.value])
-                                : values.filter((v) => v !== option.value),
-                            )
-                          }
-                          data-testid={testId}
-                          // a computed data-* name cannot be written as a JSX attribute
-                          {...({ [dataName]: option.value } as object)}
-                        />
-                      </FormControl>
-                      <FormLabel className="font-normal">{option.label}</FormLabel>
-                    </FormItem>
-                  );
-                }}
-              />
-            ))}
-          </div>
+          {/* A FormLabel here would point at an input that does not exist: a
+              set of checkboxes is a group, named by its legend, and each box
+              keeps its own label. */}
+          <fieldset className="min-w-0 space-y-2">
+            <legend
+              data-error={!!fieldState.error}
+              className="data-[error=true]:text-destructive mb-2 text-sm leading-none font-medium"
+            >
+              {label}
+            </legend>
+            {description ? <FormDescription>{description}</FormDescription> : null}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
+              {options.map((option) => (
+                <FormField
+                  key={option.value}
+                  control={form.control}
+                  name={name}
+                  render={({ field }) => {
+                    const values = field.value as string[];
+                    return (
+                      <FormItem className="flex flex-row items-center gap-2">
+                        <FormControl>
+                          <Checkbox
+                            checked={values.includes(option.value)}
+                            onCheckedChange={(checked) =>
+                              field.onChange(
+                                checked === true
+                                  ? order([...values, option.value])
+                                  : values.filter((v) => v !== option.value),
+                              )
+                            }
+                            data-testid={testId}
+                            // a computed data-* name cannot be written as a JSX attribute
+                            {...({ [dataName]: option.value } as object)}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal">{option.label}</FormLabel>
+                      </FormItem>
+                    );
+                  }}
+                />
+              ))}
+            </div>
+          </fieldset>
           <FormMessage />
         </FormItem>
       )}

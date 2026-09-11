@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { can } from "@inkhaus/shared/admin";
 import { canConvertQuote, type AdminRoleCode } from "@inkhaus/shared/orders";
 import { quote as priceQuote, SIZE_LABEL } from "@inkhaus/shared/pricing";
-import { PRINT_METHOD_LABEL, type PrintMethodCode } from "@inkhaus/shared/taxonomy";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronsUpDown, FileOutput, Loader2, PackageCheck } from "lucide-react";
 import Link from "next/link";
@@ -14,6 +13,7 @@ import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { cn } from "cn";
 
+import { methodLabel } from "@/components/order-detail/format";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -54,7 +54,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import type { AdminQuoteDetail, CatalogOptions } from "@/lib/api";
 import { ClientApiError, clientApi } from "@/lib/client-api";
-import { count, humanize, pct, usd } from "@/lib/format";
+import { count, pct, usd } from "@/lib/format";
 import { queryKeys } from "@/lib/query-keys";
 import {
   CONVERT_NOTES_MAX,
@@ -275,7 +275,11 @@ function ConvertForm({
                     </PopoverTrigger>
                     <PopoverContent align="start" className="w-(--radix-popover-trigger-width) p-0">
                       <Command>
-                        <CommandInput placeholder="Search products…" />
+                        <CommandInput
+                          placeholder="Search products…"
+                          aria-label="Search products"
+                          data-testid="convert-product-search"
+                        />
                         <CommandList>
                           <CommandEmpty>No product matches.</CommandEmpty>
                           <CommandGroup>
@@ -377,7 +381,7 @@ function ConvertForm({
                             data-testid="convert-method-option"
                             data-method={method}
                           >
-                            {PRINT_METHOD_LABEL[method as PrintMethodCode] ?? humanize(method)}
+                            {methodLabel(method)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -471,7 +475,8 @@ function ConvertForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    Order notes <span className="text-muted-foreground font-normal">(optional)</span>
+                    Note for the customer{" "}
+                    <span className="text-muted-foreground font-normal">(optional)</span>
                   </FormLabel>
                   <FormControl>
                     <Textarea
@@ -482,6 +487,10 @@ function ConvertForm({
                       value={field.value ?? ""}
                     />
                   </FormControl>
+                  <FormDescription>
+                    The customer sees this on their order page once the order is placed. For
+                    something only staff should read, add a note on the order instead.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
