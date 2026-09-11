@@ -89,10 +89,34 @@ export class AdminAuthService implements OnModuleInit {
 
     const token = randomBytes(32).toString('base64url');
     const ttlHours = this.config.get<number>('adminSessionTtlHours') ?? 12;
-    const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + ttlHours * 60 * 60 * 1000);
 
-    const [, updated] = await this.prisma.$transaction([
-      this.prisma.adminSession.create({
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // The isActive check above is a read, and an owner can deactivate this
+      // account between it and the session insert - leaving a session minted
+      // for someone who no longer has access. So the account row is written
+      // first, only while it is still active: that write locks the row, a
+      // deactivation that committed in between turns it into a no-op here, and
+      // one still in flight has to wait for this transaction and then deletes
+      // the session it created (StaffService ends sessions in the same
+      // Serializable transaction as the flag).
+      const { count } = await tx.adminUser.updateMany({
+        where: { id: user.id, isActive: true },
+        data: {
+          lastLoginAt: now,
+          googleSub: user.googleSub ?? sub,
+          // Google is the source of truth for the display name, but never for
+          // the role - that is ours to decide
+          name: user.name ?? claims.name ?? null,
+        },
+      });
+      if (count === 0) {
+        this.logger.warn(`Google sign-in refused for "${email}": deactivated while signing in`);
+        throw new ForbiddenException('This account is not allowed in the back office');
+      }
+
+      await tx.adminSession.create({
         data: {
           tokenHash: sha256(token),
           userId: user.id,
@@ -100,20 +124,12 @@ export class AdminAuthService implements OnModuleInit {
           userAgent: meta.userAgent?.slice(0, 500),
           ip: meta.ip,
         },
-      }),
-      this.prisma.adminUser.update({
-        where: { id: user.id },
-        data: {
-          lastLoginAt: new Date(),
-          googleSub: user.googleSub ?? sub,
-          // Google is the source of truth for the display name, but never for
-          // the role - that is ours to decide
-          name: user.name ?? claims.name ?? null,
-        },
-      }),
+      });
       // opportunistic sweep - expired rows are dead weight and there is no cron
-      this.prisma.adminSession.deleteMany({ where: { expiresAt: { lt: new Date() } } }),
-    ]);
+      await tx.adminSession.deleteMany({ where: { expiresAt: { lt: now } } });
+
+      return tx.adminUser.findUniqueOrThrow({ where: { id: user.id } });
+    });
 
     return { token, expiresAt, user: toDto(updated) };
   }
