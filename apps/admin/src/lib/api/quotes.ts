@@ -2,7 +2,6 @@ import {
   adminQuoteConversionSchema,
   adminQuoteDetailSchema,
   adminQuoteListSchema,
-  quoteConversionPricesSchema,
 } from "@/lib/schemas/api";
 import type { QuoteConvertInput, QuoteNoteInput, QuoteUpdateInput } from "@/lib/schemas/forms";
 import type { QuotesQuery } from "@/lib/schemas/params";
@@ -30,8 +29,4 @@ export const quotesApi = {
       body: input,
       schema: adminQuoteConversionSchema,
     }),
-
-  /** list and bulk price per active product, for the convert dialog's estimate */
-  conversionPrices: () =>
-    request("/admin/bulk-quotes/conversion-prices", { schema: quoteConversionPricesSchema }),
 };

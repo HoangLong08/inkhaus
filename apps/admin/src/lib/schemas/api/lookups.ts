@@ -21,12 +21,19 @@ export const staffDirectoryEntrySchema = z.object({
 
 export const staffDirectorySchema = z.array(staffDirectoryEntrySchema);
 
-/** `GET /admin/catalog/options` - active products and the live price ladder */
+/**
+ * `GET /admin/catalog/options` - active products with their prices, and the
+ * live price ladder: everything the shared `quote()` needs to estimate.
+ */
 export const catalogOptionsSchema = z.object({
   products: z.array(
     z.object({
       slug: z.string(),
       name: z.string(),
+      /** single-unit list price, USD */
+      price: z.number(),
+      /** the floor no tier discount goes below, USD */
+      bulkPrice: z.number(),
       methods: z.array(z.string()),
       sizes: z.array(z.string()),
       colors: z.array(z.object({ slug: z.string(), name: z.string(), hex: z.string() })),

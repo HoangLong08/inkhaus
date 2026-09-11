@@ -70,17 +70,7 @@ export const adminQuoteConversionSchema = z.object({
   quote: adminQuoteDetailSchema,
 });
 
-/**
- * `GET /admin/bulk-quotes/conversion-prices` - list and bulk price per active
- * product, which `GET /admin/catalog/options` does not carry, for the convert
- * dialog's estimate.
- */
-export const quoteConversionPricesSchema = z.object({
-  products: z.array(z.object({ slug: z.string(), price: z.number(), bulkPrice: z.number() })),
-});
-
 export type AdminQuoteListItem = z.infer<typeof adminQuoteListItemSchema>;
 export type AdminQuoteDetail = z.infer<typeof adminQuoteDetailSchema>;
 export type AdminQuoteEvent = z.infer<typeof adminQuoteEventSchema>;
 export type AdminQuoteConversion = z.infer<typeof adminQuoteConversionSchema>;
-export type QuoteConversionPrices = z.infer<typeof quoteConversionPricesSchema>;

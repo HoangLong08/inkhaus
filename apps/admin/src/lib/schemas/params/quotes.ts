@@ -1,4 +1,8 @@
-import { QUOTE_SORTS } from "@inkhaus/shared/orders";
+import {
+  QUOTE_ASSIGNEE_KEYWORDS,
+  QUOTE_FOLLOW_UP_FILTERS,
+  QUOTE_SORTS,
+} from "@inkhaus/shared/orders";
 import { z } from "zod";
 
 import { quoteStatusSchema } from "../api";
@@ -10,12 +14,6 @@ import { limitParam, pageParam, searchParam } from "./common";
  * asking the API.
  */
 export const quoteIdSchema = z.string().regex(/^[a-z0-9]{20,40}$/i);
-
-/** `?assignee=` takes an admin id, or one of these - the API reads `me` as the caller */
-export const QUOTE_ASSIGNEE_KEYWORDS = ["me", "none"] as const;
-
-/** `?followUp=` - open quotes whose follow-up day has passed, or has not */
-export const QUOTE_FOLLOW_UP_FILTERS = ["overdue", "upcoming"] as const;
 
 /**
  * `/quotes`. Every field ends in its own `.catch()`, so `.parse()` cannot throw:

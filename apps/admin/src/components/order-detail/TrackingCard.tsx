@@ -2,7 +2,13 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { can } from "@inkhaus/shared/admin";
-import { CARRIER_LABEL, CARRIERS, trackingUrl, type OrderStatusCode } from "@inkhaus/shared/orders";
+import {
+  canEditTracking,
+  CARRIER_LABEL,
+  CARRIERS,
+  trackingUrl,
+  type OrderStatusCode,
+} from "@inkhaus/shared/orders";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -30,11 +36,7 @@ import { clientApi } from "@/lib/client-api";
 import { at } from "@/lib/format";
 import { queryKeys } from "@/lib/query-keys";
 import type { AdminOrderDetailTracking, AdminUser } from "@/lib/schemas/api";
-import {
-  ORDER_TRACKING_STATUSES,
-  orderTrackingInputSchema,
-  type OrderTrackingInput,
-} from "@/lib/schemas/forms";
+import { orderTrackingInputSchema, type OrderTrackingInput } from "@/lib/schemas/forms";
 
 import { carrierLabel, knownCarrier } from "./format";
 import {
@@ -118,8 +120,7 @@ export default function TrackingCard({ number, viewer }: { number: string; viewe
   if (!order) return null;
 
   const tracking = order.tracking;
-  const editable =
-    can(viewer.role, "orders.tracking") && ORDER_TRACKING_STATUSES.includes(order.status);
+  const editable = can(viewer.role, "orders.tracking") && canEditTracking(order.status);
 
   return (
     <Card>

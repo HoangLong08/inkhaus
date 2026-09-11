@@ -4,7 +4,6 @@ import {
   ORDER_NOTE_MAX,
   requiresTracking,
   TRACKING_NUMBER_PATTERN,
-  type OrderStatusCode,
 } from "@inkhaus/shared/orders";
 import { z } from "zod";
 
@@ -46,16 +45,8 @@ export const designPreviewParamsSchema = z.object({
 
 const TRACKING_NUMBER_MESSAGE = "A tracking number is 4 to 64 letters, digits, spaces or dashes.";
 
-/**
- * Where tracking may be edited without a status move. Mirrors
- * `TRACKING_EDITABLE_STATUSES` in the API's order-workflow.rules.ts, which is
- * what actually refuses it; this copy only decides whether to show the form.
- */
-export const ORDER_TRACKING_STATUSES: readonly OrderStatusCode[] = [
-  "IN_PRODUCTION",
-  "SHIPPED",
-  "DELIVERED",
-];
+// Where tracking may be edited without a status move is `canEditTracking` in
+// @inkhaus/shared/orders - the API refuses by it, the order page hides by it.
 
 export const orderTrackingInputSchema = z.object({
   carrier: z.enum(CARRIERS, { message: "Pick the carrier." }),

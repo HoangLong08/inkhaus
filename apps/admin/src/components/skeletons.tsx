@@ -147,24 +147,6 @@ export function OrderDetailSkeleton() {
   );
 }
 
-export function QuoteListSkeleton({ cards = 5 }: { cards?: number }) {
-  return (
-    <div className="space-y-3">
-      {Array.from({ length: cards }, (_, i) => (
-        <Card key={i} className="gap-3">
-          <CardHeader>
-            <Skeleton className="h-5 w-56" />
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Skeleton className="h-4 w-full max-w-md" />
-            <Skeleton className="h-8 w-64" />
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
 /** heading + meta line + a row of filter chips, shared by every list page's loading.tsx */
 export function ListHeaderSkeleton({ chips = 6 }: { chips?: number }) {
   return (

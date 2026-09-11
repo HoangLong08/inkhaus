@@ -1,6 +1,6 @@
 import "server-only";
 
-import { can } from "@inkhaus/shared/admin";
+import { can, PRICE_EDITS_DISABLED } from "@inkhaus/shared/admin";
 
 import { adminApi, type AdminUser } from "@/lib/api";
 import { HttpError } from "@/lib/api-guard";
@@ -22,15 +22,12 @@ import {
  *
  * - a price field needs `catalog.price` - staff get a 403 before the round trip
  * - any price write needs CATALOG_PRICE_EDITS on - a 409, with the API's own
- *   sentence (see PriceEditsPolicy), read from the options lookup
+ *   sentence (`PRICE_EDITS_DISABLED`), the flag read from the options lookup
  *
  * The API refuses both again. That is the check that protects the data; this
  * one exists so a hand-made request gets a clear answer, and so the rule has
  * exactly one home on this side of the wire.
  */
-
-const PRICE_EDITS_DISABLED =
-  "Price edits are disabled until the storefront reads prices from the API.";
 
 async function assertPriceEditsOpen() {
   const { priceEditsEnabled } = await adminApi.lookups.catalogOptions();

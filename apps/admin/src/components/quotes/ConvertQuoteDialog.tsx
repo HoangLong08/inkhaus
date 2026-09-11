@@ -52,7 +52,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { AdminQuoteDetail, CatalogOptions, QuoteConversionPrices } from "@/lib/api";
+import type { AdminQuoteDetail, CatalogOptions } from "@/lib/api";
 import { ClientApiError, clientApi } from "@/lib/client-api";
 import { count, humanize, pct, usd } from "@/lib/format";
 import { queryKeys } from "@/lib/query-keys";
@@ -65,17 +65,15 @@ import {
 
 import { useQuoteDetail } from "./useQuoteDetail";
 
-export type ConvertOptions = { catalog: CatalogOptions; prices: QuoteConversionPrices };
-
 type Props = {
   id: string;
   role: AdminRoleCode;
   /**
-   * What the form is built from, read on the server. Null when this viewer
-   * may not convert, or the quote could not be converted when the page
-   * rendered - either way there is no form to build.
+   * What the form is built from - `adminApi.lookups.catalogOptions`, prices
+   * included - read on the server. Null when this viewer may not convert -
+   * then there is no form to build.
    */
-  options: ConvertOptions | null;
+  options: CatalogOptions | null;
   /** the quote's own product and method, offered as the starting point */
   suggested: { productSlug: string | null; method: string | null };
 };
@@ -123,12 +121,12 @@ export default function ConvertQuoteDialog({ id, role, options, suggested }: Pro
 function ConvertForm({
   id,
   quoted,
-  options: { catalog, prices },
+  options: catalog,
   suggested,
 }: {
   id: string;
   quoted: number | null;
-  options: ConvertOptions;
+  options: CatalogOptions;
   suggested: Props["suggested"];
 }) {
   const router = useRouter();
@@ -136,13 +134,8 @@ function ConvertForm({
   const [open, setOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  // Only what can be priced. Both lists are "every active product", read a
-  // moment apart, so a product archived in between drops out of both.
-  const priceOf = new Map(prices.products.map((p) => [p.slug, p]));
-  const products = catalog.products.flatMap((p) => {
-    const price = priceOf.get(p.slug);
-    return price ? [{ ...p, price: price.price, bulkPrice: price.bulkPrice }] : [];
-  });
+  // every active product, each with the list and bulk price the estimate needs
+  const products = catalog.products;
 
   const start = products.find((p) => p.slug === suggested.productSlug);
 

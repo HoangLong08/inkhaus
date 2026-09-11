@@ -1,4 +1,8 @@
-import { QUOTE_STATUSES } from "@inkhaus/shared/orders";
+import {
+  QUOTE_ASSIGNEE_KEYWORDS,
+  QUOTE_FOLLOW_UP_FILTERS,
+  QUOTE_STATUSES,
+} from "@inkhaus/shared/orders";
 import { AlarmClock, SearchX } from "lucide-react";
 import Link from "next/link";
 
@@ -29,11 +33,7 @@ import {
 } from "@/components/ui/table";
 import { adminApi } from "@/lib/api";
 import { at, humanize, relative, usd } from "@/lib/format";
-import {
-  QUOTE_ASSIGNEE_KEYWORDS,
-  QUOTE_FOLLOW_UP_FILTERS,
-  quotesQuerySchema,
-} from "@/lib/schemas/params";
+import { quotesQuerySchema } from "@/lib/schemas/params";
 
 export const metadata = { title: "Bulk quotes — INKHAUS Back Office" };
 

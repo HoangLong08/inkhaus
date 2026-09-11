@@ -6,7 +6,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import AssigneeSelect from "@/components/quotes/AssigneeSelect";
-import ConvertQuoteDialog, { type ConvertOptions } from "@/components/quotes/ConvertQuoteDialog";
+import ConvertQuoteDialog from "@/components/quotes/ConvertQuoteDialog";
 import FollowUpPicker from "@/components/quotes/FollowUpPicker";
 import QuoteNotesForm from "@/components/quotes/QuoteNotesForm";
 import { QuoteStatusLive } from "@/components/quotes/QuoteStatusControl";
@@ -65,11 +65,8 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
         throw err;
       }),
     adminApi.lookups.staffDirectory(),
-    mayConvert
-      ? Promise.all([adminApi.lookups.catalogOptions(), adminApi.quotes.conversionPrices()]).then(
-          ([catalog, prices]): ConvertOptions => ({ catalog, prices }),
-        )
-      : null,
+    // products with their prices and the ladder - all the dialog's estimate needs
+    mayConvert ? adminApi.lookups.catalogOptions() : null,
   ]);
 
   const drift =

@@ -1,13 +1,17 @@
+import { CATALOG_LIMITS } from "@inkhaus/shared/admin";
 import { TIER_LIMITS, validateTiers } from "@inkhaus/shared/pricing";
 import { CATEGORIES, GARMENT_TYPES, PRINT_METHODS } from "@inkhaus/shared/taxonomy";
 import { z } from "zod";
 
 /**
  * Catalog input, shared by the form that collects it and the route handler
- * that receives it. The limits are the API DTOs' limits; the ladder and the
- * bulk-price rule are the shared functions the API refuses with, so a message
- * shown under a field is the sentence the API would have answered with.
+ * that receives it. The limits are `CATALOG_LIMITS`, which the API DTOs
+ * validate with; the ladder and the bulk-price rule are the shared functions
+ * the API refuses with, so a message shown under a field is the sentence the
+ * API would have answered with.
  */
+
+const { product: P, color: COLOR, size: SIZE, sortOrder: SORT } = CATALOG_LIMITS;
 
 /** at most two decimal places - checked on the integer, which floats cannot fool */
 const cents = (value: number) => Math.abs(Math.round(value * 100) - value * 100) < 1e-6;
@@ -35,21 +39,26 @@ const HEX = /^#[0-9A-Fa-f]{6}$/;
 
 // ---------------------------------------------------------------- products
 
-const printAreaPart = (axis: string) => whole(axis, 0, 1000);
-const inches = (what: string) => money(what, 0.5, 40);
+const printAreaPart = (axis: string) => whole(axis, P.printArea.min, P.printArea.max);
+const inches = (what: string) => money(what, P.inches.min, P.inches.max);
+const sortOrder = () => whole("a sort order", SORT.min, SORT.max);
 
 const productFieldsShape = z.object({
-  name: z.string().trim().min(1, "Give it a name.").max(80, "Keep the name to 80 characters."),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Give it a name.")
+    .max(P.name, `Keep the name to ${P.name} characters.`),
   type: z.enum(GARMENT_TYPES, { error: "Pick a blank shape." }),
   category: z.enum(CATEGORIES, { error: "Pick a category." }),
-  blurb: z.string().trim().max(400, "Keep the blurb to 400 characters."),
-  fabric: z.string().trim().max(200, "Keep the fabric line to 200 characters."),
+  blurb: z.string().trim().max(P.blurb, `Keep the blurb to ${P.blurb} characters.`),
+  fabric: z.string().trim().max(P.fabric, `Keep the fabric line to ${P.fabric} characters.`),
   /** empty clears it */
-  tag: z.string().trim().max(24, "Keep the tag to 24 characters."),
+  tag: z.string().trim().max(P.tag, `Keep the tag to ${P.tag} characters.`),
   /** size codes; none means the default apparel run */
   sizes: z.array(z.string().regex(SIZE_CODE)).max(20),
-  price: money("a price", 0.5, 1000),
-  bulkPrice: money("a bulk price", 0.5, 1000),
+  price: money("a price", P.price.min, P.price.max),
+  bulkPrice: money("a bulk price", P.price.min, P.price.max),
   methods: z.array(z.enum(PRINT_METHODS)).min(1, "Pick at least one print method."),
   printArea: z.object({
     x: printAreaPart("x"),
@@ -61,10 +70,10 @@ const productFieldsShape = z.object({
   /** in storefront order - the first is the default colourway */
   colorSlugs: z
     .array(z.string())
-    .min(1, "Pick at least one colour.")
-    .max(30, "A product can carry at most 30 colours."),
+    .min(P.colors.min, "Pick at least one colour.")
+    .max(P.colors.max, `A product can carry at most ${P.colors.max} colours.`),
   active: z.boolean(),
-  sortOrder: whole("a sort order", 0, 99999),
+  sortOrder: sortOrder(),
 });
 
 /**
@@ -123,10 +132,14 @@ export const colorInputSchema = z.object({
     .string()
     .trim()
     .regex(/^[a-z0-9-]{2,40}$/, "Use 2-40 lowercase letters, digits or dashes."),
-  name: z.string().trim().min(1, "Give it a name.").max(40, "Keep the name to 40 characters."),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Give it a name.")
+    .max(COLOR.name, `Keep the name to ${COLOR.name} characters.`),
   hex: z.string().trim().regex(HEX, "Use a colour like #1A7F7A."),
   dark: z.boolean(),
-  sortOrder: whole("a sort order", 0, 99999),
+  sortOrder: sortOrder(),
 });
 
 export const colorUpdateInputSchema = colorInputSchema
@@ -141,9 +154,13 @@ export type ColorUpdateInput = z.infer<typeof colorUpdateInputSchema>;
 
 export const sizeInputSchema = z.object({
   code: z.string().trim().regex(SIZE_CODE, "Use 1-6 capital letters or digits."),
-  label: z.string().trim().min(1, "Give it a label.").max(20, "Keep the label to 20 characters."),
-  upcharge: money("an upcharge", 0, 100),
-  sortOrder: whole("a sort order", 0, 99999),
+  label: z
+    .string()
+    .trim()
+    .min(1, "Give it a label.")
+    .max(SIZE.label, `Keep the label to ${SIZE.label} characters.`),
+  upcharge: money("an upcharge", SIZE.upcharge.min, SIZE.upcharge.max),
+  sortOrder: sortOrder(),
 });
 
 /** no code - it is what order lines and product size runs store */
