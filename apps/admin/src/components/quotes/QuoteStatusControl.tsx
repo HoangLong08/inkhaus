@@ -2,6 +2,8 @@
 
 import { canSetQuoteStatus, QUOTE_STATUSES, type QuoteStatusCode } from "@inkhaus/shared/orders";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
 
 import StatusBadge from "@/components/StatusBadge";
 import { Label } from "@/components/ui/label";
@@ -13,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { humanize } from "@/lib/format";
+import { quoteStatusSchema } from "@/lib/schemas/api";
 
 import { useQuoteDetail } from "./useQuoteDetail";
 import { useQuoteUpdate } from "./useQuoteUpdate";
@@ -45,19 +48,35 @@ export default function QuoteStatusControl({
   /** read by screen readers; the list's column header is the visible label */
   label: string;
 }) {
+  const router = useRouter();
+  const [refreshing, startRefresh] = useTransition();
   const mutation = useQuoteUpdate({
     id,
     optimistic: (input) => (input.status ? { status: input.status } : {}),
     success: (quote) => `Marked ${humanize(quote.status).toLowerCase()}`,
     failure: "Could not update the quote",
-    // the list is server rendered, so it only shows the new status on a refresh
-    refresh: true,
   });
 
-  const shown =
-    mutation.isPending && mutation.variables.status
-      ? mutation.variables.status
-      : (mutation.data?.status ?? status);
+  // The live value, except while a change is in the air. `status` is the cache
+  // entry on the quote page - which a rollback, a convert's optimistic WON or a
+  // colleague's change on refetch all move - and the server-rendered row on
+  // the list. The list only learns a new status from a refresh, so the saved
+  // one is held for exactly as long as that refresh takes, and no longer.
+  const shown = mutation.isPending
+    ? (mutation.variables.status ?? status)
+    : refreshing && mutation.isSuccess
+      ? mutation.data.status
+      : status;
+
+  function choose(next: string) {
+    const parsed = quoteStatusSchema.safeParse(next);
+    if (!parsed.success) return;
+    mutation.mutate(
+      { status: parsed.data },
+      // the list is server rendered, so it only shows the new status on a refresh
+      { onSettled: () => startRefresh(() => router.refresh()) },
+    );
+  }
 
   // the order's number stands in for its id - either is set exactly when the
   // quote is an order, which is all the shared rule looks at
@@ -75,7 +94,7 @@ export default function QuoteStatusControl({
       <Select
         value={shown}
         disabled={mutation.isPending || offered.length < 2}
-        onValueChange={(next) => mutation.mutate({ status: next as QuoteStatusCode })}
+        onValueChange={choose}
       >
         <SelectTrigger
           id={`quote-status-${id}`}

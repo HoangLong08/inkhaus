@@ -15,6 +15,6 @@ export const GET = route(async () => {
 /** a new code carries an upcharge: owners only, and refused while price edits are off */
 export const POST = route(async (request: Request) => {
   await requireCapability("catalog.price");
-  const input = sizeInputSchema.parse(await request.json());
+  const input = sizeInputSchema.parse(await request.json().catch(() => null));
   return NextResponse.json(await applySizeCreate(input), { status: 201 });
 });

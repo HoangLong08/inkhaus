@@ -4,9 +4,14 @@ import type { AdminRoleCode } from "@inkhaus/shared/orders";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
-import { activeChildren, ownsPath, visibleNav } from "@/components/nav/nav-config";
+import {
+  activeChildren,
+  ownsPath,
+  visibleNav,
+  type NavSection,
+} from "@/components/nav/nav-config";
 import {
   Collapsible,
   CollapsibleContent,
@@ -41,68 +46,88 @@ export function NavMain({ role }: { role: AdminRoleCode }) {
     <SidebarGroup>
       <SidebarGroupLabel>Back office</SidebarGroupLabel>
       <SidebarMenu>
-        {sections.map((section) => {
-          const inSection = ownsPath(section.href, pathname);
-          const lit = activeChildren(section, pathname, searchParams);
-          const children = section.children ?? [];
-
-          return (
-            <Collapsible
-              key={section.id}
-              asChild
-              defaultOpen={inSection}
-              className="group/collapsible"
-            >
-              <SidebarMenuItem>
-                {/* A link, not a collapsible trigger: every section is a real
-                    destination, and sidebar-07's stock markup makes the parent
-                    unclickable. The chevron gets its own hit target below. */}
-                <SidebarMenuButton
-                  asChild
-                  tooltip={section.title}
-                  isActive={inSection && lit.size === 0}
-                >
-                  <Link href={section.href} data-testid="nav-link" data-section={section.id}>
-                    <section.icon />
-                    <span>{section.title}</span>
-                  </Link>
-                </SidebarMenuButton>
-
-                {children.length > 0 ? (
-                  <>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuAction
-                        className="data-[state=open]:rotate-90"
-                        aria-label={`Show ${section.title.toLowerCase()} shortcuts`}
-                      >
-                        <ChevronRight className="transition-transform duration-200" />
-                      </SidebarMenuAction>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <SidebarMenuSub>
-                        {children.map((child) => (
-                          <SidebarMenuSubItem key={child.value}>
-                            <SidebarMenuSubButton asChild isActive={lit.has(child.value)}>
-                              <Link
-                                href={child.href}
-                                data-testid="nav-sub-link"
-                                data-section={section.id}
-                                data-value={child.value}
-                              >
-                                <span>{child.title}</span>
-                              </Link>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
-                    </CollapsibleContent>
-                  </>
-                ) : null}
-              </SidebarMenuItem>
-            </Collapsible>
-          );
-        })}
+        {sections.map((section) => (
+          <NavSectionItem
+            key={section.id}
+            section={section}
+            inSection={ownsPath(section.href, pathname)}
+            lit={activeChildren(section, pathname, searchParams)}
+          />
+        ))}
       </SidebarMenu>
     </SidebarGroup>
+  );
+}
+
+function NavSectionItem({
+  section,
+  inSection,
+  lit,
+}: {
+  section: NavSection;
+  inSection: boolean;
+  lit: ReturnType<typeof activeChildren>;
+}) {
+  const children = section.children ?? [];
+
+  // Controlled, and synced to navigation: a section opens when you go into it
+  // and folds when you leave, and the chevron still toggles it in between. The
+  // sidebar lives in the layout and never remounts, so `defaultOpen` only ever
+  // saw the first page it rendered on. Adjusted while rendering rather than in
+  // an effect, which would paint the old state first.
+  const [open, setOpen] = useState(inSection);
+  const [wasInSection, setWasInSection] = useState(inSection);
+  if (inSection !== wasInSection) {
+    setWasInSection(inSection);
+    setOpen(inSection);
+  }
+
+  return (
+    <Collapsible asChild open={open} onOpenChange={setOpen} className="group/collapsible">
+      <SidebarMenuItem>
+        {/* A link, not a collapsible trigger: every section is a real
+            destination, and sidebar-07's stock markup makes the parent
+            unclickable. The chevron gets its own hit target below. */}
+        <SidebarMenuButton asChild tooltip={section.title} isActive={inSection && lit.size === 0}>
+          <Link href={section.href} data-testid="nav-link" data-section={section.id}>
+            <section.icon />
+            <span>{section.title}</span>
+          </Link>
+        </SidebarMenuButton>
+
+        {children.length > 0 ? (
+          <>
+            <CollapsibleTrigger asChild>
+              <SidebarMenuAction
+                className="data-[state=open]:rotate-90"
+                aria-label={`Show ${section.title.toLowerCase()} shortcuts`}
+                data-testid="nav-expand"
+                data-section={section.id}
+              >
+                <ChevronRight className="transition-transform duration-200" />
+              </SidebarMenuAction>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarMenuSub>
+                {children.map((child) => (
+                  <SidebarMenuSubItem key={child.value}>
+                    <SidebarMenuSubButton asChild isActive={lit.has(child.value)}>
+                      <Link
+                        href={child.href}
+                        data-testid="nav-sub-link"
+                        data-section={section.id}
+                        data-value={child.value}
+                      >
+                        <span>{child.title}</span>
+                      </Link>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                ))}
+              </SidebarMenuSub>
+            </CollapsibleContent>
+          </>
+        ) : null}
+      </SidebarMenuItem>
+    </Collapsible>
   );
 }

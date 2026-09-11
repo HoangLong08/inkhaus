@@ -142,9 +142,7 @@ export default function TrackingCard({ number, viewer }: { number: string; viewe
               <>
                 <dt className="text-muted-foreground">Shipped</dt>
                 <dd>
-                  <time dateTime={order.shippedAt} suppressHydrationWarning>
-                    {at(order.shippedAt)}
-                  </time>
+                  <time dateTime={order.shippedAt}>{at(order.shippedAt)}</time>
                 </dd>
               </>
             ) : null}
@@ -152,9 +150,7 @@ export default function TrackingCard({ number, viewer }: { number: string; viewe
               <>
                 <dt className="text-muted-foreground">Delivered</dt>
                 <dd>
-                  <time dateTime={order.deliveredAt} suppressHydrationWarning>
-                    {at(order.deliveredAt)}
-                  </time>
+                  <time dateTime={order.deliveredAt}>{at(order.deliveredAt)}</time>
                 </dd>
               </>
             ) : null}

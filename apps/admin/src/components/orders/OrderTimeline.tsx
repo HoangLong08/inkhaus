@@ -72,13 +72,7 @@ function TimelineEvent({ event }: { event: AdminOrderDetailEvent }) {
           {event.kind === "NOTE" ? <Badge variant="secondary">Internal</Badge> : null}
           {event.kind === "TRACKING" ? <TrackingLine event={event} /> : null}
 
-          {/* the server renders this in its own time zone and the browser in
-              the operator's; the browser's is the one worth showing */}
-          <time
-            dateTime={event.at}
-            suppressHydrationWarning
-            className="text-muted-foreground ml-auto text-xs"
-          >
+          <time dateTime={event.at} className="text-muted-foreground ml-auto text-xs">
             {at(event.at)}
           </time>
         </div>

@@ -27,7 +27,7 @@ export default async function LatestOrders() {
           Latest orders
         </CardTitle>
         <Button asChild variant="link" size="sm" className="h-auto p-0">
-          <Link href="/orders">
+          <Link href="/orders" data-testid="recent-orders-all">
             All {recent.meta.total}
             <ArrowRight />
           </Link>

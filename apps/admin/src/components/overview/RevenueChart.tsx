@@ -17,10 +17,10 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { count, usd } from "@/lib/format";
+import { count, on, usd } from "@/lib/format";
 import type { StatsSeriesPoint } from "@/lib/schemas/api";
 
-import { compactUsd, longDay, shortDay } from "./labels";
+import { compactUsd, shortDay } from "./labels";
 
 const chartConfig = {
   revenue: { label: "Revenue", color: "var(--chart-1)" },
@@ -122,7 +122,7 @@ function MeasureChart({
           <ChartTooltip
             content={
               <ChartTooltipContent
-                labelFormatter={(day) => longDay(String(day))}
+                labelFormatter={(day) => on(String(day))}
                 formatter={(amount) => (
                   <>
                     <span className="text-muted-foreground">{label}</span>

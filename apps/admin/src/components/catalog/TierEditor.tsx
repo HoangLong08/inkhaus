@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { TIER_LIMITS, validateTiers } from "@inkhaus/shared/pricing";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Trash2, TriangleAlert } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -73,6 +74,7 @@ function TierForm({
   priceEditsEnabled: boolean;
   products: TierSample[];
 }) {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const key = queryKeys.catalog.tiers();
 
@@ -116,6 +118,8 @@ function TierForm({
 
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: key });
+      // the page's tier count is server rendered
+      router.refresh();
     },
   });
 

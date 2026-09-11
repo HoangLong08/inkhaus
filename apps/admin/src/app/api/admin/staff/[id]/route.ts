@@ -15,6 +15,6 @@ import { staffChangeInputSchema, staffIdSchema } from "@/lib/schemas/forms";
 export const PATCH = route(async (request: Request, ctx: { params: Promise<{ id: string }> }) => {
   const [user, params] = await Promise.all([requireCapability("staff.manage"), ctx.params]);
   const id = staffIdSchema.parse(params.id);
-  const change = staffChangeInputSchema.parse(await request.json());
+  const change = staffChangeInputSchema.parse(await request.json().catch(() => null));
   return NextResponse.json(await applyStaffChange(user, id, change));
 });

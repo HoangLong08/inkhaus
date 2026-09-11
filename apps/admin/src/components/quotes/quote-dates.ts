@@ -1,19 +1,16 @@
 import type { QuoteStatusCode } from "@inkhaus/shared/orders";
 
-import { isoDay } from "@/lib/format";
+import { isoDay, on } from "@/lib/format";
 
 /**
  * A follow-up is a day, not an instant: the API stores midnight UTC of the day
- * picked (decision D8). Everything here keeps it a day. `on()` from
- * lib/format would render midnight UTC in the viewer's zone - the day before,
- * anywhere west of Greenwich.
+ * picked (decision D8). Everything here keeps it a day - `on()` prints the UTC
+ * calendar day, like every date in the back office.
  */
-
-const utcDayFormat = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" });
 
 /** `2026-09-14T00:00:00.000Z` or `2026-09-14` -> "Sep 14, 2026" */
 export function formatFollowUp(value: string) {
-  return utcDayFormat.format(new Date(value.length === 10 ? `${value}T00:00:00Z` : value));
+  return on(value);
 }
 
 /** today by the UTC calendar, `YYYY-MM-DD` */

@@ -14,6 +14,6 @@ export const GET = route(async () => {
 
 export const POST = route(async (request: Request) => {
   await requireCapability("catalog.edit");
-  const input = colorInputSchema.parse(await request.json());
+  const input = colorInputSchema.parse(await request.json().catch(() => null));
   return NextResponse.json(await applyColorCreate(input), { status: 201 });
 });

@@ -10,11 +10,10 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { relative } from "@/lib/format";
+import { on, relative } from "@/lib/format";
 import type { OverviewQuery } from "@/lib/schemas/params";
 
 import { getOverview } from "./data";
-import { longDay } from "./labels";
 
 type Kind = "overdue-follow-up" | "stale-quote" | "stuck-order";
 
@@ -65,7 +64,7 @@ export default async function NeedsAttention({ params }: { params: OverviewQuery
                   href={`/quotes/${quote.id}`}
                   id={quote.id}
                   email={quote.email}
-                  when={`due ${longDay(quote.followUpAt)}`}
+                  when={`due ${on(quote.followUpAt)}`}
                 >
                   <Who name={quote.name} email={quote.email} />
                   <span className="text-muted-foreground text-xs">

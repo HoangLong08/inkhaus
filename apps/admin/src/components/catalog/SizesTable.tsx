@@ -20,7 +20,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   Table,
@@ -170,7 +170,7 @@ function DeleteSize({ code, onConfirm }: { code: string; onConfirm: (code: strin
         <AlertDialogFooter>
           <AlertDialogCancel data-testid="size-delete-cancel">Cancel</AlertDialogCancel>
           <AlertDialogAction
-            className={buttonVariants({ variant: "destructive" })}
+            variant="destructive"
             onClick={() => onConfirm(code)}
             data-testid="size-delete-confirm"
           >

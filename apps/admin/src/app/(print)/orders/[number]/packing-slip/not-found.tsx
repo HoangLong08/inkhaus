@@ -27,7 +27,9 @@ export default function PackingSlipNotFound() {
           </EmptyHeader>
           <EmptyContent>
             <Button asChild variant="outline">
-              <Link href="/orders">Back to orders</Link>
+              <Link href="/orders" data-testid="packing-slip-not-found-back">
+                Back to orders
+              </Link>
             </Button>
           </EmptyContent>
         </Empty>

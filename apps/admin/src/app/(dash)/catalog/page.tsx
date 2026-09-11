@@ -1,10 +1,5 @@
 import { can, PRODUCT_SORTS, type ProductSort } from "@inkhaus/shared/admin";
-import {
-  CATEGORIES,
-  CATEGORY_LABEL,
-  GARMENT_TYPE_LABEL,
-  type ProductCategory,
-} from "@inkhaus/shared/taxonomy";
+import { CATEGORIES, CATEGORY_LABEL, GARMENT_TYPE_LABEL } from "@inkhaus/shared/taxonomy";
 import { Plus, SearchX } from "lucide-react";
 import Link from "next/link";
 
@@ -34,8 +29,13 @@ import {
 } from "@/components/ui/table";
 import { adminApi } from "@/lib/api";
 import { requireAdmin } from "@/lib/dal";
-import { count, on, usd } from "@/lib/format";
-import { DEFAULT_PAGE_SIZE, productsQuerySchema } from "@/lib/schemas/params";
+import { count, humanize, on, usd } from "@/lib/format";
+import { catalogCategorySchema } from "@/lib/schemas/api";
+import {
+  DEFAULT_PAGE_SIZE,
+  productSortParamSchema,
+  productsQuerySchema,
+} from "@/lib/schemas/params";
 
 export const metadata = { title: "Products — INKHAUS Back Office" };
 
@@ -46,6 +46,17 @@ const SORT_LABEL: Record<ProductSort, string> = {
   price_desc: "Price, high first",
   updated_desc: "Recently edited",
 };
+
+// FilterLinks hands a label its value as a plain string: checked, not cast
+function categoryLabel(value: string) {
+  const parsed = catalogCategorySchema.safeParse(value);
+  return parsed.success ? CATEGORY_LABEL[parsed.data] : humanize(value);
+}
+
+function sortLabel(value: string) {
+  const parsed = productSortParamSchema.safeParse(value);
+  return parsed.success ? SORT_LABEL[parsed.data] : humanize(value);
+}
 
 /**
  * Every blank, archived included - fully server rendered, because the table is
@@ -114,7 +125,7 @@ export default async function ProductsPage({
             active={params.category}
             params={linkParams}
             ariaLabel="Filter by category"
-            label={(value) => CATEGORY_LABEL[value as ProductCategory]}
+            label={categoryLabel}
           />
         </div>
         <FilterLinks
@@ -125,7 +136,7 @@ export default async function ProductsPage({
           params={linkParams}
           ariaLabel="Sort products"
           allLabel={null}
-          label={(value) => SORT_LABEL[value as ProductSort]}
+          label={sortLabel}
         />
       </div>
 
@@ -181,7 +192,12 @@ export default async function ProductsPage({
                       size="sm"
                       className="h-auto p-0 font-semibold after:absolute after:inset-0"
                     >
-                      <Link href={`/catalog/products/${product.slug}`}>{product.name}</Link>
+                      <Link
+                        href={`/catalog/products/${product.slug}`}
+                        data-testid="product-row-link"
+                      >
+                        {product.name}
+                      </Link>
                     </Button>
                     <div className="text-muted-foreground text-xs">
                       <span className="font-mono">{product.slug}</span> ·{" "}
