@@ -140,6 +140,42 @@ export const PRODUCT_ACTIVE_FILTERS = ["all", "active", "archived"] as const;
 
 export type ProductActiveFilter = (typeof PRODUCT_ACTIVE_FILTERS)[number];
 
+/**
+ * What the catalog's fields may hold. The API's DTOs validate with these and
+ * the admin's forms check the same numbers, so a message under a field is never
+ * about a limit only one side knows. Money is USD.
+ */
+export const CATALOG_LIMITS = {
+  product: {
+    name: 80,
+    blurb: 400,
+    fabric: 200,
+    tag: 24,
+    /** list and bulk price alike */
+    price: { min: 0.5, max: 1000 },
+    /** the print area on the real garment - drives the storefront's DPI check */
+    inches: { min: 0.5, max: 40 },
+    /** the print area in the garment SVG's viewBox units */
+    printArea: { min: 0, max: 1000 },
+    colors: { min: 1, max: 30 },
+  },
+  color: { name: 40 },
+  size: {
+    label: 20,
+    /** per unit, on top of the tier price */
+    upcharge: { min: 0, max: 100 },
+  },
+  /** products, colours and sizes */
+  sortOrder: { min: 0, max: 99999 },
+} as const;
+
+/**
+ * Why a price write is refused while CATALOG_PRICE_EDITS is off (decision
+ * D13): the API's 409 and the admin's own, word for word.
+ */
+export const PRICE_EDITS_DISABLED =
+  "Price edits are disabled until the storefront reads prices from the API.";
+
 // ------------------------------------------------------------------- stats
 
 export const STATS_RANGES = ["7d", "30d", "90d", "365d"] as const;

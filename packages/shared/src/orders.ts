@@ -106,6 +106,14 @@ export const ORDER_SORTS = [
 
 export type OrderSort = (typeof ORDER_SORTS)[number];
 
+/**
+ * The most rows one CSV export carries. The file is personal data in bulk, and
+ * a spreadsheet past this size is a reporting job, not a download. The API
+ * caps the file at it; the orders list warns before the download from the same
+ * number.
+ */
+export const ORDER_EXPORT_MAX = 10_000;
+
 // ---------------------------------------------------------------- shipping
 
 export const CARRIERS = ["USPS", "UPS", "FEDEX", "DHL", "OTHER"] as const;
@@ -151,6 +159,24 @@ export function requiresTracking(to: OrderStatusCode) {
   return to === "SHIPPED";
 }
 
+/**
+ * Where tracking may be added or corrected on its own, without a status move:
+ * from the moment an order is on the press - a label is often bought before it
+ * ships - until after delivery, where a typo is still worth fixing in the
+ * customer's history. Before production there is no parcel; a cancelled or
+ * refunded order never went out. The API refuses anything else; the order page
+ * hides its tracking form by the same list.
+ */
+export const TRACKING_EDITABLE_STATUSES: readonly OrderStatusCode[] = [
+  "IN_PRODUCTION",
+  "SHIPPED",
+  "DELIVERED",
+];
+
+export function canEditTracking(status: OrderStatusCode) {
+  return TRACKING_EDITABLE_STATUSES.includes(status);
+}
+
 // ---------------------------------------------------------- quote workflow
 
 export const QUOTE_EVENT_KINDS = ["STATUS", "NOTE", "ASSIGNED", "FOLLOW_UP", "CONVERTED"] as const;
@@ -162,6 +188,14 @@ export const QUOTE_NOTE_MAX = 1000;
 export const QUOTE_SORTS = ["created_desc", "created_asc", "followup_asc", "quantity_desc"] as const;
 
 export type QuoteSort = (typeof QUOTE_SORTS)[number];
+
+/** `?assignee=` on the quote list takes an admin id, or one of these - `me` is the caller */
+export const QUOTE_ASSIGNEE_KEYWORDS = ["me", "none"] as const;
+
+/** `?followUp=` - open quotes whose follow-up day has passed, or is today or later (UTC) */
+export const QUOTE_FOLLOW_UP_FILTERS = ["overdue", "upcoming"] as const;
+
+export type QuoteFollowUpFilter = (typeof QUOTE_FOLLOW_UP_FILTERS)[number];
 
 /**
  * Quotes still move freely - with one exception. Once a quote has become an
