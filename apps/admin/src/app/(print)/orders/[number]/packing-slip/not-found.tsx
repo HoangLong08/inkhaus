@@ -12,11 +12,10 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 
-/** its own h1, like every page - EmptyTitle is a div, not a heading */
-export default function OrderNotFound() {
+export default function PackingSlipNotFound() {
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Order not found</h1>
+    <div className="mx-auto max-w-3xl space-y-6 px-6 py-8">
+      <h1 className="text-2xl font-bold tracking-tight">Packing slip not found</h1>
       <Card>
         <Empty className="py-10">
           <EmptyHeader>
@@ -24,9 +23,7 @@ export default function OrderNotFound() {
               <PackageX />
             </EmptyMedia>
             <EmptyTitle>No order with that number</EmptyTitle>
-            <EmptyDescription>
-              It may have been a typo, or the order was never placed.
-            </EmptyDescription>
+            <EmptyDescription>There is nothing to pack for an order that does not exist.</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
             <Button asChild variant="outline">
