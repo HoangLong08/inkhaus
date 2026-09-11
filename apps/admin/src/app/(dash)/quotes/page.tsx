@@ -1,12 +1,17 @@
 import { QUOTE_STATUSES } from "@inkhaus/shared/orders";
-import { SearchX } from "lucide-react";
+import { AlarmClock, SearchX } from "lucide-react";
+import Link from "next/link";
 
+import FilterLinks from "@/components/common/FilterLinks";
 import ListHeader from "@/components/common/ListHeader";
+import PageSizeLinks from "@/components/common/PageSizeLinks";
+import UrlSearchBox from "@/components/common/UrlSearchBox";
 import Pager from "@/components/Pager";
+import { followUpState, formatFollowUp, todayUtc } from "@/components/quotes/quote-dates";
 import QuoteStatusControl from "@/components/quotes/QuoteStatusControl";
 import StatusFilterLinks from "@/components/StatusFilterLinks";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import {
   Empty,
   EmptyDescription,
@@ -14,19 +19,43 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { adminApi } from "@/lib/api";
-import { at, humanize, usd } from "@/lib/format";
-import { quotesQuerySchema } from "@/lib/schemas/params";
+import { at, humanize, relative, usd } from "@/lib/format";
+import {
+  QUOTE_ASSIGNEE_KEYWORDS,
+  QUOTE_FOLLOW_UP_FILTERS,
+  quotesQuerySchema,
+} from "@/lib/schemas/params";
 
 export const metadata = { title: "Bulk quotes — INKHAUS Back Office" };
 
+const assigneeLabel = (value: string) => (value === "me" ? "Mine" : "Unassigned");
+
+/**
+ * Fully server rendered: the table is a projection of the URL, and every
+ * filter is a link. The status control in each row is the one client leaf; it
+ * refreshes this page when it lands.
+ *
+ * Each row is one link, stretched over the row, so a click anywhere opens the
+ * quote - except on the status control, which sits above it.
+ */
 export default async function QuotesPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  // every field ends in .catch(), so this cannot throw
   const params = quotesQuerySchema.parse(await searchParams);
   const { data, meta } = await adminApi.quotes.list(params);
+  const today = todayUtc();
 
   return (
     <div className="space-y-6">
@@ -34,14 +63,46 @@ export default async function QuotesPage({
         title="Bulk quotes"
         meta={`${meta.total} total · page ${meta.page} of ${meta.pages}`}
         metaTestId="quotes-meta"
+        actions={<PageSizeLinks base="/quotes" params={params} active={params.limit} />}
       />
 
-      <StatusFilterLinks
-        base="/quotes"
-        statuses={QUOTE_STATUSES}
-        active={params.status}
-        params={params}
+      <UrlSearchBox
+        label="Search quotes"
+        placeholder="Email, name or company"
+        testId="quotes-search"
+        clearTestId="quotes-search-clear"
       />
+
+      <div className="space-y-3">
+        <StatusFilterLinks
+          base="/quotes"
+          statuses={QUOTE_STATUSES}
+          active={params.status}
+          params={params}
+        />
+        <div className="flex flex-wrap gap-x-6 gap-y-3">
+          <FilterLinks
+            base="/quotes"
+            param="assignee"
+            values={QUOTE_ASSIGNEE_KEYWORDS}
+            active={params.assignee}
+            params={params}
+            ariaLabel="Filter by assignee"
+            allLabel="Anyone"
+            label={assigneeLabel}
+          />
+          <FilterLinks
+            base="/quotes"
+            param="followUp"
+            values={QUOTE_FOLLOW_UP_FILTERS}
+            active={params.followUp}
+            params={params}
+            ariaLabel="Filter by follow-up"
+            allLabel="Any follow-up"
+            label={humanize}
+          />
+        </div>
+      </div>
 
       {data.length === 0 ? (
         <Card>
@@ -50,66 +111,121 @@ export default async function QuotesPage({
               <EmptyMedia variant="icon">
                 <SearchX />
               </EmptyMedia>
-              <EmptyTitle>No quotes match this filter</EmptyTitle>
-              <EmptyDescription>Pick a different status to see more.</EmptyDescription>
+              <EmptyTitle>No quotes match</EmptyTitle>
+              <EmptyDescription>Try another filter, or clear the search.</EmptyDescription>
             </EmptyHeader>
           </Empty>
         </Card>
       ) : (
-        <ul className="space-y-3">
-          {data.map((quote) => (
-            <li key={quote.id}>
-              <Card data-testid="quote-card" data-id={quote.id} className="gap-3">
-                <CardHeader className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <CardTitle>
-                    <Button asChild variant="link" className="h-auto p-0 font-semibold">
-                      <a href={`mailto:${quote.email}`}>{quote.email}</a>
-                    </Button>
-                  </CardTitle>
-                  {quote.name ? (
-                    <span className="text-muted-foreground text-sm">{quote.name}</span>
-                  ) : null}
-                  {quote.company ? (
-                    <span className="text-muted-foreground text-sm">{quote.company}</span>
-                  ) : null}
-                  <span className="text-muted-foreground ml-auto text-xs">
-                    {at(quote.createdAt)}
-                  </span>
-                </CardHeader>
-
-                <CardContent className="space-y-2">
-                  <p className="text-muted-foreground text-sm">
-                    <span className="text-foreground font-semibold tabular-nums">
-                      {quote.quantity}
-                    </span>{" "}
-                    units
-                    {quote.productSlug ? ` · ${quote.productSlug}` : " · no blank chosen"}
-                    {quote.method ? ` · ${humanize(quote.method)}` : ""}
-                    {quote.estimated !== null ? (
-                      <>
-                        {" "}
-                        · quoted{" "}
-                        <span className="text-foreground font-semibold tabular-nums">
-                          {usd(quote.estimated)}
+        <Card className="overflow-hidden p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Received</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Product</TableHead>
+                <TableHead className="text-right">Qty</TableHead>
+                <TableHead className="text-right">Estimate</TableHead>
+                <TableHead>Assignee</TableHead>
+                <TableHead>Follow-up</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.map((quote) => {
+                const followUp = followUpState(quote.followUpAt, quote.status, today);
+                const title = quote.company ?? quote.name ?? quote.email;
+                return (
+                  <TableRow
+                    key={quote.id}
+                    className="relative"
+                    data-testid="quote-row"
+                    data-id={quote.id}
+                    data-status={quote.status}
+                    data-overdue={followUp === "overdue" ? "true" : undefined}
+                  >
+                    <TableCell className="text-muted-foreground whitespace-nowrap text-xs">
+                      <time dateTime={quote.createdAt} title={at(quote.createdAt)}>
+                        {relative(quote.createdAt)}
+                      </time>
+                    </TableCell>
+                    <TableCell className="max-w-64">
+                      <Link
+                        href={`/quotes/${quote.id}`}
+                        data-testid="quote-row-link"
+                        className="focus-visible:ring-ring rounded-sm font-semibold outline-none after:absolute after:inset-0 hover:underline focus-visible:ring-2"
+                      >
+                        {title}
+                      </Link>
+                      <div className="text-muted-foreground truncate text-xs">
+                        {[quote.company ? quote.name : null, quote.email]
+                          .filter((part) => part && part !== title)
+                          .join(" · ")}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {quote.product ? (
+                        quote.product.name
+                      ) : (
+                        <span className="text-muted-foreground">No blank chosen</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{quote.quantity}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {quote.estimated !== null ? (
+                        usd(quote.estimated)
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {quote.assignee ? (
+                        (quote.assignee.name ?? quote.assignee.email)
+                      ) : (
+                        <span className="text-muted-foreground">Unassigned</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-sm">
+                      {quote.followUpAt ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          {formatFollowUp(quote.followUpAt)}
+                          {/* the word, not just the colour */}
+                          {followUp === "overdue" ? (
+                            <Badge
+                              variant="outline"
+                              className="border-destructive/40 text-destructive"
+                            >
+                              <AlarmClock />
+                              Overdue
+                            </Badge>
+                          ) : followUp === "today" ? (
+                            <Badge variant="secondary">Today</Badge>
+                          ) : null}
                         </span>
-                      </>
-                    ) : null}
-                  </p>
-
-                  {quote.message ? (
-                    <blockquote className="bg-muted text-muted-foreground whitespace-pre-wrap rounded-md px-3 py-2 text-sm">
-                      {quote.message}
-                    </blockquote>
-                  ) : null}
-                </CardContent>
-
-                <CardFooter>
-                  <QuoteStatusControl id={quote.id} status={quote.status} />
-                </CardFooter>
-              </Card>
-            </li>
-          ))}
-        </ul>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    {/* above the stretched row link, so it stays clickable */}
+                    <TableCell className="relative z-10">
+                      <QuoteStatusControl
+                        id={quote.id}
+                        status={quote.status}
+                        convertedOrderNumber={quote.convertedOrderNumber}
+                        label={`Status of the quote from ${title}`}
+                      />
+                      {quote.convertedOrderNumber ? (
+                        <p className="text-muted-foreground mt-1 font-mono text-xs">
+                          {quote.convertedOrderNumber}
+                        </p>
+                      ) : null}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </Card>
       )}
 
       <Pager base="/quotes" page={meta.page} pages={meta.pages} params={params} />
