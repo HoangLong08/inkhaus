@@ -1,10 +1,5 @@
-import { ListHeaderSkeleton, OrdersTableSkeleton } from "@/components/skeletons";
+import { OrdersListSkeleton } from "@/components/orders-list/Skeletons";
 
 export default function Loading() {
-  return (
-    <div className="space-y-6">
-      <ListHeaderSkeleton />
-      <OrdersTableSkeleton />
-    </div>
-  );
+  return <OrdersListSkeleton />;
 }
