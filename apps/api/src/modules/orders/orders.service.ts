@@ -13,19 +13,19 @@ import { OrderBuilderService } from './order-builder.service';
 import { OrderWorkflowService, type WorkflowActor } from './order-workflow.service';
 import { toTracking } from './tracking';
 
-const orderInclude = {
+export const publicOrderInclude = {
   customer: true,
   items: { include: { product: true, color: true, design: true, sizes: true } },
   // Staff notes never leave the back office (decision D3), so this DTO does not
-  // even load them. `toDto` filters again: it is the last line, and a caller
-  // with its own include should not be able to leak one.
+  // even load them. `toPublicOrder` filters again: it is the last line, and a
+  // caller with its own include should not be able to leak one.
   events: {
     where: { kind: { in: [...PUBLIC_ORDER_EVENT_KINDS] } },
     orderBy: { createdAt: 'asc' },
   },
 } satisfies Prisma.OrderInclude;
 
-type OrderRow = Prisma.OrderGetPayload<{ include: typeof orderInclude }>;
+export type PublicOrderRow = Prisma.OrderGetPayload<{ include: typeof publicOrderInclude }>;
 
 @Injectable()
 export class OrdersService {
@@ -61,19 +61,19 @@ export class OrdersService {
         notes: dto.notes,
         event: { status: OrderStatus.PENDING_PAYMENT, note: 'Order placed' },
       });
-      return tx.order.findUniqueOrThrow({ where: { id: created.id }, include: orderInclude });
+      return tx.order.findUniqueOrThrow({ where: { id: created.id }, include: publicOrderInclude });
     });
 
-    return this.toDto(order);
+    return toPublicOrder(order);
   }
 
   async findByNumber(number: string) {
     const order = await this.prisma.order.findUnique({
       where: { number },
-      include: orderInclude,
+      include: publicOrderInclude,
     });
     if (!order) throw new NotFoundException(`No order "${number}"`);
-    return this.toDto(order);
+    return toPublicOrder(order);
   }
 
   /**
@@ -89,7 +89,7 @@ export class OrdersService {
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.order.findMany({
         where,
-        include: orderInclude,
+        include: publicOrderInclude,
         orderBy: { createdAt: 'desc' },
         skip: (query.page - 1) * query.limit,
         take: query.limit,
@@ -97,7 +97,7 @@ export class OrdersService {
       this.prisma.order.count({ where }),
     ]);
 
-    return paginate(rows.map((r) => this.toDto(r)), total, query);
+    return paginate(rows.map(toPublicOrder), total, query);
   }
 
   async list(query: ListOrdersDto) {
@@ -109,7 +109,7 @@ export class OrdersService {
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.order.findMany({
         where,
-        include: orderInclude,
+        include: publicOrderInclude,
         orderBy: { createdAt: 'desc' },
         skip: (query.page - 1) * query.limit,
         take: query.limit,
@@ -117,7 +117,7 @@ export class OrdersService {
       this.prisma.order.count({ where }),
     ]);
 
-    return paginate(rows.map((r) => this.toDto(r)), total, query as PaginationDto);
+    return paginate(rows.map(toPublicOrder), total, query as PaginationDto);
   }
 
   /**
@@ -130,56 +130,62 @@ export class OrdersService {
     await this.workflow.changeStatus(number, dto, actor, { allowSame: true });
     return this.findByNumber(number);
   }
+}
 
-  private toDto(o: OrderRow) {
-    return {
-      number: o.number,
-      status: o.status,
-      currency: o.currency,
-      customer: { email: o.customer.email, name: o.customer.name },
-      items: o.items.map((i) => ({
-        productSlug: i.product.slug,
-        productName: i.product.name,
-        color: { slug: i.color.slug, name: i.color.name, hex: i.color.hex },
-        method: i.method,
-        designId: i.design?.publicId ?? null,
-        unitPrice: num(i.unitPrice),
-        quantity: i.quantity,
-        lineTotal: num(i.lineTotal),
-        sizes: i.sizes.map((s) => ({
-          size: s.size,
-          qty: s.quantity,
-          upcharge: num(s.upcharge),
-        })),
+/**
+ * The customer's view of an order: the storefront's order page, the shopper's
+ * own list, and the legacy back-office routes. Pure and exported so its spec can
+ * sit beside the admin mapper's - this one must never carry a NOTE, an actor or
+ * anything else from the back office, whatever the row it is handed includes.
+ */
+export function toPublicOrder(o: PublicOrderRow) {
+  return {
+    number: o.number,
+    status: o.status,
+    currency: o.currency,
+    customer: { email: o.customer.email, name: o.customer.name },
+    items: o.items.map((i) => ({
+      productSlug: i.product.slug,
+      productName: i.product.name,
+      color: { slug: i.color.slug, name: i.color.name, hex: i.color.hex },
+      method: i.method,
+      designId: i.design?.publicId ?? null,
+      unitPrice: num(i.unitPrice),
+      quantity: i.quantity,
+      lineTotal: num(i.lineTotal),
+      sizes: i.sizes.map((s) => ({
+        size: s.size,
+        qty: s.quantity,
+        upcharge: num(s.upcharge),
       })),
-      subtotal: num(o.subtotal),
-      discount: num(o.discount),
-      shipping: num(o.shipping),
-      tax: num(o.tax),
-      total: num(o.total),
-      shippingAddress: {
-        name: o.shipName,
-        line1: o.shipLine1,
-        line2: o.shipLine2,
-        city: o.shipCity,
-        state: o.shipState,
-        postal: o.shipPostal,
-        country: o.shipCountry,
-      },
-      tracking: toTracking(o),
-      notes: o.notes,
-      // never the actor: who in the back office did something is not the
-      // customer's business
-      timeline: o.events
-        .filter((e) => PUBLIC_ORDER_EVENT_KINDS.includes(e.kind))
-        .map((e) => ({
-          kind: e.kind,
-          status: e.status,
-          note: e.note,
-          at: e.createdAt,
-        })),
-      placedAt: o.placedAt,
-      createdAt: o.createdAt,
-    };
-  }
+    })),
+    subtotal: num(o.subtotal),
+    discount: num(o.discount),
+    shipping: num(o.shipping),
+    tax: num(o.tax),
+    total: num(o.total),
+    shippingAddress: {
+      name: o.shipName,
+      line1: o.shipLine1,
+      line2: o.shipLine2,
+      city: o.shipCity,
+      state: o.shipState,
+      postal: o.shipPostal,
+      country: o.shipCountry,
+    },
+    tracking: toTracking(o),
+    notes: o.notes,
+    // never the actor: who in the back office did something is not the
+    // customer's business
+    timeline: o.events
+      .filter((e) => PUBLIC_ORDER_EVENT_KINDS.includes(e.kind))
+      .map((e) => ({
+        kind: e.kind,
+        status: e.status,
+        note: e.note,
+        at: e.createdAt,
+      })),
+    placedAt: o.placedAt,
+    createdAt: o.createdAt,
+  };
 }

@@ -50,3 +50,21 @@ export function toTracking(o: { carrier: string | null; trackingNumber: string |
 export function trackingNote(t: ParsedTracking): string {
   return `${CARRIER_LABEL[t.carrier]} ${t.number}`;
 }
+
+/**
+ * The inverse of `trackingNote`, for a TRACKING event - the note is all an
+ * event keeps, and the back office links each one to the carrier, including
+ * numbers the order has since replaced. It sits beside `trackingNote` so the
+ * format has one owner. Null for a note this module did not write.
+ */
+export function parseTrackingNote(note: string | null): Tracking | null {
+  if (!note) return null;
+  for (const carrier of CARRIERS) {
+    const prefix = `${CARRIER_LABEL[carrier]} `;
+    if (!note.startsWith(prefix)) continue;
+    const number = note.slice(prefix.length);
+    if (!TRACKING_NUMBER_PATTERN.test(number)) return null;
+    return { carrier, number, url: trackingUrl(carrier, number) };
+  }
+  return null;
+}
