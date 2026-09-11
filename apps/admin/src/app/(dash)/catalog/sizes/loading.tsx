@@ -10,6 +10,8 @@ export default function Loading() {
           { label: "Code", bar: "h-4 w-10" },
           { label: "Label", bar: "h-4 w-20" },
           { label: "Upcharge", align: "right", bar: "h-4 w-12" },
+          { label: "Sort", align: "right", bar: "h-4 w-6" },
+          { label: "Products", align: "right", bar: "h-4 w-6" },
         ]}
       />
     </div>
