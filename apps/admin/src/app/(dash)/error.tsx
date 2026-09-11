@@ -24,20 +24,29 @@ export default function DashError({
   }, [error]);
 
   return (
-    <Alert variant="destructive" data-testid="segment-error">
-      <AlertCircle />
-      <AlertTitle>Something went wrong</AlertTitle>
-      <AlertDescription className="space-y-3">
-        <p>{error.message}</p>
-        {/* the digest is the only handle on a minified production stack, so it
-            is the one thing worth asking an operator to quote back */}
-        {error.digest ? (
-          <p className="font-mono text-xs opacity-70">digest {error.digest}</p>
-        ) : null}
-        <Button size="sm" variant="outline" onClick={() => retry()}>
-          Try again
-        </Button>
-      </AlertDescription>
-    </Alert>
+    // it stands in for the whole page, so it keeps the page's one <h1>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold tracking-tight">Something went wrong</h1>
+      <Alert variant="destructive" data-testid="segment-error">
+        <AlertCircle />
+        <AlertTitle>This page could not be loaded</AlertTitle>
+        <AlertDescription className="space-y-3">
+          <p>{error.message}</p>
+          {/* the digest is the only handle on a minified production stack, so it
+              is the one thing worth asking an operator to quote back */}
+          {error.digest ? (
+            <p className="font-mono text-xs opacity-70">digest {error.digest}</p>
+          ) : null}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => retry()}
+            data-testid="segment-error-retry"
+          >
+            Try again
+          </Button>
+        </AlertDescription>
+      </Alert>
+    </div>
   );
 }
