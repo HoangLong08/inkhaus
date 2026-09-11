@@ -36,7 +36,7 @@ export default async function NewProductPage() {
     <div className="space-y-6">
       <div>
         <Button asChild variant="link" size="sm" className="h-auto p-0">
-          <Link href="/catalog">
+          <Link href="/catalog" data-testid="product-back">
             <ArrowLeft />
             Products
           </Link>

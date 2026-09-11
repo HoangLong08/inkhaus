@@ -47,7 +47,11 @@ export function DashBreadcrumb() {
                   </BreadcrumbPage>
                 ) : (
                   <BreadcrumbLink asChild>
-                    <Link href={crumb.href} className={crumb.mono ? "font-mono" : undefined}>
+                    <Link
+                      href={crumb.href}
+                      className={crumb.mono ? "font-mono" : undefined}
+                      data-testid="breadcrumb-link"
+                    >
                       {crumb.label}
                     </Link>
                   </BreadcrumbLink>

@@ -30,7 +30,9 @@ export default function OrderNotFound() {
           </EmptyHeader>
           <EmptyContent>
             <Button asChild variant="outline">
-              <Link href="/orders">Back to orders</Link>
+              <Link href="/orders" data-testid="order-not-found-back">
+                Back to orders
+              </Link>
             </Button>
           </EmptyContent>
         </Empty>

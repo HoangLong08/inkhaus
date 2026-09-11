@@ -74,7 +74,7 @@ export default async function OrderPage({ params }: Params) {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <Button asChild variant="link" size="sm" className="h-auto p-0">
-              <Link href="/orders">
+              <Link href="/orders" data-testid="order-back">
                 <ArrowLeft />
                 Orders
               </Link>
