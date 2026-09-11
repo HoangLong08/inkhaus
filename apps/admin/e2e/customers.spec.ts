@@ -149,7 +149,8 @@ test.describe("customers", () => {
   });
 
   test("an owner sees the customer's saved designs", async ({ page }) => {
-    await page.goto(`/customers/${await customerId()}`);
+    const id = await customerId();
+    await page.goto(`/customers/${id}`);
     await tab(page, "designs").click();
 
     const design = page.locator(`[data-testid="customer-design"][data-design="${DESIGN_ID}"]`);
@@ -158,6 +159,15 @@ test.describe("customers", () => {
       "src",
       `/api/admin/designs/${DESIGN_ID}/preview/front`,
     );
+
+    // the list the tab reads carries labels and flags, never the artwork itself
+    const listed = await api(readToken(OWNER_STATE)).get(`/admin/designs?customerId=${id}`);
+    expect(listed.status).toBe(200);
+    expect(listed.json).toEqual(
+      expect.arrayContaining([expect.objectContaining({ publicId: DESIGN_ID, hasFront: true })]),
+    );
+    expect(listed.text).not.toContain("data:image");
+    expect(listed.text).not.toContain("scene");
   });
 
   test("staff get no designs tab - not a disabled one, none at all", async ({ browser }) => {
@@ -171,6 +181,9 @@ test.describe("customers", () => {
       await expect(page.getByTestId("customer-design")).toHaveCount(0);
       // nor anywhere in the document, the serialized server payload included
       expect(await page.content()).not.toContain(DESIGN_ID);
+      // and the API refuses the list outright - hiding the tab is not the guard
+      const listed = await api(readToken(STAFF_STATE)).get(`/admin/designs?customerId=${id}`);
+      expect(listed.status).toBe(403);
 
       // staff may still edit a customer
       await expect(page.getByTestId("customer-edit-open")).toBeVisible();

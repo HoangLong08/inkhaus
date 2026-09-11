@@ -4,7 +4,7 @@ import { orderStatusSchema, paginatedSchema, quoteStatusSchema } from "./core";
 
 /**
  * `GET|PATCH /admin/customers[/:id]` response shapes, plus the owner-only
- * `GET /designs?email=` the profile's Designs tab reads.
+ * `GET /admin/designs?customerId=` the profile's Designs tab reads.
  */
 
 export const customerListItemSchema = z.object({
@@ -66,22 +66,20 @@ export const customerDetailSchema = customerListItemSchema.extend({
 });
 
 /**
- * One saved design, from the owner-only `GET /designs?email=`. That endpoint
- * returns the whole fabric scene and a data-URL preview per side - megabytes
- * for a customer with real artwork. The tab draws its thumbnail through the
- * design-preview BFF route instead, so this keeps only the labels and whether a
- * front preview exists at all, and none of the rest reaches the page.
+ * One saved design, from the owner-only `GET /admin/designs?customerId=`. The
+ * API sends labels and whether each side can be drawn, never the scene or a
+ * preview: the tab draws its thumbnails through the design-preview BFF route.
  */
-export const customerDesignSchema = z
-  .object({
-    publicId: z.string(),
-    name: z.string(),
-    productSlug: z.string(),
-    createdAt: z.string(),
-    previewFront: z.string().nullable(),
-  })
-  .transform(({ previewFront, ...design }) => ({ ...design, hasFront: previewFront !== null }));
+export const customerDesignSchema = z.object({
+  publicId: z.string(),
+  name: z.string(),
+  product: z.object({ slug: z.string(), name: z.string() }),
+  createdAt: z.string(),
+  hasFront: z.boolean(),
+  hasBack: z.boolean(),
+});
 
+/** newest first, at most CUSTOMER_DESIGNS_MAX */
 export const customerDesignListSchema = z.array(customerDesignSchema);
 
 export type CustomerListItem = z.infer<typeof customerListItemSchema>;
@@ -89,4 +87,4 @@ export type CustomerList = z.infer<typeof customerListSchema>;
 export type CustomerOrderRow = z.infer<typeof customerOrderRowSchema>;
 export type CustomerQuoteRow = z.infer<typeof customerQuoteRowSchema>;
 export type CustomerDetail = z.infer<typeof customerDetailSchema>;
-export type CustomerDesign = z.output<typeof customerDesignSchema>;
+export type CustomerDesign = z.infer<typeof customerDesignSchema>;

@@ -21,9 +21,10 @@ export const customersApi = {
     request(path(id), { method: "PATCH", body: input, schema: customerDetailSchema }),
 
   /**
-   * Designs saved under an address. The API route is OWNER-only, so call it only
-   * for a viewer with `designs.view`; a staff token gets a 403.
+   * The customer's saved designs, newest first - labels and which sides can be
+   * drawn, never the artwork. `designs.view` (owners only), so call it only for
+   * a viewer who has it; a staff token gets a 403.
    */
-  designs: (email: string) =>
-    request(`/designs${query({ email })}`, { schema: customerDesignListSchema }),
+  designs: (customerId: string) =>
+    request(`/admin/designs${query({ customerId })}`, { schema: customerDesignListSchema }),
 };

@@ -11,22 +11,30 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { adminApi, ApiError } from "@/lib/api";
-import { on } from "@/lib/format";
+import { count, on } from "@/lib/format";
 
 const GRID = "grid grid-cols-2 gap-3 sm:grid-cols-3";
 
 /**
- * Designs saved under the customer's address, drawn only for a viewer with
+ * Designs saved under the customer, drawn only for a viewer with
  * `designs.view` - the page decides that and never renders this otherwise, so
  * for staff there is no tab, no request and nothing in the payload.
  *
- * Its own async component, streamed behind a Suspense boundary: the endpoint
- * sends every design's scene and previews, which can take a while, and the rest
- * of the profile should not wait for it. A failure stays inside the tab rather
- * than replacing the whole profile with the segment error.
+ * The API sends labels and which sides can be drawn, never the artwork; each
+ * thumbnail is its own lazy request to the preview route. Still its own async
+ * component behind a Suspense boundary, so the rest of the profile does not
+ * wait for it and a failure stays inside the tab rather than replacing the
+ * whole profile with the segment error.
  */
-export default async function CustomerDesigns({ email }: { email: string }) {
-  const designs = await adminApi.customers.designs(email).catch((err: unknown) => {
+export default async function CustomerDesigns({
+  customerId,
+  designCount,
+}: {
+  customerId: string;
+  /** every design saved under the customer - the list stops at the newest few */
+  designCount: number;
+}) {
+  const designs = await adminApi.customers.designs(customerId).catch((err: unknown) => {
     if (err instanceof ApiError) return null;
     throw err;
   });
@@ -58,33 +66,42 @@ export default async function CustomerDesigns({ email }: { email: string }) {
   }
 
   return (
-    <ul className={GRID}>
-      {designs.map((design) => (
-        <li key={design.publicId}>
-          <Card className="gap-0 overflow-hidden p-0" data-testid="customer-design" data-design={design.publicId}>
-            {design.hasFront ? (
-              // eslint-disable-next-line @next/next/no-img-element -- same-origin BFF image; this app runs no image optimizer
-              <img
-                src={`/api/admin/designs/${encodeURIComponent(design.publicId)}/preview/front`}
-                alt={`${design.name}, front`}
-                loading="lazy"
-                className="bg-muted aspect-square w-full object-contain"
-              />
-            ) : (
-              <div className="bg-muted text-muted-foreground flex aspect-square w-full flex-col items-center justify-center gap-1 text-xs">
-                <ImageOff className="size-5" />
-                No preview
-              </div>
-            )}
-            <CardContent className="space-y-0.5 border-t px-3 py-2">
-              <p className="truncate text-sm font-medium">{design.name}</p>
-              <p className="text-muted-foreground truncate font-mono text-xs">{design.productSlug}</p>
-              <p className="text-muted-foreground text-xs">Saved {on(design.createdAt)}</p>
-            </CardContent>
-          </Card>
-        </li>
-      ))}
-    </ul>
+    <div className="space-y-3">
+      <ul className={GRID}>
+        {designs.map((design) => (
+          <li key={design.publicId}>
+            <Card className="gap-0 overflow-hidden p-0" data-testid="customer-design" data-design={design.publicId}>
+              {design.hasFront ? (
+                // eslint-disable-next-line @next/next/no-img-element -- same-origin BFF image; this app runs no image optimizer
+                <img
+                  src={`/api/admin/designs/${encodeURIComponent(design.publicId)}/preview/front`}
+                  alt={`${design.name}, front`}
+                  loading="lazy"
+                  className="bg-muted aspect-square w-full object-contain"
+                />
+              ) : (
+                <div className="bg-muted text-muted-foreground flex aspect-square w-full flex-col items-center justify-center gap-1 text-xs">
+                  <ImageOff className="size-5" />
+                  No preview
+                </div>
+              )}
+              <CardContent className="space-y-0.5 border-t px-3 py-2">
+                <p className="truncate text-sm font-medium">{design.name}</p>
+                <p className="text-muted-foreground truncate text-xs" data-slug={design.product.slug}>
+                  {design.product.name}
+                </p>
+                <p className="text-muted-foreground text-xs">Saved {on(design.createdAt)}</p>
+              </CardContent>
+            </Card>
+          </li>
+        ))}
+      </ul>
+      {designCount > designs.length ? (
+        <p className="text-muted-foreground text-xs">
+          The latest {designs.length} of {count(designCount)}.
+        </p>
+      ) : null}
+    </div>
   );
 }
 

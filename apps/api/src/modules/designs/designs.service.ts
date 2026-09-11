@@ -1,15 +1,37 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { CUSTOMER_DESIGNS_MAX } from '@inkhaus/shared';
 import { customAlphabet } from 'nanoid';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CatalogService } from '../catalog/catalog.service';
 import { CustomersService } from '../customers/customers.service';
+import { PREVIEWABLE_IMAGE_PREFIXES } from '../orders/admin-order-detail.mapper';
 import type { CreateDesignDto } from './dto/create-design.dto';
 import type { UpdateDesignDto } from './dto/update-design.dto';
 
 /** url-safe, no lookalike characters - these end up in shareable links */
 const publicId = customAlphabet('23456789abcdefghjkmnpqrstuvwxyz', 10);
+
+/** one row of GET /admin/designs - the admin app parses exactly this shape */
+export type AdminDesignListItem = {
+  publicId: string;
+  name: string;
+  product: { slug: string; name: string };
+  createdAt: string;
+  /** a preview the admin's preview route can decode exists for this side */
+  hasFront: boolean;
+  hasBack: boolean;
+};
+
+// Whether a side can be drawn is asked of the database, never read off the
+// row: the previews are data URLs that can run to megabytes each.
+const drawableFront = {
+  OR: PREVIEWABLE_IMAGE_PREFIXES.map((prefix) => ({ previewFront: { startsWith: prefix } })),
+} satisfies Prisma.DesignWhereInput;
+const drawableBack = {
+  OR: PREVIEWABLE_IMAGE_PREFIXES.map((prefix) => ({ previewBack: { startsWith: prefix } })),
+} satisfies Prisma.DesignWhereInput;
 
 @Injectable()
 export class DesignsService {
@@ -119,6 +141,46 @@ export class DesignsService {
       take: 100,
     });
     return designs.map((d) => this.toDto(d));
+  }
+
+  /**
+   * A customer's saved designs for the back office's profile tab, newest first
+   * and at most CUSTOMER_DESIGNS_MAX: labels, the blank, and whether each side
+   * can be drawn. Never the scene or a preview - the tab draws its thumbnails
+   * through the preview route, one image at a time, and the legacy
+   * `GET /designs?email=` it replaces sent both for up to 100 designs.
+   */
+  async listForAdmin(customerId: string): Promise<AdminDesignListItem[]> {
+    const rows = await this.prisma.design.findMany({
+      where: { customerId },
+      select: {
+        id: true,
+        publicId: true,
+        name: true,
+        createdAt: true,
+        product: { select: { slug: true, name: true } },
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: CUSTOMER_DESIGNS_MAX,
+    });
+    if (rows.length === 0) return [];
+
+    const ids = rows.map((r) => r.id);
+    const [front, back] = await this.prisma.$transaction([
+      this.prisma.design.findMany({ where: { id: { in: ids }, ...drawableFront }, select: { id: true } }),
+      this.prisma.design.findMany({ where: { id: { in: ids }, ...drawableBack }, select: { id: true } }),
+    ]);
+    const hasFront = new Set(front.map((d) => d.id));
+    const hasBack = new Set(back.map((d) => d.id));
+
+    return rows.map((d) => ({
+      publicId: d.publicId,
+      name: d.name,
+      product: { slug: d.product.slug, name: d.product.name },
+      createdAt: d.createdAt.toISOString(),
+      hasFront: hasFront.has(d.id),
+      hasBack: hasBack.has(d.id),
+    }));
   }
 
   /** a colour is only valid for a product if the product actually stocks it */

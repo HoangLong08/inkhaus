@@ -63,6 +63,7 @@ export default function CustomersTable({
                 <div className="flex items-center gap-2">
                   <Link
                     href={`${BASE}/${customer.id}`}
+                    data-testid="customer-row-link"
                     className="focus-visible:after:ring-ring truncate font-medium outline-none after:absolute after:inset-0 hover:underline focus-visible:after:ring-2 focus-visible:after:ring-inset"
                   >
                     {customer.email}

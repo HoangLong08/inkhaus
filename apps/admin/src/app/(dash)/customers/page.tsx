@@ -1,3 +1,4 @@
+import { CUSTOMER_ORDER_FILTERS } from "@inkhaus/shared/admin";
 import { SearchX } from "lucide-react";
 
 import FilterLinks from "@/components/common/FilterLinks";
@@ -15,7 +16,7 @@ import {
 } from "@/components/ui/empty";
 import { adminApi } from "@/lib/api";
 import { count } from "@/lib/format";
-import { CUSTOMERS_ORDER_FILTERS, customersQuerySchema } from "@/lib/schemas/params";
+import { customersQuerySchema } from "@/lib/schemas/params";
 
 export const metadata = { title: "Customers — INKHAUS Back Office" };
 
@@ -55,7 +56,7 @@ export default async function CustomersPage({
       <FilterLinks
         base="/customers"
         param="hasOrders"
-        values={CUSTOMERS_ORDER_FILTERS}
+        values={CUSTOMER_ORDER_FILTERS}
         active={params.hasOrders}
         params={params}
         ariaLabel="Filter customers by orders"

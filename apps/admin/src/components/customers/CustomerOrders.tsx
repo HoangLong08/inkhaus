@@ -75,7 +75,9 @@ export default function CustomerOrders({
             >
               <TableCell>
                 <Button asChild variant="link" size="sm" className="h-auto p-0 font-mono">
-                  <Link href={`/orders/${order.number}`}>{order.number}</Link>
+                  <Link href={`/orders/${order.number}`} data-testid="customer-order-link">
+                    {order.number}
+                  </Link>
                 </Button>
               </TableCell>
               <TableCell>

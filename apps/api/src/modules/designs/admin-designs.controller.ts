@@ -1,10 +1,11 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { Can } from '../../common/decorators/can.decorator';
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard';
 import { CapabilityGuard } from '../../common/guards/capability.guard';
 import { DesignsService } from './designs.service';
+import { AdminListDesignsDto } from './dto/admin-list-designs.dto';
 import { DesignPublicIdParamsDto } from './dto/design-public-id.params';
 
 /**
@@ -18,6 +19,20 @@ import { DesignPublicIdParamsDto } from './dto/design-public-id.params';
 @UseGuards(AdminAuthGuard, CapabilityGuard)
 export class AdminDesignsController {
   constructor(private readonly designs: DesignsService) {}
+
+  /**
+   * One customer's saved designs, including ones never ordered - which is why
+   * it is `designs.view`, not `customers.view`.
+   */
+  @Get()
+  @Can('designs.view')
+  @ApiOperation({
+    summary:
+      "A customer's saved designs, newest first (at most 60) - names and which sides can be drawn, never the artwork",
+  })
+  list(@Query() query: AdminListDesignsDto) {
+    return this.designs.listForAdmin(query.customerId);
+  }
 
   /**
    * One design by id, as the order page draws it. `orders.view` rather than

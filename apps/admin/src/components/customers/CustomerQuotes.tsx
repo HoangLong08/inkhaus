@@ -67,7 +67,9 @@ export default function CustomerQuotes({
             >
               <TableCell>
                 <Button asChild variant="link" size="sm" className="h-auto p-0">
-                  <Link href={`/quotes/${quote.id}`}>{on(quote.createdAt)}</Link>
+                  <Link href={`/quotes/${quote.id}`} data-testid="customer-quote-link">
+                    {on(quote.createdAt)}
+                  </Link>
                 </Button>
               </TableCell>
               <TableCell className="max-w-56 truncate">

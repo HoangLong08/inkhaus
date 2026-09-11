@@ -27,7 +27,9 @@ export default function CustomerNotFound() {
         </EmptyHeader>
         <EmptyContent>
           <Button asChild variant="outline">
-            <Link href="/customers">Back to customers</Link>
+            <Link href="/customers" data-testid="customer-not-found-back">
+              Back to customers
+            </Link>
           </Button>
         </EmptyContent>
       </Empty>

@@ -55,22 +55,17 @@ export default function CustomerProfileCard({ id, canEdit }: { id: string; canEd
             )}
           </dd>
 
-          {/* Dates are formatted in the viewer's time zone, which the server
-              rendering this first may not share - hence the hydration opt-out on
-              exactly these two text nodes. */}
+          {/* `on` and `at` format in UTC, so the server's render and the
+              browser's agree and no hydration opt-out is needed */}
           <dt className="text-muted-foreground">Customer since</dt>
           <dd>
-            <time dateTime={customer.createdAt} suppressHydrationWarning>
-              {on(customer.createdAt)}
-            </time>
+            <time dateTime={customer.createdAt}>{on(customer.createdAt)}</time>
           </dd>
 
           <dt className="text-muted-foreground">Last sign-in</dt>
           <dd>
             {customer.lastLoginAt ? (
-              <time dateTime={customer.lastLoginAt} suppressHydrationWarning>
-                {at(customer.lastLoginAt)}
-              </time>
+              <time dateTime={customer.lastLoginAt}>{at(customer.lastLoginAt)}</time>
             ) : (
               <span className="text-muted-foreground">Never</span>
             )}

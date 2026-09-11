@@ -1,17 +1,16 @@
-import { CUSTOMER_SORTS } from "@inkhaus/shared/admin";
+import { CUSTOMER_ORDER_FILTERS, CUSTOMER_SORTS } from "@inkhaus/shared/admin";
 import { z } from "zod";
 
 import { pageParam, searchParam } from "./common";
 
-/** `?hasOrders=` - the API's filter values: placed at least one order, or never */
-export const CUSTOMERS_ORDER_FILTERS = ["yes", "no"] as const;
-
 const customersQueryShape = z.object({
   q: searchParam,
-  hasOrders: z.enum(CUSTOMERS_ORDER_FILTERS).optional().catch(undefined),
+  // the API's own list: placed at least one order, or never
+  hasOrders: z.enum(CUSTOMER_ORDER_FILTERS).optional().catch(undefined),
   // Left out of the URL when it is the default, so a plain /customers link and
-  // every filter or pager link built from these params stay free of it. A sort
-  // the API does not offer - a header clicked the other way - lands here too.
+  // every filter or pager link built from these params stay free of it. Every
+  // sortable column has both directions in CUSTOMER_SORTS, so a header clicked
+  // a second time is a real sort; only a hand-typed one lands here.
   sort: z.enum(CUSTOMER_SORTS).optional().catch(undefined),
   page: pageParam,
 });
