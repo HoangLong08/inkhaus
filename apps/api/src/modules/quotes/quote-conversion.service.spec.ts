@@ -1,10 +1,11 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 
 import type { PrismaService } from '../../common/prisma/prisma.service';
 import type { CustomersService } from '../customers/customers.service';
 import type { OrderBuilderService, PricedItem } from '../orders/order-builder.service';
 import {
   CONVERTED_ORDER_NOTE,
+  DESIGN_NOT_THEIRS_MESSAGE,
   QuoteConversionService,
   type QuoteConversionInput,
 } from './quote-conversion.service';
@@ -45,7 +46,11 @@ const PRICED: PricedItem[] = [
 const TOTALS = { subtotal: 576, shipping: 0, tax: 0, total: 576 };
 
 /** a Prisma stand-in whose interactive transaction hands over the same stub */
-function setup(row: Partial<QuoteRow> | null, claimed = 1) {
+function setup(
+  row: Partial<QuoteRow> | null,
+  claimed = 1,
+  design: { customerId: string | null } | null = { customerId: null },
+) {
   const tx = {
     bulkQuote: {
       findUnique: jest.fn().mockResolvedValue(
@@ -62,6 +67,7 @@ function setup(row: Partial<QuoteRow> | null, claimed = 1) {
       ),
       updateMany: jest.fn().mockResolvedValue({ count: claimed }),
     },
+    design: { findUnique: jest.fn().mockResolvedValue(design) },
     quoteEvent: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
   };
   const prisma = { ...tx, $transaction: jest.fn((fn: (client: typeof tx) => unknown) => fn(tx)) };
@@ -77,7 +83,7 @@ function setup(row: Partial<QuoteRow> | null, claimed = 1) {
     builder as unknown as OrderBuilderService,
     customers as unknown as CustomersService,
   );
-  const convert = () => service.convert('quote-1', INPUT, ACTOR);
+  const convert = (input: QuoteConversionInput = INPUT) => service.convert('quote-1', input, ACTOR);
   const newOrder = () => builder.createOrder.mock.calls[0][1];
   const events = () => tx.quoteEvent.createMany.mock.calls[0][0].data;
 
@@ -164,14 +170,16 @@ describe('QuoteConversionService.convert', () => {
     expect(tx.quoteEvent.createMany).not.toHaveBeenCalled();
   });
 
-  it('files the order under the quote email when the quote has no customer yet', async () => {
+  it('files the order under the quote email when the quote has no customer yet, without rewriting one', async () => {
     const { customers, tx, convert, newOrder } = setup({ customerId: null });
 
     await convert();
-    expect(customers.findOrCreate).toHaveBeenCalledWith('lead@inkhaus.test', {
-      name: 'Lead',
-      company: 'Lead Co',
-    });
+    // create-only: an existing customer keeps whatever staff last saved on it
+    expect(customers.findOrCreate).toHaveBeenCalledWith(
+      'lead@inkhaus.test',
+      { name: 'Lead', company: 'Lead Co' },
+      { update: false },
+    );
     expect(newOrder().customerId).toBe('cust-new');
     // and links the quote to that customer while it is at it
     expect(tx.bulkQuote.updateMany.mock.calls[0][0].data.customerId).toBe('cust-new');
@@ -182,6 +190,43 @@ describe('QuoteConversionService.convert', () => {
 
     await convert();
     expect(customers.findOrCreate).not.toHaveBeenCalled();
+  });
+
+  it("refuses another customer's design, before writing anything", async () => {
+    const { prisma, builder, convert } = setup({}, 1, { customerId: 'cust-other' });
+
+    await expect(convert({ ...INPUT, designId: 'k3m9xq2t7p' })).rejects.toThrow(
+      new BadRequestException(DESIGN_NOT_THEIRS_MESSAGE),
+    );
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(builder.createOrder).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["the customer's own", 'cust-1'],
+    ['an ownerless', null],
+  ])('accepts %s design', async (_label, owner) => {
+    const { tx, newOrder, convert } = setup({}, 1, { customerId: owner });
+
+    await expect(convert({ ...INPUT, designId: 'k3m9xq2t7p' })).resolves.toMatchObject({ number: 'INK-000123' });
+    expect(tx.design.findUnique).toHaveBeenCalledWith({
+      where: { publicId: 'k3m9xq2t7p' },
+      select: { customerId: true },
+    });
+    expect(newOrder().customerId).toBe('cust-1');
+  });
+
+  it('checks the design against the customer the order is filed under', async () => {
+    // a quote with no customer: the order goes to the customer found by email
+    const { convert } = setup({ customerId: null }, 1, { customerId: 'cust-new' });
+    await expect(convert({ ...INPUT, designId: 'k3m9xq2t7p' })).resolves.toMatchObject({ id: 'order-1' });
+  });
+
+  it('checks no design when none was chosen', async () => {
+    const { tx, convert } = setup({});
+
+    await convert();
+    expect(tx.design.findUnique).not.toHaveBeenCalled();
   });
 
   it('answers 404 for a quote that does not exist', async () => {

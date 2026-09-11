@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   OrderStatus,
   QuoteEventKind,
@@ -26,6 +31,9 @@ export type QuoteConversionInput = {
 
 /** the first line on the new order's timeline */
 export const CONVERTED_ORDER_NOTE = 'Created from bulk quote';
+
+export const DESIGN_NOT_THEIRS_MESSAGE =
+  "That design belongs to a different customer. Use one of this customer's own designs.";
 
 export const QUOTE_CONVERT_RACE_MESSAGE =
   'This quote changed while you were converting it - someone may have converted it already. Reload and check.';
@@ -95,17 +103,23 @@ export class QuoteConversionService {
     ]);
     const totals = this.builder.totals(priced);
 
-    // Quotes from before customers were linked have no customerId. The upsert
-    // is idempotent, so running it outside the transaction below costs nothing
-    // if the conversion then fails.
+    // Quotes from before customers were linked have no customerId. Create-only:
+    // the name and company on the quote are what the lead typed back then, and
+    // an existing customer row may carry a staff correction made since - which
+    // the audit log records and an upsert would silently undo. Idempotent, so
+    // running it outside the transaction below costs nothing if the conversion
+    // then fails.
     const customerId =
       quote.customerId ??
       (
-        await this.customers.findOrCreate(quote.email, {
-          name: quote.name ?? undefined,
-          company: quote.company ?? undefined,
-        })
+        await this.customers.findOrCreate(
+          quote.email,
+          { name: quote.name ?? undefined, company: quote.company ?? undefined },
+          { update: false },
+        )
       ).id;
+
+    if (input.designId) await this.assertDesignOwner(input.designId, customerId);
 
     return this.prisma.$transaction(async (tx) => {
       const order = await this.builder.createOrder(tx, {
@@ -151,5 +165,24 @@ export class QuoteConversionService {
 
       return { id: order.id, number: order.number };
     });
+  }
+
+  /**
+   * A design on a converted order must be the customer's own or nobody's (a
+   * studio save made without an email). A publicId is a share link, so anyone
+   * who has seen one could otherwise print another customer's artwork on this
+   * order - and hand it that customer's design history. The builder has already
+   * refused an unknown id and one made for a different blank; checkout, where
+   * the shopper picks their own design, is unaffected.
+   */
+  private async assertDesignOwner(publicId: string, customerId: string) {
+    const design = await this.prisma.design.findUnique({
+      where: { publicId },
+      select: { customerId: true },
+    });
+    if (!design) throw new NotFoundException(`No design "${publicId}"`);
+    if (design.customerId !== null && design.customerId !== customerId) {
+      throw new BadRequestException(DESIGN_NOT_THEIRS_MESSAGE);
+    }
   }
 }

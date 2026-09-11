@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { QUOTE_NOTE_MAX } from '@inkhaus/shared';
 
 import type { PrismaService } from '../../common/prisma/prisma.service';
 import { parseUtcDay, type QuotePatch, type QuoteState } from './admin-quotes.rules';
@@ -17,9 +18,13 @@ function setup(
         row && { status: 'NEW', assigneeId: null, followUpAt: null, convertedOrderId: null, ...row },
       ),
       updateMany: jest.fn().mockResolvedValue({ count: updated }),
+      count: jest.fn().mockResolvedValue(row ? 1 : 0),
     },
     adminUser: { findFirst: jest.fn().mockResolvedValue(assignee) },
-    quoteEvent: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
+    quoteEvent: {
+      createMany: jest.fn().mockResolvedValue({ count: 1 }),
+      create: jest.fn().mockResolvedValue({ id: 'evt-1' }),
+    },
   };
   const prisma = { ...tx, $transaction: jest.fn((fn: (client: typeof tx) => unknown) => fn(tx)) };
   const service = new QuoteWorkflowService(prisma as unknown as PrismaService);
@@ -96,5 +101,39 @@ describe('QuoteWorkflowService.update', () => {
 
     await expect(service.setStatus('quote-1', 'LOST', ACTOR)).rejects.toThrow(BadRequestException);
     expect(tx.bulkQuote.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('QuoteWorkflowService.addNote', () => {
+  it('files the trimmed note under its author', async () => {
+    const { service, tx } = setup({});
+
+    await service.addNote('quote-1', '  called back, wants navy  ', ACTOR);
+    expect(tx.quoteEvent.create).toHaveBeenCalledWith({
+      data: { quoteId: 'quote-1', kind: 'NOTE', note: 'called back, wants navy', actorId: 'admin-owner' },
+    });
+  });
+
+  it('takes a note of exactly QUOTE_NOTE_MAX characters', async () => {
+    const { service, tx } = setup({});
+
+    await service.addNote('quote-1', 'x'.repeat(QUOTE_NOTE_MAX), ACTOR);
+    expect(tx.quoteEvent.create).toHaveBeenCalled();
+  });
+
+  it('refuses an empty note or an overlong one without touching the quote', async () => {
+    const { service, tx } = setup({});
+
+    await expect(service.addNote('quote-1', '   ', ACTOR)).rejects.toThrow(BadRequestException);
+    await expect(service.addNote('quote-1', 'x'.repeat(QUOTE_NOTE_MAX + 1), ACTOR)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(tx.bulkQuote.count).not.toHaveBeenCalled();
+    expect(tx.quoteEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('answers 404 for a quote that does not exist', async () => {
+    const { service } = setup(null);
+    await expect(service.addNote('quote-1', 'hello', ACTOR)).rejects.toThrow(NotFoundException);
   });
 });
