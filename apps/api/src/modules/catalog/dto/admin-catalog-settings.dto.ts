@@ -5,7 +5,6 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
-  IsBoolean,
   IsInt,
   IsNumber,
   IsOptional,
@@ -17,6 +16,8 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
+
+import { RawBoolean } from '../../../common/dto/raw-boolean.decorator';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
@@ -45,7 +46,7 @@ export class AdminCreateColorDto {
 
   @ApiPropertyOptional({ default: false, description: 'artwork on it needs light ink' })
   @IsOptional()
-  @IsBoolean()
+  @RawBoolean()
   dark?: boolean;
 
   @ApiPropertyOptional({ default: 0 })
@@ -73,7 +74,7 @@ export class AdminUpdateColorDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsBoolean()
+  @RawBoolean()
   dark?: boolean;
 
   @ApiPropertyOptional()
@@ -85,7 +86,7 @@ export class AdminUpdateColorDto {
 
   @ApiPropertyOptional({ description: 'false archives it: it stays where it is, and cannot be added anew' })
   @IsOptional()
-  @IsBoolean()
+  @RawBoolean()
   active?: boolean;
 }
 
