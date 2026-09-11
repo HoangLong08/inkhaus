@@ -353,7 +353,9 @@ model Order {
   deliveredAt    DateTime?
 
   notes     String?
-  /// null for a DRAFT - set the first time the order leaves DRAFT
+  /// when it was sent for payment: set by checkout, or by the move to
+  /// PENDING_PAYMENT. Null for a DRAFT, and for a draft cancelled before it
+  /// was ever placed
   placedAt  DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

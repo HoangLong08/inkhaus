@@ -144,6 +144,64 @@ describe('OrderWorkflowService.changeStatus', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
+  it('refuses tracking sent with a move that has no parcel, before writing anything', async () => {
+    const { tx, change } = setup({ status: 'PENDING_PAYMENT' });
+
+    await expect(
+      change({ status: 'PAID', tracking: { carrier: 'UPS', number: '1Z999AA10123456784' } }),
+    ).rejects.toThrow(BadRequestException);
+    expect(tx.order.updateMany).not.toHaveBeenCalled();
+    expect(tx.orderEvent.createMany).not.toHaveBeenCalled();
+  });
+
+  it('refuses tracking on a cancellation, and on a legacy note before production', async () => {
+    const cancel = setup({ status: 'IN_PRODUCTION' });
+    await expect(
+      cancel.change({ status: 'CANCELLED', tracking: { carrier: 'UPS', number: '1Z99' } }, OWNER),
+    ).rejects.toThrow(BadRequestException);
+    expect(cancel.tx.order.updateMany).not.toHaveBeenCalled();
+
+    const legacy = setup({ status: 'PAID' });
+    await expect(
+      legacy.change({ status: 'PAID', tracking: { carrier: 'UPS', number: '1Z99' } }, STAFF, true),
+    ).rejects.toThrow(BadRequestException);
+    expect(legacy.tx.orderEvent.createMany).not.toHaveBeenCalled();
+  });
+
+  it('still takes tracking on a legacy note for an order in production', async () => {
+    const { change, updateData, events } = setup({ status: 'IN_PRODUCTION' });
+
+    await expect(
+      change({ status: 'IN_PRODUCTION', tracking: { carrier: 'UPS', number: '1Z999AA10123456784' } }, STAFF, true),
+    ).resolves.toMatchObject({ kind: 'NOTE' });
+    expect(updateData()).toMatchObject({ carrier: 'UPS', trackingNumber: '1Z999AA10123456784' });
+    expect(events().map((e: { kind: string }) => e.kind)).toEqual(['NOTE', 'TRACKING']);
+  });
+
+  it('ships on re-sent tracking the order already has, without writing it or recording it twice', async () => {
+    const { change, updateData, events } = setup({
+      status: 'IN_PRODUCTION',
+      carrier: 'UPS',
+      trackingNumber: '1Z999AA10123456784',
+    });
+
+    await change({ status: 'SHIPPED', tracking: { carrier: 'UPS', number: ' 1Z999AA10123456784 ' } });
+    expect(updateData()).toEqual({ status: 'SHIPPED', shippedAt: expect.any(Date) });
+    expect(events()).toEqual([expect.objectContaining({ kind: 'STATUS', status: 'SHIPPED' })]);
+  });
+
+  it('replaces different tracking sent with the move to SHIPPED', async () => {
+    const { change, updateData, events } = setup({
+      status: 'IN_PRODUCTION',
+      carrier: 'UPS',
+      trackingNumber: '1Z999AA10123456784',
+    });
+
+    await change({ status: 'SHIPPED', tracking: { carrier: 'FEDEX', number: '771234567890' } });
+    expect(updateData()).toMatchObject({ carrier: 'FEDEX', trackingNumber: '771234567890' });
+    expect(events()).toHaveLength(2);
+  });
+
   it('stamps deliveredAt on delivery', async () => {
     const { change, updateData } = setup({ status: 'SHIPPED', carrier: 'UPS', trackingNumber: '1Z99' });
 
@@ -151,11 +209,18 @@ describe('OrderWorkflowService.changeStatus', () => {
     expect(updateData()).toEqual({ status: 'DELIVERED', deliveredAt: expect.any(Date) });
   });
 
-  it('sets placedAt when an order leaves DRAFT', async () => {
+  it('sets placedAt when a draft is sent for payment', async () => {
     const { change, updateData } = setup({ status: 'DRAFT', placedAt: null });
 
     await change({ status: 'PENDING_PAYMENT' });
     expect(updateData()).toEqual({ status: 'PENDING_PAYMENT', placedAt: expect.any(Date) });
+  });
+
+  it('leaves placedAt empty when a draft is cancelled - it was never placed', async () => {
+    const { change, updateData } = setup({ status: 'DRAFT', placedAt: null });
+
+    await change({ status: 'CANCELLED' }, OWNER);
+    expect(updateData()).toEqual({ status: 'CANCELLED' });
   });
 
   it('keeps a placedAt a draft somehow already had', async () => {

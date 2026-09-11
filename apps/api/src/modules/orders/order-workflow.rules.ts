@@ -1,4 +1,5 @@
 import {
+  canEditTracking,
   canSetStatus,
   canTransition,
   requiresTracking,
@@ -14,11 +15,24 @@ export type StatusChangeInput = {
   allowSame: boolean;
   /** tracking sent with this change, or already on the order */
   hasTracking: boolean;
+  /** whether this request itself carries tracking */
+  sendsTracking?: boolean;
 };
 
 export type StatusChangeDecision =
   | { ok: true; kind: 'STATUS' | 'NOTE' }
   | { ok: false; status: 400 | 403; message: string };
+
+/**
+ * Whether tracking may ride along with a request that leaves the order in
+ * `to`: the move to SHIPPED that needs it, or a status where tracking can be
+ * edited on its own anyway. Anywhere else there is no parcel - tracking sent
+ * with PENDING_PAYMENT -> PAID would put a public TRACKING line on an order
+ * that has not been printed.
+ */
+export function acceptsTracking(to: OrderStatusCode): boolean {
+  return requiresTracking(to) || canEditTracking(to);
+}
 
 /**
  * Whether a staff member may move an order from one status to another, and
@@ -36,6 +50,8 @@ export type StatusChangeDecision =
  *    from, so the two cannot disagree about what is a legal move.
  * 4. tracking (400). SHIPPED needs a carrier and a number, sent now or already
  *    on the order (decision D5).
+ * 5. tracking sent where it does not belong (400) - see `acceptsTracking`. This
+ *    one applies to a legacy same-status note too.
  */
 export function decideStatusChange(input: StatusChangeInput): StatusChangeDecision {
   const { from, to, role } = input;
@@ -44,25 +60,35 @@ export function decideStatusChange(input: StatusChangeInput): StatusChangeDecisi
     return { ok: false, status: 403, message: `Only an owner can move an order to ${to}` };
   }
 
+  let kind: 'STATUS' | 'NOTE' = 'STATUS';
   if (from === to) {
-    return input.allowSame
-      ? { ok: true, kind: 'NOTE' }
-      : { ok: false, status: 400, message: `This order is already ${to}.` };
+    if (!input.allowSame) {
+      return { ok: false, status: 400, message: `This order is already ${to}.` };
+    }
+    kind = 'NOTE';
+  } else {
+    if (!canTransition(from, to)) {
+      return { ok: false, status: 400, message: `Cannot move an order from ${from} to ${to}` };
+    }
+
+    if (requiresTracking(to) && !input.hasTracking) {
+      return {
+        ok: false,
+        status: 400,
+        message: 'Add a carrier and tracking number before marking this order shipped.',
+      };
+    }
   }
 
-  if (!canTransition(from, to)) {
-    return { ok: false, status: 400, message: `Cannot move an order from ${from} to ${to}` };
-  }
-
-  if (requiresTracking(to) && !input.hasTracking) {
+  if (input.sendsTracking && !acceptsTracking(to)) {
     return {
       ok: false,
       status: 400,
-      message: 'Add a carrier and tracking number before marking this order shipped.',
+      message: `Tracking goes with a move to SHIPPED, or on an order in production, shipped or delivered - not ${to}.`,
     };
   }
 
-  return { ok: true, kind: 'STATUS' };
+  return { ok: true, kind };
 }
 
 // Where tracking may be edited without a status move is `canEditTracking` in

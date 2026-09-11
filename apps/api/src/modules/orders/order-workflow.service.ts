@@ -76,20 +76,29 @@ export class OrderWorkflowService {
       });
       if (!order) throw new NotFoundException(`No order "${number}"`);
 
-      const tracking = change.tracking ? parseTracking(change.tracking) : null;
+      const sent = change.tracking ? parseTracking(change.tracking) : null;
 
       const decision = decideStatusChange({
         from: order.status,
         to: change.status,
         role: actor.role,
         allowSame,
-        hasTracking: Boolean(tracking || (order.carrier && order.trackingNumber)),
+        hasTracking: Boolean(sent || (order.carrier && order.trackingNumber)),
+        sendsTracking: sent !== null,
       });
       if (!decision.ok) {
         throw decision.status === 403
           ? new ForbiddenException(decision.message)
           : new BadRequestException(decision.message);
       }
+
+      // Re-sending the tracking the order already has is not new tracking: it
+      // counts towards SHIPPED above, but writes nothing and adds no second
+      // "UPS 1Z…" line that would read as a second parcel.
+      const tracking =
+        sent && !(order.carrier === sent.carrier && order.trackingNumber === sent.number)
+          ? sent
+          : null;
 
       const now = new Date();
       const moved = decision.kind === 'STATUS';
@@ -98,8 +107,12 @@ export class OrderWorkflowService {
         ...(tracking ? { carrier: tracking.carrier, trackingNumber: tracking.number } : {}),
         ...(moved && change.status === OrderStatus.SHIPPED ? { shippedAt: now } : {}),
         ...(moved && change.status === OrderStatus.DELIVERED ? { deliveredAt: now } : {}),
-        // a DRAFT has no placedAt; the first move out of DRAFT is when it was placed
-        ...(moved && order.status === OrderStatus.DRAFT ? { placedAt: order.placedAt ?? now } : {}),
+        // Placed means sent for payment. A DRAFT has no placedAt, and one that
+        // is cancelled was never placed at all - only the move to
+        // PENDING_PAYMENT stamps it.
+        ...(moved && change.status === OrderStatus.PENDING_PAYMENT
+          ? { placedAt: order.placedAt ?? now }
+          : {}),
       };
 
       const { count } = await tx.order.updateMany({

@@ -1,6 +1,6 @@
-import type { AdminRoleCode, OrderStatusCode } from '@inkhaus/shared';
+import { ORDER_STATUSES, type AdminRoleCode, type OrderStatusCode } from '@inkhaus/shared';
 
-import { decideStatusChange, type StatusChangeInput } from './order-workflow.rules';
+import { acceptsTracking, decideStatusChange, type StatusChangeInput } from './order-workflow.rules';
 
 const move = (
   from: OrderStatusCode,
@@ -64,5 +64,43 @@ describe('decideStatusChange', () => {
       ok: true,
       kind: 'STATUS',
     });
+  });
+
+  it('takes tracking only where there is a parcel to track', () => {
+    const refused = { ok: false, status: 400 };
+    // nothing has been printed yet, let alone posted
+    expect(move('PENDING_PAYMENT', 'PAID', 'STAFF', { sendsTracking: true })).toMatchObject(refused);
+    expect(move('DRAFT', 'CANCELLED', 'OWNER', { sendsTracking: true })).toMatchObject(refused);
+    expect(move('IN_PRODUCTION', 'CANCELLED', 'OWNER', { sendsTracking: true })).toMatchObject(refused);
+
+    expect(
+      move('IN_PRODUCTION', 'SHIPPED', 'STAFF', { sendsTracking: true, hasTracking: true }),
+    ).toEqual({ ok: true, kind: 'STATUS' });
+    expect(move('PAID', 'IN_PRODUCTION', 'STAFF', { sendsTracking: true })).toEqual({
+      ok: true,
+      kind: 'STATUS',
+    });
+    expect(move('SHIPPED', 'DELIVERED', 'STAFF', { sendsTracking: true })).toEqual({
+      ok: true,
+      kind: 'STATUS',
+    });
+  });
+
+  it('applies the tracking rule to a legacy same-status note too', () => {
+    expect(move('PAID', 'PAID', 'STAFF', { allowSame: true, sendsTracking: true })).toMatchObject({
+      ok: false,
+      status: 400,
+    });
+    expect(
+      move('IN_PRODUCTION', 'IN_PRODUCTION', 'STAFF', {
+        allowSame: true,
+        sendsTracking: true,
+        hasTracking: true,
+      }),
+    ).toEqual({ ok: true, kind: 'NOTE' });
+  });
+
+  it.each(ORDER_STATUSES)('accepts tracking with %s exactly where SHIPPED needs it or it is editable', (to) => {
+    expect(acceptsTracking(to)).toBe(['IN_PRODUCTION', 'SHIPPED', 'DELIVERED'].includes(to));
   });
 });
