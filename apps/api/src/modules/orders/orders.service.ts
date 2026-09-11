@@ -67,13 +67,28 @@ export class OrdersService {
     return toPublicOrder(order);
   }
 
+  /**
+   * The storefront's order page - public, keyed by nothing but the number.
+   *
+   * A DRAFT is a 404 here, exactly as if it did not exist. A draft is a bulk
+   * quote staff are still turning into an order: its notes are what staff typed
+   * in the convert dialog and its address is the customer's, and nobody has
+   * placed it yet. The admin detail endpoint reads its own include and is
+   * unaffected.
+   */
   async findByNumber(number: string) {
+    const order = await this.load(number);
+    if (order.status === OrderStatus.DRAFT) throw new NotFoundException(`No order "${number}"`);
+    return toPublicOrder(order);
+  }
+
+  private async load(number: string) {
     const order = await this.prisma.order.findUnique({
       where: { number },
       include: publicOrderInclude,
     });
     if (!order) throw new NotFoundException(`No order "${number}"`);
-    return toPublicOrder(order);
+    return order;
   }
 
   /**
@@ -82,9 +97,12 @@ export class OrdersService {
    * Scoped by `customerId` from the session and never by anything in the
    * request, which is what separates this from `list()` below: there is no
    * parameter here a caller could bend into someone else's history.
+   *
+   * Drafts are left out for the reason `findByNumber` 404s them - one listed
+   * here would link to an order page that says it does not exist.
    */
   async listForCustomer(customerId: string, query: PaginationDto) {
-    const where: Prisma.OrderWhereInput = { customerId };
+    const where: Prisma.OrderWhereInput = { customerId, status: { not: OrderStatus.DRAFT } };
 
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.order.findMany({
@@ -128,7 +146,8 @@ export class OrdersService {
    */
   async updateStatus(number: string, dto: UpdateOrderStatusDto, actor: WorkflowActor) {
     await this.workflow.changeStatus(number, dto, actor, { allowSame: true });
-    return this.findByNumber(number);
+    // staff asked, so a draft they just noted is answered rather than 404ed
+    return toPublicOrder(await this.load(number));
   }
 }
 
