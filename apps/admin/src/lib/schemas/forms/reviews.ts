@@ -1,4 +1,4 @@
-import { REVIEW_BULK_MAX } from "@inkhaus/shared/admin";
+import { REVIEW_BULK_MAX, REVIEW_ID_PATTERN } from "@inkhaus/shared/admin";
 import { z } from "zod";
 
 import { reviewStatusSchema } from "../api";
@@ -7,12 +7,13 @@ import { reviewStatusSchema } from "../api";
  * Review moderation input, shared by the table that sends it and the route
  * handlers that receive it.
  *
- * The id format is what Prisma's `cuid()` produces, the same pattern the API's
- * `admin-reviews.rules.ts` checks. It is checked here as well because the BFF
- * puts the id into an upstream path: `..` survives `encodeURIComponent`, and a
- * request for `/admin/reviews/..` is a request for something else entirely.
+ * The id format is REVIEW_ID_PATTERN - what Prisma's `cuid()` produces, and the
+ * pattern the API checks a bulk selection with. It is checked here as well
+ * because the BFF puts the id into an upstream path: `..` survives
+ * `encodeURIComponent`, and a request for `/admin/reviews/..` is a request for
+ * something else entirely.
  */
-export const reviewIdSchema = z.string().regex(/^c[a-z0-9]{24}$/, "That is not a review id.");
+export const reviewIdSchema = z.string().regex(REVIEW_ID_PATTERN, "That is not a review id.");
 
 export const reviewModerateInputSchema = z.object({
   status: reviewStatusSchema,

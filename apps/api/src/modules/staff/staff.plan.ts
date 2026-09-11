@@ -7,8 +7,8 @@ import type { AdminRole, Prisma } from '@prisma/client';
  * it too); StaffService asks that first, then this, then writes.
  */
 
-/** the API's limit on a display name; the admin's forms validate the same number */
-export const STAFF_NAME_MAX = 120;
+// The display-name limit is STAFF_NAME_MAX in @inkhaus/shared, which the
+// admin's forms validate with too.
 
 /** `admin_audit_logs.entity` for every staff entry */
 export const STAFF_AUDIT_ENTITY = 'admin_user';

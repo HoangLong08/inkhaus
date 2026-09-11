@@ -1,9 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AdminRole } from '@prisma/client';
+import { STAFF_NAME_MAX } from '@inkhaus/shared';
 import { Transform } from 'class-transformer';
 import { IsEmail, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 
-import { normalizeStaffEmail, STAFF_NAME_MAX } from '../staff.plan';
+import { normalizeStaffEmail } from '../staff.plan';
 
 export class InviteStaffDto {
   @ApiProperty({

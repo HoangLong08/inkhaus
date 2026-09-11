@@ -1,3 +1,4 @@
+import { STAFF_NAME_MAX, STAFF_REVOKE_SELF_MESSAGE } from "@inkhaus/shared/admin";
 import { z } from "zod";
 
 import { adminRoleSchema } from "../api";
@@ -6,17 +7,17 @@ import { adminRoleSchema } from "../api";
  * Staff invite and change input, shared by the form or control that collects
  * it and the route handler that receives it.
  *
- * The name limit mirrors `STAFF_NAME_MAX` in the API's staff.plan.ts. It is not
- * in @inkhaus/shared yet, which is the one place a limit should live - moving it
- * there is a Phase 2 change to a frozen package.
+ * The name limit and the self-revocation sentence are the shared constants the
+ * API validates and refuses with. They are re-exported here under the names
+ * the staff screen already imports, not copied.
  */
-export const STAFF_NAME_MAX = 120;
+export { STAFF_NAME_MAX };
 
 /**
  * The sentence the API refuses self-revocation with, so the disabled button's
  * tooltip and a hand-made request's 400 say the same thing.
  */
-export const staffRevokeSelfMessage = "You cannot end your own sessions here — use Sign out.";
+export const staffRevokeSelfMessage = STAFF_REVOKE_SELF_MESSAGE;
 
 const nameField = z
   .string()

@@ -5,11 +5,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { STAFF_REVOKE_SELF_MESSAGE } from '@inkhaus/shared';
 
 import type { AuditService } from '../../common/audit/audit.service';
 import type { PrismaService } from '../../common/prisma/prisma.service';
 import { planStaffChange } from './staff.plan';
-import { STAFF_RACE_MESSAGE, STAFF_REVOKE_SELF_MESSAGE, StaffService } from './staff.service';
+import { STAFF_RACE_MESSAGE, StaffService } from './staff.service';
 
 type Row = {
   id: string;
