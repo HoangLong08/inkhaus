@@ -1,6 +1,29 @@
-/**
- * `/admin/customers` calls. Empty until the customers workstream fills it in;
- * `index.ts` already mounts it as `adminApi.customers`, so adding a method here
- * is the whole change.
- */
-export const customersApi = {};
+import {
+  customerDesignListSchema,
+  customerDetailSchema,
+  customerListSchema,
+} from "@/lib/schemas/api";
+import type { CustomerEditInput } from "@/lib/schemas/forms";
+import type { CustomersQuery } from "@/lib/schemas/params";
+
+import { query, request } from "./core";
+
+const path = (id: string) => `/admin/customers/${encodeURIComponent(id)}`;
+
+export const customersApi = {
+  /** `GET /admin/customers` - the page's parsed params, or any subset of them */
+  list: (params: Partial<CustomersQuery> = {}) =>
+    request(`/admin/customers${query(params)}`, { schema: customerListSchema }),
+
+  get: (id: string) => request(path(id), { schema: customerDetailSchema }),
+
+  update: (id: string, input: CustomerEditInput) =>
+    request(path(id), { method: "PATCH", body: input, schema: customerDetailSchema }),
+
+  /**
+   * Designs saved under an address. The API route is OWNER-only, so call it only
+   * for a viewer with `designs.view`; a staff token gets a 403.
+   */
+  designs: (email: string) =>
+    request(`/designs${query({ email })}`, { schema: customerDesignListSchema }),
+};
