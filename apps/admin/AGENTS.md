@@ -75,7 +75,9 @@ that file is the computed conversion of the hex above it, not an approximation.
   dark. In a `ChartConfig` write `color: "var(--chart-1)"` and let `ui/chart.tsx`
   expose it as `var(--color-<key>)` to the series. A hex in a chart is still a hex.
 - The one legitimate inline colour is product data:
-  `style={{ background: item.color.hex }}` on a swatch.
+  `style={{ background: item.color.hex }}` on a swatch — an order line's, or a
+  catalog colour's own in the colours table, the colour dialog and the product
+  form.
 - `acid` is an accent, not a surface. It is the brand chip in the sidebar and the
   selection highlight, and it is `--primary` in dark mode. It is never a
   background for body text.
@@ -108,8 +110,8 @@ schema that drifts.
 2. **Form input** — `useForm({ resolver: zodResolver(schema) })`, always, even
    for one field. The resolver is what wires messages into `<FormMessage />`.
    Length limits are the shared constants the API validates with
-   (`ORDER_NOTE_MAX`), never a number typed twice — the note limit was 500 here
-   and 300 in the API.
+   (`ORDER_NOTE_MAX`, `CATALOG_LIMITS`), never a number typed twice — the note
+   limit was 500 here and 300 in the API.
 3. **Route-handler input** — every handler under `src/app/api/admin/*` parses its
    query or body with a schema. The client is not trusted, including our own.
 4. **API responses** — `src/lib/api/` parses what the NestJS API returns before
@@ -210,7 +212,7 @@ an HttpOnly cookie and stays that way.
 - **Never** put an API URL in a client component, and never expose one through
   `NEXT_PUBLIC_*`.
 - **A same-origin download link or image is allowed**, and is the right tool for
-  a body that is not JSON: `<a href="/api/admin/exports/orders.csv?…">` or
+  a body that is not JSON: `<a href="/api/admin/exports/orders?…">` or
   `<img src="/api/admin/designs/…/preview/front">`. The browser sends the cookie
   to our own origin, the route handler checks the capability and streams the
   body through with `requestRaw`. The `<img>` trips `@next/next/no-img-element`;
@@ -243,8 +245,9 @@ an HttpOnly cookie and stays that way.
   `can(user.role, action)` against `await requireAdmin()` in the page.
 
 `e2e/auth.spec.ts` asserts the browser makes **zero** requests to the API origin
-across a sign-in and four navigations, including the one page that runs client
-queries. Any direct call fails the suite, and that is the point.
+across a sign-in and five navigations, including an order, a quote and a
+product — pages whose client leaves run queries. Any direct call fails the
+suite, and that is the point.
 
 ## 6. Accessibility and test hooks — the e2e contract.
 
@@ -261,11 +264,11 @@ conventions are what keep it from being rewritten every time the UI moves.
   | chrome | `user-menu`, `current-user`, `sign-out`, `sign-out-dialog`, `sign-out-{confirm,cancel}`, `sidebar-toggle`, `breadcrumb-current`, `theme-toggle`, `theme-{light,dark,system}`, `nav-link` (data-section), `nav-sub-link` (data-section, data-value), `owners-only` |
   | shared | `status-badge` (data-status), `status-filter` (data-status), `pager`, `pager-{previous,page,next}`, `filter-link` (data-param, data-value), `sort-head` (data-sort, data-active), `page-size` (data-limit), `{prefix}-date-{trigger,apply,clear,preset}` |
   | overview | `stat-tile` (data-status), `recent-order` (data-number), `range-link` (data-range), `revenue-total`, `revenue-chart`, `series-table`, `top-product` (data-slug), `quote-funnel`, `attention-item` (data-kind) |
-  | orders | `orders-meta`, `orders-search`, `orders-search-clear`, `order-row` (data-number, data-status, data-total), `order-row-link`, `order-customer-link`, `orders-export` |
-  | order detail | `status-select`, `status-option` (data-status), `status-note`, `status-save`, `no-moves`, `order-timeline`, `status-confirm-dialog`, `status-confirm`, `status-confirm-cancel`, `status-tracking-carrier`, `status-tracking-number`, `tracking-carrier`, `tracking-carrier-option`, `tracking-number`, `tracking-save`, `tracking-link`, `order-note-input`, `order-note-save`, `timeline-event` (data-kind, data-status), `timeline-actor`, `customer-link`, `design-preview` (data-design, data-side), `quote-origin-link`, `packing-slip-link`, `packing-slip`, `packing-slip-print` |
-  | quotes | `quotes-meta`, `quote-card` (data-id), `quote-select`, `quote-option` (data-status), `quotes-search`, `quotes-search-clear`, `quote-row` (data-id, data-status), `quote-row-link`, `quote-assignee-select`, `quote-assignee-option`, `quote-follow-up-trigger`, `quote-follow-up-clear`, `quote-note-input`, `quote-note-save`, `quote-timeline`, `quote-event` (data-kind), `quote-convert-open`, `quote-convert-dialog`, `convert-product`, `convert-product-option` (data-slug), `convert-color`, `convert-color-option`, `convert-method`, `convert-method-option`, `convert-size-qty` (data-size), `convert-estimate`, `convert-submit`, `quote-order-link`, `quote-customer-link` |
+  | orders | `orders-meta`, `orders-search`, `orders-search-clear`, `order-row` (data-number, data-status, data-total), `order-row-link`, `order-customer-link` (data-customer-id), `orders-export` (data-capped), `orders-export-capped`, `orders-empty` (data-reason), `orders-empty-action` |
+  | order detail | `status-select`, `status-option` (data-status), `status-note`, `status-save`, `no-moves`, `order-timeline`, `status-confirm-dialog`, `status-confirm`, `status-confirm-cancel`, `status-tracking-carrier`, `status-tracking-carrier-option` (data-carrier), `status-tracking-number`, `tracking-carrier`, `tracking-carrier-option` (data-carrier), `tracking-number`, `tracking-save`, `tracking-link`, `order-note-input`, `order-note-save`, `timeline-event` (data-kind, data-status), `timeline-actor`, `timeline-tracking-link`, `customer-link`, `design-preview` (data-design, data-side), `quote-origin-link`, `packing-slip-link`, `packing-slip`, `packing-slip-print`, `packing-slip-back` |
+  | quotes | `quotes-meta`, `quotes-search`, `quotes-search-clear`, `quote-row` (data-id, data-status, data-overdue), `quote-row-link`, `quote-select` (data-status), `quote-option` (data-status), `quote-back`, `quote-not-found-back`, `quote-email`, `quote-assignee-select` (data-assignee), `quote-assignee-option` (data-id, data-self), `quote-follow-up-trigger` (data-day), `quote-follow-up-day` (data-day, data-today), `quote-follow-up-clear`, `quote-note-input`, `quote-note-save`, `quote-timeline`, `quote-event` (data-kind, data-pending), `quote-event-order`, `quote-convert-open`, `quote-convert-dialog`, `convert-product` (data-slug), `convert-product-option` (data-slug), `convert-color` (data-slug), `convert-color-option` (data-slug), `convert-method` (data-method), `convert-method-option` (data-method), `convert-size-qty` (data-size), `convert-estimate` (data-units, data-total), `convert-notes`, `convert-cancel`, `convert-submit`, `quote-order-link` (data-number), `quote-customer-link` |
   | customers | `customers-meta`, `customers-search`, `customers-search-clear`, `customer-row` (data-id, data-email), `customer-profile`, `customer-edit-open`, `customer-edit-dialog`, `customer-{name,phone,company,note}`, `customer-save`, `customer-stat` (data-stat), `customer-tab` (data-tab), `customer-order-row` (data-number), `customer-quote-row`, `customer-design` (data-design) |
-  | catalog | `products-meta`, `products-search`, `products-search-clear`, `product-row` (data-slug, data-active), `product-new`, `product-{name,slug,type,category,blurb,fabric,tag,price,bulk-price,sort-order,active,save}`, `product-{type,category}-option`, `product-method` (data-method), `product-size` (data-size), `product-color` (data-color), `product-print-{x,y,w,h}`, `product-inches-{w,h}`, `product-history`, `color-row` (data-slug), `color-{new,name,slug,hex,dark,active,save}`, `size-row` (data-code), `size-{new,code,label,upcharge,save,delete,delete-confirm}`, `tier-row` (data-min), `tier-{min,off,add,remove}`, `tiers-save`, `tiers-preview`, `price-sync-warning` |
+  | catalog | `products-meta`, `products-search`, `products-search-clear`, `product-row` (data-slug, data-active), `product-new`, `product-{name,slug,type,category,blurb,fabric,tag,price,bulk-price,sort-order,active,save}`, `product-type-option` (data-type), `product-category-option` (data-category), `product-method` (data-method), `product-size` (data-size), `product-color` (data-color), `product-print-{x,y,w,h}`, `product-inches-{w,h}`, `product-history`, `product-history-entry` (data-action), `color-row` (data-slug, data-active), `color-{new,edit,name,slug,hex,dark,sort-order,active,save,cancel}`, `size-row` (data-code, data-built-in), `size-{new,edit,code,label,upcharge,sort-order,save,cancel,delete,delete-confirm,delete-cancel}`, `tier-row` (data-min), `tier-{min,off,add,remove}`, `tiers-save`, `tiers-error`, `tiers-preview`, `tiers-sample`, `tiers-sample-option` (data-slug), `price-sync-warning` |
   | reviews | `reviews-meta`, `reviews-search`, `review-row` (data-id, data-status, data-rating), `review-select`, `review-select-all`, `review-actions`, `review-{publish,reject,pending,delete}`, `review-delete-dialog`, `review-delete-confirm`, `bulk-publish`, `bulk-reject` |
   | staff | `staff-row` (data-email, data-role, data-active, data-self), `staff-invite-{open,dialog,email,name,role,role-option,submit}`, `staff-role-select`, `staff-role-option`, `staff-active`, `staff-deactivate-confirm`, `staff-revoke-sessions`, `staff-revoke-dialog`, `staff-revoke-confirm` |
   | errors | `segment-error` |
