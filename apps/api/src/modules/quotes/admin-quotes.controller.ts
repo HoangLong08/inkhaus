@@ -12,7 +12,6 @@ import {
   AdminQuotesService,
   type AdminQuoteDetail,
   type AdminQuoteListItem,
-  type QuoteConversionPrices,
 } from './admin-quotes.service';
 import { AdminListQuotesDto } from './dto/admin-list-quotes.dto';
 import { AdminUpdateQuoteDto } from './dto/admin-update-quote.dto';
@@ -47,14 +46,6 @@ export class AdminQuotesController {
     @CurrentAdmin() admin: AdminUser,
   ): Promise<Paginated<AdminQuoteListItem>> {
     return this.quotes.list(query, admin.id);
-  }
-
-  // a static path, so it is declared before `:id` - Nest matches in order
-  @Get('conversion-prices')
-  @Can('quotes.convert')
-  @ApiOperation({ summary: 'List and bulk prices of every active product, for the convert estimate' })
-  conversionPrices(): Promise<QuoteConversionPrices> {
-    return this.quotes.conversionPrices();
   }
 
   @Get(':id')

@@ -63,11 +63,6 @@ export type AdminQuoteDetail = AdminQuoteListItem & {
   convertedOrder: { number: string; status: OrderStatus } | null;
 };
 
-/** GET /admin/bulk-quotes/conversion-prices */
-export type QuoteConversionPrices = {
-  products: { slug: string; price: number; bulkPrice: number }[];
-};
-
 const person = { select: { id: true, name: true, email: true } } as const;
 
 /** only what a list row shows - no message, no events, no customer */
@@ -167,23 +162,6 @@ export class AdminQuotesService {
     }
 
     return toDetail(row, liveEstimate);
-  }
-
-  /**
-   * The list and bulk prices of every product a quote can be converted into -
-   * the same set `GET /admin/catalog/options` lists - so the convert dialog
-   * can estimate with the shared `quote()` before anything is submitted. The
-   * order itself is still priced here, from the database, on submit.
-   */
-  async conversionPrices(): Promise<QuoteConversionPrices> {
-    const rows = await this.prisma.product.findMany({
-      where: { active: true },
-      select: { slug: true, price: true, bulkPrice: true },
-      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-    });
-    return {
-      products: rows.map((p) => ({ slug: p.slug, price: num(p.price), bulkPrice: num(p.bulkPrice) })),
-    };
   }
 }
 
