@@ -124,19 +124,35 @@ function publicRow(): PublicOrderRow {
 const NO_PREVIEWS: PreviewSides = { front: new Set(), back: new Set() };
 
 describe('toAdminOrderDetail', () => {
-  it('prices every size: the tier price plus its upcharge, times its quantity', () => {
+  it('lists every size with its quantity and upcharge, beside the line total as stored', () => {
     const [tee, tote] = toAdminOrderDetail(adminRow(), NO_PREVIEWS).items;
 
     expect(tee.unitPrice).toBe(21.6);
+    expect(tee.lineTotal).toBe(112);
     expect(tee.sizes).toEqual([
-      { size: 'M', qty: 3, upcharge: 0, unitPrice: 21.6, lineTotal: 64.8 },
-      { size: '2XL', qty: 2, upcharge: 2, unitPrice: 23.6, lineTotal: 47.2 },
+      { size: 'M', qty: 3, upcharge: 0 },
+      { size: '2XL', qty: 2, upcharge: 2 },
     ]);
-    // the per-size lines add up to the stored line total
-    expect(tee.sizes.reduce((sum, s) => sum + s.lineTotal, 0)).toBeCloseTo(tee.lineTotal, 2);
+    expect(tote.sizes).toEqual([{ size: 'OS', qty: 3, upcharge: 0.01 }]);
+  });
 
-    // rounded to cents, not left as float noise (9.99 + 0.01 = 10.000000000000002)
-    expect(tote.sizes).toEqual([{ size: 'OS', qty: 3, upcharge: 0.01, unitPrice: 10, lineTotal: 30 }]);
+  it('never recomputes a total from the rounded unit price', () => {
+    // 21.99 at 38% off is 13.6338 a unit: checkout charged 24 of them from the
+    // unrounded figure (327.21) and stored the unit price rounded (13.63), and
+    // 13.63 x 24 is 327.12 - nine cents short of what the customer paid
+    const row = adminRow();
+    row.items[0] = {
+      ...row.items[0],
+      unitPrice: d('13.63'),
+      quantity: 24,
+      lineTotal: d('327.21'),
+      sizes: [{ id: 's1', itemId: 'item_1', size: 'M', quantity: 24, upcharge: d('0') }],
+    };
+
+    const [tee] = toAdminOrderDetail(row, NO_PREVIEWS).items;
+    expect(tee.lineTotal).toBe(327.21);
+    expect(tee.sizes).toEqual([{ size: 'M', qty: 24, upcharge: 0 }]);
+    expect(JSON.stringify(tee)).not.toContain('327.12');
   });
 
   it('keeps the house size run in order, custom sizes last', () => {

@@ -15,10 +15,14 @@ import DesignPreview from "./DesignPreview";
 import { methodLabel } from "./format";
 
 /**
- * What was ordered and what it cost, down to each size - server rendered,
- * because nothing on this screen can change it. The per-size rows are the
- * answer to "why is this line not quantity × price": a 2XL carries an upcharge
- * the tier price does not show.
+ * What was ordered and what it cost - server rendered, because nothing on this
+ * screen can change it. The per-size rows are the answer to "why is this line
+ * not quantity × price": a 2XL carries an upcharge the tier price does not show.
+ *
+ * The line total is the one checkout charged, and it is the only total drawn
+ * per line. There is no per-size total: checkout priced from the unrounded
+ * tier price, so the rounded unit price × quantity would disagree with the
+ * charge by a few cents.
  */
 export default function OrderItemsCard({ order }: { order: AdminOrderDetail }) {
   const units = order.items.reduce((n, item) => n + item.quantity, 0);
@@ -61,6 +65,8 @@ export default function OrderItemsCard({ order }: { order: AdminOrderDetail }) {
 }
 
 function OrderLine({ item }: { item: AdminOrderDetailItem }) {
+  const upcharged = item.sizes.some((size) => size.upcharge > 0);
+
   return (
     <div className="space-y-3 px-4 py-4">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -86,26 +92,21 @@ function OrderLine({ item }: { item: AdminOrderDetailItem }) {
           <TableRow>
             <TableHead>Size</TableHead>
             <TableHead className="text-right">Qty</TableHead>
-            <TableHead className="text-right">Each</TableHead>
-            <TableHead className="text-right">Line</TableHead>
+            <TableHead className="text-right">Upcharge each</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {item.sizes.map((size) => (
-            <TableRow key={size.size} data-size={size.size}>
+            <TableRow key={size.size} data-size={size.size} data-upcharge={size.upcharge}>
               <TableCell className="font-medium">{size.size}</TableCell>
               <TableCell className="text-right tabular-nums">×{size.qty}</TableCell>
               <TableCell className="text-right tabular-nums">
                 {size.upcharge > 0 ? (
-                  <>
-                    {usd(item.unitPrice)}{" "}
-                    <span className="text-muted-foreground">+ {usd(size.upcharge)}</span>
-                  </>
+                  `+ ${usd(size.upcharge)}`
                 ) : (
-                  usd(size.unitPrice)
+                  <span className="text-muted-foreground">—</span>
                 )}
               </TableCell>
-              <TableCell className="text-right tabular-nums">{usd(size.lineTotal)}</TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -113,6 +114,7 @@ function OrderLine({ item }: { item: AdminOrderDetailItem }) {
 
       <p className="text-muted-foreground text-xs">
         {count(item.quantity)} units at a {usd(item.unitPrice)} tier price
+        {upcharged ? ", plus the size upcharges above" : ""} - {usd(item.lineTotal)} as charged
       </p>
 
       <DesignPreview design={item.design} />
