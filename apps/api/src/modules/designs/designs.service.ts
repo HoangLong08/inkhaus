@@ -50,6 +50,35 @@ export class DesignsService {
     return this.toDto(design);
   }
 
+  /**
+   * What the back office needs to draw a design: its name and the two mockup
+   * previews. Never the scene - that is the studio's working file, it can run to
+   * megabytes, and nothing in the back office edits it.
+   */
+  async preview(publicId: string) {
+    const design = await this.prisma.design.findUnique({
+      where: { publicId },
+      select: {
+        publicId: true,
+        name: true,
+        previewFront: true,
+        previewBack: true,
+        product: { select: { slug: true } },
+        color: { select: { hex: true } },
+      },
+    });
+    if (!design) throw new NotFoundException(`No design "${publicId}"`);
+
+    return {
+      publicId: design.publicId,
+      name: design.name,
+      productSlug: design.product.slug,
+      colorHex: design.color?.hex ?? null,
+      previewFront: design.previewFront,
+      previewBack: design.previewBack,
+    };
+  }
+
   async update(id: string, dto: UpdateDesignDto) {
     const existing = await this.prisma.design.findUnique({ where: { publicId: id } });
     if (!existing) throw new NotFoundException(`No design "${id}"`);

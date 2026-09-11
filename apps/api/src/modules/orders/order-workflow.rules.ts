@@ -64,3 +64,20 @@ export function decideStatusChange(input: StatusChangeInput): StatusChangeDecisi
 
   return { ok: true, kind: 'STATUS' };
 }
+
+/**
+ * Where tracking may be added or corrected on its own, without a status move:
+ * from the moment an order is on the press - a label is often bought before it
+ * ships - until after delivery, where a typo is still worth fixing in the
+ * customer's history. Before production there is no parcel; a cancelled or
+ * refunded order never went out.
+ */
+export const TRACKING_EDITABLE_STATUSES: readonly OrderStatusCode[] = [
+  'IN_PRODUCTION',
+  'SHIPPED',
+  'DELIVERED',
+];
+
+export function canEditTracking(status: OrderStatusCode) {
+  return TRACKING_EDITABLE_STATUSES.includes(status);
+}
