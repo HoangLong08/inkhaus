@@ -2,7 +2,9 @@ import { BadRequestException } from '@nestjs/common';
 import type { OrderSort } from '@inkhaus/shared';
 import type { OrderStatus, Prisma } from '@prisma/client';
 
-import { resolveRange } from '../../common/date-range';
+import { parseDay } from '../../common/date-range';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export type OrderListFilter = {
   q?: string;
@@ -64,33 +66,23 @@ export function buildOrderWhere(filter: OrderListFilter): Prisma.OrderWhereInput
  * that side - the date picker labels a lone bound "From Aug 1" or "Until Aug
  * 31", and that is what it has to mean.
  *
- * There is no cap on the span. `resolveRange` refuses more than a year because
- * it builds a day-by-day series; a paged list has no series to build.
+ * Each day goes through `parseDay`, so "a real UTC day" means the same here as
+ * on every other date filter, and a malformed one is refused under the name the
+ * caller sent. There is no cap on the span. `resolveRange` refuses more than a
+ * year because it builds a day-by-day series; a paged list has no series to
+ * build.
  */
 export function dayWindow(from?: string, to?: string): { gte?: Date; lt?: Date } | null {
   if (!from && !to) return null;
 
-  const gte = from ? utcDay(from, 'from').from : undefined;
-  const lt = to ? utcDay(to, 'to').toExclusive : undefined;
+  const gte = from ? parseDay(from, 'from') : undefined;
+  // `to` is inclusive, so the window closes at the start of the day after it
+  const lt = to ? new Date(parseDay(to, 'to').getTime() + DAY_MS) : undefined;
   if (gte && lt && gte.getTime() >= lt.getTime()) {
     throw new BadRequestException('"from" must be on or before "to"');
   }
 
   return { ...(gte && { gte }), ...(lt && { lt }) };
-}
-
-/**
- * One day, read by `resolveRange` as a one-day range so "a real UTC day" means
- * the same here as on every other date filter. With both ends given it never
- * looks at `now`, and a malformed day is the only thing it can refuse - which is
- * rethrown under the name the caller actually sent.
- */
-function utcDay(day: string, name: 'from' | 'to') {
-  try {
-    return resolveRange({ from: day, to: day }, new Date());
-  } catch {
-    throw new BadRequestException(`"${name}" must be a date as YYYY-MM-DD`);
-  }
 }
 
 /**

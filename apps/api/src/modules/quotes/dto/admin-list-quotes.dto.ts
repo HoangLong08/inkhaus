@@ -1,11 +1,15 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { QuoteStatus } from '@prisma/client';
-import { QUOTE_SORTS, type QuoteSort } from '@inkhaus/shared';
+import {
+  QUOTE_FOLLOW_UP_FILTERS,
+  QUOTE_SORTS,
+  type QuoteFollowUpFilter,
+  type QuoteSort,
+} from '@inkhaus/shared';
 import { Transform } from 'class-transformer';
 import { IsEnum, IsIn, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
 import { PaginationDto } from '../../../common/dto/pagination.dto';
-import { QUOTE_FOLLOW_UP_FILTERS, type QuoteFollowUpFilter } from '../admin-quotes.rules';
 
 export class AdminListQuotesDto extends PaginationDto {
   @ApiPropertyOptional({

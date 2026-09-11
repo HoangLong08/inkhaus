@@ -1,4 +1,4 @@
-import type { OrderSort } from '@inkhaus/shared';
+import { ORDER_EXPORT_MAX, type OrderSort } from '@inkhaus/shared';
 import type { Prisma } from '@prisma/client';
 
 import { csvRow } from '../../common/csv';
@@ -6,12 +6,9 @@ import { isoDay } from '../../common/date-range';
 import { num } from '../../common/decimal';
 import { describeFilter, type OrderListFilter } from './admin-orders.query';
 
-/**
- * The most rows one export carries. The file is personal data in bulk, and a
- * spreadsheet past this size is a reporting job, not a download. Past it the
- * response says so in `X-Export-Truncated`.
- */
-export const ORDER_EXPORT_MAX = 10_000;
+// ORDER_EXPORT_MAX, the most rows one file carries, is in @inkhaus/shared: the
+// orders list warns from the same number before the download. Past it the
+// response says so in `X-Export-Truncated`.
 
 /** rows read per query while the file streams */
 export const ORDER_EXPORT_BATCH = 500;

@@ -1,10 +1,6 @@
 import type { AdminRoleCode, OrderStatusCode } from '@inkhaus/shared';
 
-import {
-  canEditTracking,
-  decideStatusChange,
-  type StatusChangeInput,
-} from './order-workflow.rules';
+import { decideStatusChange, type StatusChangeInput } from './order-workflow.rules';
 
 const move = (
   from: OrderStatusCode,
@@ -68,21 +64,5 @@ describe('decideStatusChange', () => {
       ok: true,
       kind: 'STATUS',
     });
-  });
-});
-
-describe('canEditTracking', () => {
-  it.each<[OrderStatusCode, boolean]>([
-    ['DRAFT', false],
-    ['PENDING_PAYMENT', false],
-    ['PAID', false],
-    ['IN_PRODUCTION', true],
-    ['SHIPPED', true],
-    ['DELIVERED', true],
-    ['CANCELLED', false],
-    ['REFUNDED', false],
-  ])('%s -> %s', (status, allowed) => {
-    // from the press until after delivery; never on an order that did not go out
-    expect(canEditTracking(status)).toBe(allowed);
   });
 });

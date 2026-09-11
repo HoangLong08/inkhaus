@@ -1,4 +1,5 @@
 import { OrderStatus, Prisma } from '@prisma/client';
+import { ORDER_EXPORT_MAX } from '@inkhaus/shared';
 
 import { csvRow } from '../../common/csv';
 import {
@@ -6,7 +7,6 @@ import {
   exportSummary,
   ORDER_EXPORT_COLUMNS,
   ORDER_EXPORT_HEAD,
-  ORDER_EXPORT_MAX,
   orderCsv,
   toCsvRecord,
   type OrderExportRow,

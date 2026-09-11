@@ -1,18 +1,14 @@
 import { QuoteEventKind, type Prisma, type QuoteStatus } from '@prisma/client';
-import { canSetQuoteStatus, type QuoteSort } from '@inkhaus/shared';
+import { canSetQuoteStatus, type QuoteFollowUpFilter, type QuoteSort } from '@inkhaus/shared';
 
 /**
  * The pure half of the back-office quote workflow: which rows a list filter
  * means, how a sort orders them, and what one PATCH writes and records. No
  * Prisma client in here, so every rule is a unit test rather than a fixture.
+ *
+ * The filter vocabulary - QUOTE_ASSIGNEE_KEYWORDS, QUOTE_FOLLOW_UP_FILTERS -
+ * is in @inkhaus/shared, which the admin's URL parser reads too.
  */
-
-/** `assignee` takes an admin id, or one of these */
-export const QUOTE_ASSIGNEE_KEYWORDS = ['me', 'none'] as const;
-
-export const QUOTE_FOLLOW_UP_FILTERS = ['overdue', 'upcoming'] as const;
-
-export type QuoteFollowUpFilter = (typeof QUOTE_FOLLOW_UP_FILTERS)[number];
 
 /**
  * A follow-up is only a reminder while the lead is still open. A quote that

@@ -95,7 +95,11 @@ function addDays(d: Date, days: number): Date {
   return new Date(d.getTime() + days * DAY_MS);
 }
 
-function parseDay(value: string, name: 'from' | 'to'): Date {
+/**
+ * One `YYYY-MM-DD` as midnight UTC that day, or a 400 naming the parameter it
+ * came in as. The one test of "a real UTC day" every date filter shares.
+ */
+export function parseDay(value: string, name: 'from' | 'to'): Date {
   const m = ISO_DAY.exec(value);
   const d = m ? new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))) : null;
   // Date.UTC rolls 2026-02-30 over into March instead of failing; only the

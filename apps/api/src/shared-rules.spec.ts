@@ -2,6 +2,7 @@ import {
   ADMIN_ACTIONS,
   can,
   canConvertQuote,
+  canEditTracking,
   canSetQuoteStatus,
   QUOTE_STATUSES,
   staffChangeError,
@@ -10,6 +11,7 @@ import {
   validateTiers,
   type AdminAction,
   type CarrierCode,
+  type OrderStatusCode,
   type Tier,
 } from '@inkhaus/shared';
 
@@ -190,5 +192,21 @@ describe('trackingUrl()', () => {
 
   it('trims and encodes the number', () => {
     expect(trackingUrl('UPS', ' 1Z 999 ')).toBe('https://www.ups.com/track?tracknum=1Z%20999');
+  });
+});
+
+describe('canEditTracking()', () => {
+  it.each<[OrderStatusCode, boolean]>([
+    ['DRAFT', false],
+    ['PENDING_PAYMENT', false],
+    ['PAID', false],
+    ['IN_PRODUCTION', true],
+    ['SHIPPED', true],
+    ['DELIVERED', true],
+    ['CANCELLED', false],
+    ['REFUNDED', false],
+  ])('%s -> %s', (status, allowed) => {
+    // from the press until after delivery; never on an order that did not go out
+    expect(canEditTracking(status)).toBe(allowed);
   });
 });

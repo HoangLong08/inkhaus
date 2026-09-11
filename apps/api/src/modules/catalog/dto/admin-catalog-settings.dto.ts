@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { TIER_LIMITS } from '@inkhaus/shared';
+import { CATALOG_LIMITS, TIER_LIMITS } from '@inkhaus/shared';
 import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -22,6 +22,9 @@ const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? val
 
 const HEX = /^#[0-9A-Fa-f]{6}$/;
 
+/** the numbers the admin's colour and size dialogs check too */
+const { color: COLOR, size: SIZE, sortOrder: SORT } = CATALOG_LIMITS;
+
 // ------------------------------------------------------------------ colours
 
 export class AdminCreateColorDto {
@@ -29,11 +32,11 @@ export class AdminCreateColorDto {
   @Matches(/^[a-z0-9-]{2,40}$/, { message: 'slug must be 2-40 lowercase letters, digits or dashes' })
   slug!: string;
 
-  @ApiProperty({ maxLength: 40 })
+  @ApiProperty({ maxLength: COLOR.name })
   @Transform(trim)
   @IsString()
   @MinLength(1)
-  @MaxLength(40)
+  @MaxLength(COLOR.name)
   name!: string;
 
   @ApiProperty({ example: '#1A7F7A' })
@@ -48,19 +51,19 @@ export class AdminCreateColorDto {
   @ApiPropertyOptional({ default: 0 })
   @IsOptional()
   @IsInt()
-  @Min(0)
-  @Max(99999)
+  @Min(SORT.min)
+  @Max(SORT.max)
   sortOrder?: number;
 }
 
 /** no slug - order lines and product images point at it - and no delete (D11) */
 export class AdminUpdateColorDto {
-  @ApiPropertyOptional({ maxLength: 40 })
+  @ApiPropertyOptional({ maxLength: COLOR.name })
   @IsOptional()
   @Transform(trim)
   @IsString()
   @MinLength(1)
-  @MaxLength(40)
+  @MaxLength(COLOR.name)
   name?: string;
 
   @ApiPropertyOptional({ example: '#1A7F7A' })
@@ -76,8 +79,8 @@ export class AdminUpdateColorDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsInt()
-  @Min(0)
-  @Max(99999)
+  @Min(SORT.min)
+  @Max(SORT.max)
   sortOrder?: number;
 
   @ApiPropertyOptional({ description: 'false archives it: it stays where it is, and cannot be added anew' })
@@ -93,49 +96,57 @@ export class AdminCreateSizeDto {
   @Matches(/^[A-Z0-9]{1,6}$/, { message: 'code must be 1-6 capital letters or digits' })
   code!: string;
 
-  @ApiProperty({ maxLength: 20 })
+  @ApiProperty({ maxLength: SIZE.label })
   @Transform(trim)
   @IsString()
   @MinLength(1)
-  @MaxLength(20)
+  @MaxLength(SIZE.label)
   label!: string;
 
-  @ApiProperty({ minimum: 0, maximum: 100, description: 'USD per unit on top of the tier price' })
+  @ApiProperty({
+    minimum: SIZE.upcharge.min,
+    maximum: SIZE.upcharge.max,
+    description: 'USD per unit on top of the tier price',
+  })
   @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  @Max(100)
+  @Min(SIZE.upcharge.min)
+  @Max(SIZE.upcharge.max)
   upcharge!: number;
 
   @ApiPropertyOptional({ default: 0 })
   @IsOptional()
   @IsInt()
-  @Min(0)
-  @Max(99999)
+  @Min(SORT.min)
+  @Max(SORT.max)
   sortOrder?: number;
 }
 
 /** no code - it is what order lines and product size runs store */
 export class AdminUpdateSizeDto {
-  @ApiPropertyOptional({ maxLength: 20 })
+  @ApiPropertyOptional({ maxLength: SIZE.label })
   @IsOptional()
   @Transform(trim)
   @IsString()
   @MinLength(1)
-  @MaxLength(20)
+  @MaxLength(SIZE.label)
   label?: string;
 
-  @ApiPropertyOptional({ minimum: 0, maximum: 100, description: 'owner-only, and needs price edits on' })
+  @ApiPropertyOptional({
+    minimum: SIZE.upcharge.min,
+    maximum: SIZE.upcharge.max,
+    description: 'owner-only, and needs price edits on',
+  })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  @Max(100)
+  @Min(SIZE.upcharge.min)
+  @Max(SIZE.upcharge.max)
   upcharge?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsInt()
-  @Min(0)
-  @Max(99999)
+  @Min(SORT.min)
+  @Max(SORT.max)
   sortOrder?: number;
 }
 

@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
+  CATALOG_LIMITS,
   CATEGORIES,
   GARMENT_TYPES,
   PRINT_METHODS,
@@ -30,26 +31,30 @@ import {
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
+/** the numbers the admin's product form checks too */
+const P = CATALOG_LIMITS.product;
+const SORT = CATALOG_LIMITS.sortOrder;
+
 /** where the artwork may go, in the garment SVG's viewBox units */
 export class PrintAreaDto {
-  @ApiProperty() @IsInt() @Min(0) @Max(1000) x!: number;
-  @ApiProperty() @IsInt() @Min(0) @Max(1000) y!: number;
-  @ApiProperty() @IsInt() @Min(0) @Max(1000) w!: number;
-  @ApiProperty() @IsInt() @Min(0) @Max(1000) h!: number;
+  @ApiProperty() @IsInt() @Min(P.printArea.min) @Max(P.printArea.max) x!: number;
+  @ApiProperty() @IsInt() @Min(P.printArea.min) @Max(P.printArea.max) y!: number;
+  @ApiProperty() @IsInt() @Min(P.printArea.min) @Max(P.printArea.max) w!: number;
+  @ApiProperty() @IsInt() @Min(P.printArea.min) @Max(P.printArea.max) h!: number;
 }
 
 /** the same area on the real garment, inches - drives the storefront's DPI check */
 export class PrintInchesDto {
   @ApiProperty()
   @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0.5)
-  @Max(40)
+  @Min(P.inches.min)
+  @Max(P.inches.max)
   w!: number;
 
   @ApiProperty()
   @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0.5)
-  @Max(40)
+  @Min(P.inches.min)
+  @Max(P.inches.max)
   h!: number;
 }
 
@@ -59,11 +64,11 @@ export class PrintInchesDto {
  * depends on who is asking and on the body, not on the route.
  */
 export class ProductInputDto {
-  @ApiProperty({ maxLength: 80 })
+  @ApiProperty({ maxLength: P.name })
   @Transform(trim)
   @IsString()
   @MinLength(1)
-  @MaxLength(80)
+  @MaxLength(P.name)
   name!: string;
 
   @ApiProperty({ enum: GARMENT_TYPES, description: 'which blank shape the studio draws' })
@@ -74,23 +79,23 @@ export class ProductInputDto {
   @IsIn(CATEGORIES)
   category!: ProductCategory;
 
-  @ApiProperty({ maxLength: 400 })
+  @ApiProperty({ maxLength: P.blurb })
   @Transform(trim)
   @IsString()
-  @MaxLength(400)
+  @MaxLength(P.blurb)
   blurb!: string;
 
-  @ApiProperty({ maxLength: 200 })
+  @ApiProperty({ maxLength: P.fabric })
   @Transform(trim)
   @IsString()
-  @MaxLength(200)
+  @MaxLength(P.fabric)
   fabric!: string;
 
-  @ApiPropertyOptional({ maxLength: 24, nullable: true, description: 'empty or null clears it' })
+  @ApiPropertyOptional({ maxLength: P.tag, nullable: true, description: 'empty or null clears it' })
   @IsOptional()
   @Transform(trim)
   @IsString()
-  @MaxLength(24)
+  @MaxLength(P.tag)
   tag?: string | null;
 
   @ApiProperty({
@@ -104,16 +109,20 @@ export class ProductInputDto {
   @Matches(/^[A-Z0-9]{1,6}$/, { each: true })
   sizes!: string[];
 
-  @ApiProperty({ minimum: 0.5, maximum: 1000 })
+  @ApiProperty({ minimum: P.price.min, maximum: P.price.max })
   @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0.5)
-  @Max(1000)
+  @Min(P.price.min)
+  @Max(P.price.max)
   price!: number;
 
-  @ApiProperty({ minimum: 0.5, maximum: 1000, description: 'the 50+ floor; never above price' })
+  @ApiProperty({
+    minimum: P.price.min,
+    maximum: P.price.max,
+    description: 'the 50+ floor; never above price',
+  })
   @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0.5)
-  @Max(1000)
+  @Min(P.price.min)
+  @Max(P.price.max)
   bulkPrice!: number;
 
   @ApiProperty({ enum: PRINT_METHODS, isArray: true })
@@ -135,8 +144,8 @@ export class ProductInputDto {
 
   @ApiProperty({ type: [String], description: 'colour slugs in storefront order' })
   @IsArray()
-  @ArrayMinSize(1)
-  @ArrayMaxSize(30)
+  @ArrayMinSize(P.colors.min)
+  @ArrayMaxSize(P.colors.max)
   @ArrayUnique()
   @IsString({ each: true })
   colorSlugs!: string[];
@@ -145,10 +154,10 @@ export class ProductInputDto {
   @IsBoolean()
   active!: boolean;
 
-  @ApiProperty({ minimum: 0, maximum: 99999 })
+  @ApiProperty({ minimum: SORT.min, maximum: SORT.max })
   @IsInt()
-  @Min(0)
-  @Max(99999)
+  @Min(SORT.min)
+  @Max(SORT.max)
   sortOrder!: number;
 }
 

@@ -10,9 +10,10 @@ import { PriceEditsPolicy } from './price-edits.policy';
 export type AdminCatalogOptions = CatalogOptions & { priceEditsEnabled: boolean };
 
 /**
- * The lookups a back-office form builds from - products with the methods,
- * sizes and colours each can be ordered in, the price ladder, and whether
- * prices may be edited right now. One call, so a dialog is not four requests.
+ * The lookups a back-office form builds from - products with their prices and
+ * the methods, sizes and colours each can be ordered in, the price ladder, and
+ * whether prices may be edited right now. One call, so a dialog is not four
+ * requests.
  */
 @ApiTags('admin')
 @ApiBearerAuth()
@@ -27,7 +28,7 @@ export class AdminCatalogOptionsController {
   @Get()
   @Can('catalog.view')
   @ApiOperation({
-    summary: 'Active products with their methods, sizes and colours, plus the price ladder',
+    summary: 'Active products with their prices, methods, sizes and colours, plus the price ladder',
   })
   async options(): Promise<AdminCatalogOptions> {
     const { products, ladder } = await this.catalog.adminOptions();

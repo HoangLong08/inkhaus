@@ -1,17 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import type { AdminUser, OrderStatus, Prisma } from '@prisma/client';
+import { ORDER_EXPORT_MAX } from '@inkhaus/shared';
 
 import { AuditService } from '../../common/audit/audit.service';
 import { num } from '../../common/decimal';
 import { paginate, type Paginated } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import {
-  exportFilename,
-  exportSummary,
-  ORDER_EXPORT_MAX,
-  orderCsv,
-  orderExportSelect,
-} from './admin-order-export.csv';
+import { exportFilename, exportSummary, orderCsv, orderExportSelect } from './admin-order-export.csv';
 import { buildOrderWhere, orderByFor } from './admin-orders.query';
 import type { AdminListOrdersDto } from './dto/admin-list-orders.dto';
 import type { ExportOrdersDto } from './dto/export-orders.dto';

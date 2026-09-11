@@ -1,8 +1,10 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PRICE_EDITS_DISABLED } from '@inkhaus/shared';
 
-export const PRICE_EDITS_DISABLED =
-  'Price edits are disabled until the storefront reads prices from the API.';
+// The sentence lives in @inkhaus/shared so the admin's own 409 is the same
+// words. Still exported from here, where it was first declared.
+export { PRICE_EDITS_DISABLED };
 
 /**
  * Whether the back office may change what things cost (decision D13).

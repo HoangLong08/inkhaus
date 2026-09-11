@@ -20,6 +20,10 @@ export type CatalogOptions = {
   products: {
     slug: string;
     name: string;
+    /** the single-unit list price, USD */
+    price: number;
+    /** the floor no tier discount goes below, USD */
+    bulkPrice: number;
     methods: PrintMethod[];
     /** the size run it stocks - the product's own, or the default apparel run */
     sizes: string[];
@@ -114,10 +118,11 @@ export class CatalogService {
 
   /**
    * What a back-office form needs to build an order line or preview a price:
-   * every product on sale, with the methods, sizes and colours it can be
-   * ordered in, plus the ladder to price it with. Archived products are left
-   * out because checkout refuses them; archived colours because nothing new
-   * may be made in one.
+   * every product on sale, with its prices and the methods, sizes and colours
+   * it can be ordered in, plus the ladder to price it with - everything the
+   * shared `quote()` needs to estimate before anything is submitted. Archived
+   * products are left out because checkout refuses them; archived colours
+   * because nothing new may be made in one.
    */
   async adminOptions(): Promise<CatalogOptions> {
     const [rows, ladder] = await Promise.all([
@@ -127,6 +132,8 @@ export class CatalogService {
         select: {
           slug: true,
           name: true,
+          price: true,
+          bulkPrice: true,
           methods: true,
           sizes: true,
           colors: {
@@ -143,6 +150,8 @@ export class CatalogService {
       products: rows.map((p) => ({
         slug: p.slug,
         name: p.name,
+        price: num(p.price),
+        bulkPrice: num(p.bulkPrice),
         methods: p.methods,
         // the same fallback as `sizesFor` in @inkhaus/shared: empty means the
         // apparel run

@@ -6,10 +6,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { OrderEventKind, OrderStatus, type AdminRole, type Prisma } from '@prisma/client';
-import { ORDER_INTERNAL_NOTE_MAX } from '@inkhaus/shared';
+import { canEditTracking, ORDER_INTERNAL_NOTE_MAX } from '@inkhaus/shared';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { canEditTracking, decideStatusChange } from './order-workflow.rules';
+import { decideStatusChange } from './order-workflow.rules';
 import { parseTracking, trackingNote, type TrackingInput } from './tracking';
 
 export type StatusChange = {

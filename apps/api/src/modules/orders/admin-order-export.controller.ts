@@ -13,12 +13,12 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiProduces, ApiTags } from '@nestjs/swagger';
 import type { AdminUser } from '@prisma/client';
 import type { Response } from 'express';
+import { ORDER_EXPORT_MAX } from '@inkhaus/shared';
 
 import { Can } from '../../common/decorators/can.decorator';
 import { CurrentAdmin } from '../../common/decorators/current-admin.decorator';
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard';
 import { CapabilityGuard } from '../../common/guards/capability.guard';
-import { ORDER_EXPORT_MAX } from './admin-order-export.csv';
 import { AdminOrdersService } from './admin-orders.service';
 import { ExportOrdersDto } from './dto/export-orders.dto';
 
