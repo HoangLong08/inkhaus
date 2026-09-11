@@ -172,7 +172,8 @@ export default function OrderStatusForm({ number, viewer }: { number: string; vi
     onSettled: () => {
       // the prefix reaches this order's entry and every list it sits in
       void queryClient.invalidateQueries({ queryKey: queryKeys.orders.all() });
-      // The header's "placed" line is server rendered - leaving DRAFT sets it -
+      // The header's "placed" line is server rendered - the move to
+      // PENDING_PAYMENT sets it -
       // and so are the overview tiles this move just changed.
       router.refresh();
     },

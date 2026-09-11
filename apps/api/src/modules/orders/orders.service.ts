@@ -70,15 +70,18 @@ export class OrdersService {
   /**
    * The storefront's order page - public, keyed by nothing but the number.
    *
-   * A DRAFT is a 404 here, exactly as if it did not exist. A draft is a bulk
-   * quote staff are still turning into an order: its notes are what staff typed
-   * in the convert dialog and its address is the customer's, and nobody has
-   * placed it yet. The admin detail endpoint reads its own include and is
+   * An order that was never placed is a 404 here, exactly as if it did not
+   * exist. That is every DRAFT - a bulk quote staff are still turning into an
+   * order, whose notes are what staff typed in the convert dialog and whose
+   * address is the customer's - and a draft that was cancelled before anyone
+   * placed it, which is no longer DRAFT but holds the same staff text. `placedAt`
+   * is set only on the move to PENDING_PAYMENT, so it is the one test that
+   * covers both. The admin detail endpoint reads its own include and is
    * unaffected.
    */
   async findByNumber(number: string) {
     const order = await this.load(number);
-    if (order.status === OrderStatus.DRAFT) throw new NotFoundException(`No order "${number}"`);
+    if (order.placedAt === null) throw new NotFoundException(`No order "${number}"`);
     return toPublicOrder(order);
   }
 
@@ -98,11 +101,12 @@ export class OrdersService {
    * request, which is what separates this from `list()` below: there is no
    * parameter here a caller could bend into someone else's history.
    *
-   * Drafts are left out for the reason `findByNumber` 404s them - one listed
-   * here would link to an order page that says it does not exist.
+   * Orders that were never placed are left out for the reason `findByNumber`
+   * 404s them - one listed here would link to an order page that says it does
+   * not exist.
    */
   async listForCustomer(customerId: string, query: PaginationDto) {
-    const where: Prisma.OrderWhereInput = { customerId, status: { not: OrderStatus.DRAFT } };
+    const where: Prisma.OrderWhereInput = { customerId, placedAt: { not: null } };
 
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.order.findMany({
