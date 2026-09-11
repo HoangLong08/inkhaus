@@ -329,12 +329,7 @@ export default function ReviewsTable({
                       {review.handle ? (
                         <span className="text-muted-foreground text-xs">{review.handle}</span>
                       ) : null}
-                      <time
-                        dateTime={review.createdAt}
-                        // formatted in the viewer's time zone, which the server cannot know
-                        suppressHydrationWarning
-                        className="text-muted-foreground text-xs"
-                      >
+                      <time dateTime={review.createdAt} className="text-muted-foreground text-xs">
                         {at(review.createdAt)}
                       </time>
                     </div>
@@ -366,11 +361,7 @@ export default function ReviewsTable({
                             ? (review.moderatedBy.name ?? review.moderatedBy.email)
                             : "Not recorded"}
                         </span>
-                        <time
-                          dateTime={review.moderatedAt}
-                          suppressHydrationWarning
-                          className="text-muted-foreground"
-                        >
+                        <time dateTime={review.moderatedAt} className="text-muted-foreground">
                           {at(review.moderatedAt)}
                         </time>
                       </div>

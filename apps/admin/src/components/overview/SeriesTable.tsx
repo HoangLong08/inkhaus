@@ -7,10 +7,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { count, usd } from "@/lib/format";
+import { count, on, usd } from "@/lib/format";
 import type { StatsSeriesPoint } from "@/lib/schemas/api";
-
-import { longDay } from "./labels";
 
 /**
  * The chart's text equivalent: the same series, one row per day, visually
@@ -38,7 +36,7 @@ export default function SeriesTable({
         <TableBody>
           {series.map((point) => (
             <TableRow key={point.date} data-date={point.date}>
-              <TableHead scope="row">{longDay(point.date)}</TableHead>
+              <TableHead scope="row">{on(point.date)}</TableHead>
               <TableCell>{count(point.orders)}</TableCell>
               <TableCell>{usd(point.revenue)}</TableCell>
             </TableRow>
