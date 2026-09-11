@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { TEST_PRODUCT } from "./fixtures";
 import {
   API_ORIGIN,
   COOKIE_NAME,
@@ -136,12 +137,21 @@ test.describe("admin sign-in", () => {
     await signIn(page, "owner");
     await page.goto("/orders");
     await page.goto("/quotes");
+    const quoteId = await page.getByTestId("quote-row").first().getAttribute("data-id");
+    expect(quoteId, "no quote on the list - run db:seed:e2e").toBeTruthy();
 
-    // The order detail is the one page that runs TanStack Query in the browser,
-    // so it is the one that could regress this. Wait for the client island to be
-    // interactive, not merely present, or the check races the hydration.
+    // An order, a quote and a product are the pages whose client leaves run
+    // TanStack Query in the browser, so they are the ones that could regress
+    // this. Wait for each client island to be interactive, not merely present,
+    // or the check races the hydration.
     await page.goto(`/orders/${await findActionableOrder(await sessionToken(page))}`);
     await expect(page.getByTestId("status-select")).toBeEnabled();
+
+    await page.goto(`/quotes/${quoteId}`);
+    await expect(page.getByTestId("quote-note-save")).toBeEnabled();
+
+    await page.goto(`/catalog/products/${TEST_PRODUCT}`);
+    await expect(page.getByTestId("product-save")).toBeEnabled();
 
     expect(direct, "every API call must be server-to-server").toEqual([]);
   });

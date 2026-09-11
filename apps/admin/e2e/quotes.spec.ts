@@ -140,8 +140,8 @@ test.describe("quote detail", () => {
     await page.waitForURL(/\/orders\/INK-\d+$/);
     const number = decodeURIComponent(new URL(page.url()).pathname.split("/").pop()!);
     await expect(page.locator('[data-testid="status-badge"][data-status="DRAFT"]').first()).toBeVisible();
-    // The order page's `quote-origin-link` belongs to the order-detail
-    // workstream and is not in this branch; its spec, or Phase 2, asserts it.
+    // and the order points back at the lead it came from
+    await expect(page.getByTestId("quote-origin-link")).toHaveAttribute("href", `/quotes/${id}`);
 
     await page.goto(`/quotes/${id}`);
     await expect(page.getByTestId("quote-select")).toHaveAttribute("data-status", "WON");
