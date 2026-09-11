@@ -1,24 +1,27 @@
 import { can } from "@inkhaus/shared/admin";
-import { UserCog } from "lucide-react";
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 
 import ListHeader from "@/components/common/ListHeader";
 import OwnersOnly from "@/components/common/OwnersOnly";
-import { Card } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
+import InviteStaffDialog from "@/components/staff/InviteStaffDialog";
+import StaffTable from "@/components/staff/StaffTable";
+import { adminApi } from "@/lib/api";
 import { requireAdmin } from "@/lib/dal";
+import { count } from "@/lib/format";
+import { getQueryClient } from "@/lib/query-client";
+import { queryKeys } from "@/lib/query-keys";
 
 export const metadata = { title: "Staff — INKHAUS Back Office" };
 
 /**
- * A placeholder the nav and breadcrumb can already point at; the staff
- * workstream replaces the body. The gate stays: staff reach this URL by typing
- * it, and get the page's own heading and an explanation - not a redirect.
+ * Who can sign in to the back office, and as what. `admin_users` is the
+ * allowlist, so this is the most sensitive screen in the app.
+ *
+ * Owner-only three times over: this page renders `OwnersOnly` without
+ * `staff.view`, the BFF refuses without `staff.manage`, and the API refuses
+ * again with `@Can`. The table is a client leaf over the prefetched list, since
+ * every change on it is optimistic; the header's counts stay server rendered
+ * and follow along through `router.refresh()`.
  */
 export default async function StaffPage() {
   // cached by the DAL, so this costs nothing beyond the layout's own call
@@ -32,22 +35,35 @@ export default async function StaffPage() {
     );
   }
 
+  const queryClient = getQueryClient();
+  // fetchQuery, not prefetchQuery: the header counts below need the value too
+  const staff = await queryClient.fetchQuery({
+    queryKey: queryKeys.staff.all(),
+    queryFn: () => adminApi.staff.list(),
+  });
+
+  const active = staff.data.filter((member) => member.isActive).length;
+  const canManage = can(user.role, "staff.manage");
+
   return (
-    <div className="space-y-6">
-      <ListHeader title="Staff" />
-      <Card>
-        <Empty className="py-10">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <UserCog />
-            </EmptyMedia>
-            <EmptyTitle>Not built yet</EmptyTitle>
-            <EmptyDescription>
-              Who can sign in to the back office, and as what, will be managed here.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </Card>
-    </div>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <div className="space-y-6">
+        <ListHeader
+          title="Staff"
+          meta={`${count(active)} active · ${count(staff.data.length - active)} deactivated · ${count(staff.activeOwners)} active ${staff.activeOwners === 1 ? "owner" : "owners"}`}
+          actions={canManage ? <InviteStaffDialog /> : null}
+        />
+
+        <StaffTable actor={{ id: user.id, role: user.role }} canManage={canManage} />
+
+        <p className="text-muted-foreground max-w-prose text-sm">
+          Nobody can change their own role or turn off their own access, and the last active owner
+          can be neither demoted nor deactivated. Addresses in{" "}
+          <code className="font-mono text-xs">ADMIN_BOOTSTRAP_EMAILS</code> are restored as active
+          owners by every <code className="font-mono text-xs">npm run db:seed</code> — take an
+          address out of that variable before deactivating it here.
+        </p>
+      </div>
+    </HydrationBoundary>
   );
 }
