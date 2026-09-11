@@ -1,7 +1,12 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CUSTOMER_NOTE_MAX } from "@inkhaus/shared/admin";
+import {
+  CUSTOMER_COMPANY_MAX,
+  CUSTOMER_NAME_MAX,
+  CUSTOMER_NOTE_MAX,
+  CUSTOMER_PHONE_MAX,
+} from "@inkhaus/shared/admin";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Pencil } from "lucide-react";
 import { useState } from "react";
@@ -33,13 +38,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { CustomerDetail } from "@/lib/api";
 import { ClientApiError, clientApi } from "@/lib/client-api";
 import { queryKeys } from "@/lib/query-keys";
-import {
-  CUSTOMER_COMPANY_MAX,
-  CUSTOMER_NAME_MAX,
-  CUSTOMER_PHONE_MAX,
-  customerEditInputSchema,
-  type CustomerEditInput,
-} from "@/lib/schemas/forms";
+import { customerEditInputSchema, type CustomerEditInput } from "@/lib/schemas/forms";
 
 const FIELDS = ["name", "phone", "company", "adminNote"] as const;
 

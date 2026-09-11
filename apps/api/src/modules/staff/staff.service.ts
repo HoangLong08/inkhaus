@@ -7,7 +7,11 @@ import {
   type HttpException,
 } from '@nestjs/common';
 import { AdminRole, Prisma } from '@prisma/client';
-import { staffChangeError, type StaffChangeErrorCode } from '@inkhaus/shared';
+import {
+  STAFF_REVOKE_SELF_MESSAGE,
+  staffChangeError,
+  type StaffChangeErrorCode,
+} from '@inkhaus/shared';
 
 import { AuditService } from '../../common/audit/audit.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -52,7 +56,8 @@ export type StaffMember = {
 export type StaffList = { data: StaffMember[]; activeOwners: number };
 
 export const STAFF_RACE_MESSAGE = 'Someone else changed staff at the same time — try again.';
-export const STAFF_REVOKE_SELF_MESSAGE = 'You cannot end your own sessions here — use Sign out.';
+// STAFF_REVOKE_SELF_MESSAGE lives in @inkhaus/shared: the staff screen's
+// disabled button says the same words this 400 does.
 
 const ACTIVE_OWNERS = {
   role: AdminRole.OWNER,

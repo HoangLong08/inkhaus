@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { CUSTOMER_SORTS } from '@inkhaus/shared';
 
 import {
   buildCustomerWhere,
@@ -46,14 +47,39 @@ describe('customerOrderBy', () => {
     ['created_desc', [{ createdAt: 'desc' }, { id: 'desc' }]],
     ['created_asc', [{ createdAt: 'asc' }, { id: 'asc' }]],
     ['name_asc', [{ name: { sort: 'asc', nulls: 'last' } }, { email: 'asc' }]],
+    ['name_desc', [{ name: { sort: 'desc', nulls: 'last' } }, { email: 'desc' }]],
     ['orders_desc', [{ orders: { _count: 'desc' } }, { createdAt: 'desc' }, { id: 'desc' }]],
+    ['orders_asc', [{ orders: { _count: 'asc' } }, { createdAt: 'asc' }, { id: 'asc' }]],
     ['login_desc', [{ lastLoginAt: { sort: 'desc', nulls: 'last' } }, { createdAt: 'desc' }, { id: 'desc' }]],
+    ['login_asc', [{ lastLoginAt: { sort: 'asc', nulls: 'last' } }, { createdAt: 'asc' }, { id: 'asc' }]],
   ] as const)('sorts %s', (sort, orderBy) => {
     expect(customerOrderBy(sort)).toEqual(orderBy);
   });
 
+  it('knows every sort the shared list offers, so none falls back to the default', () => {
+    const fallback = customerOrderBy('created_desc');
+    for (const sort of CUSTOMER_SORTS.filter((s) => s !== 'created_desc')) {
+      expect(customerOrderBy(sort)).not.toEqual(fallback);
+    }
+  });
+
+  it('offers both directions of every sortable column - what a second header click asks for', () => {
+    const columns = new Set(CUSTOMER_SORTS.map((sort) => sort.replace(/_(asc|desc)$/, '')));
+    for (const column of columns) {
+      expect(CUSTOMER_SORTS).toContain(`${column}_asc`);
+      expect(CUSTOMER_SORTS).toContain(`${column}_desc`);
+    }
+  });
+
+  it('keeps customers with no name or sign-in at the end whichever way the column sorts', () => {
+    for (const sort of ['name_asc', 'name_desc', 'login_asc', 'login_desc'] as const) {
+      const first = Object.values(customerOrderBy(sort)[0])[0] as { nulls?: string };
+      expect(first.nulls).toBe('last');
+    }
+  });
+
   it('always ends on a unique column, so pages never overlap', () => {
-    for (const sort of ['created_desc', 'created_asc', 'name_asc', 'orders_desc', 'login_desc'] as const) {
+    for (const sort of CUSTOMER_SORTS) {
       const last = customerOrderBy(sort).at(-1)!;
       expect(Object.keys(last)[0]).toMatch(/^(id|email)$/);
     }

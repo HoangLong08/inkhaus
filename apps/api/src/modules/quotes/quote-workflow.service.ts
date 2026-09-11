@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { QuoteEventKind, type QuoteStatus } from '@prisma/client';
+import { QUOTE_NOTE_MAX } from '@inkhaus/shared';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { isEmptyPatch, planQuoteUpdate, type QuotePatch } from './admin-quotes.rules';
@@ -96,10 +97,17 @@ export class QuoteWorkflowService {
     return this.update(id, { status }, actor);
   }
 
-  /** a staff note on the quote's history - never shown to the customer */
+  /**
+   * A staff note on the quote's history - never shown to the customer. The
+   * DTOs trim and limit it already; this checks again because the workflow
+   * does not assume any caller ran a ValidationPipe.
+   */
   async addNote(id: string, note: string, actor: QuoteActor) {
     const text = note.trim();
     if (!text) throw new BadRequestException('A note cannot be empty.');
+    if (text.length > QUOTE_NOTE_MAX) {
+      throw new BadRequestException(`Keep a note to ${QUOTE_NOTE_MAX} characters or fewer.`);
+    }
 
     const exists = await this.prisma.bulkQuote.count({ where: { id } });
     if (!exists) throw new NotFoundException(`No quote "${id}"`);

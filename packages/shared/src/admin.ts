@@ -101,6 +101,15 @@ export function staffChangeError(
   return null;
 }
 
+/** the longest display name a staff account may carry - the API's DTOs and the admin's forms alike */
+export const STAFF_NAME_MAX = 120;
+
+/**
+ * Why nobody may end their own sessions from the staff screen: the API's 400
+ * and the disabled button's tooltip, word for word.
+ */
+export const STAFF_REVOKE_SELF_MESSAGE = "You cannot end your own sessions here — use Sign out.";
+
 // ----------------------------------------------------------------- reviews
 
 export const REVIEW_STATUSES = ["PENDING", "PUBLISHED", "REJECTED"] as const;
@@ -110,19 +119,47 @@ export type ReviewStatusCode = (typeof REVIEW_STATUSES)[number];
 /** how many reviews one bulk action may touch */
 export const REVIEW_BULK_MAX = 50;
 
+/**
+ * What Prisma's `@default(cuid())` produces: a "c" and 24 lowercase letters or
+ * digits. The API checks a bulk selection with it; the admin checks it before
+ * putting an id into an upstream path, where `..` survives
+ * `encodeURIComponent`.
+ */
+export const REVIEW_ID_PATTERN = /^c[a-z0-9]{24}$/;
+
 // --------------------------------------------------------------- customers
 
+/**
+ * Every sort the customer list offers, both directions of each sortable column
+ * - a header clicked a second time asks for the other one, and a sort the API
+ * did not know used to fall back to the default without a word.
+ */
 export const CUSTOMER_SORTS = [
   "created_desc",
   "created_asc",
   "name_asc",
+  "name_desc",
   "orders_desc",
+  "orders_asc",
   "login_desc",
+  "login_asc",
 ] as const;
 
 export type CustomerSort = (typeof CUSTOMER_SORTS)[number];
 
+/** `?hasOrders=` - customers who have placed something, or who never have */
+export const CUSTOMER_ORDER_FILTERS = ["yes", "no"] as const;
+
+export type CustomerOrderFilter = (typeof CUSTOMER_ORDER_FILTERS)[number];
+
+/** what a customer edit may hold - the API's DTO and the admin's dialog check the same numbers */
+export const CUSTOMER_NAME_MAX = 120;
+export const CUSTOMER_PHONE_MAX = 40;
+export const CUSTOMER_COMPANY_MAX = 120;
 export const CUSTOMER_NOTE_MAX = 2000;
+
+/** how many of a customer's saved designs the back office lists, newest first */
+export const CUSTOMER_DESIGNS_MAX = 60;
 
 // ----------------------------------------------------------------- catalog
 

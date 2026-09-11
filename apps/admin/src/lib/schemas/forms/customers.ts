@@ -1,14 +1,13 @@
-import { CUSTOMER_NOTE_MAX } from "@inkhaus/shared/admin";
+import {
+  CUSTOMER_COMPANY_MAX,
+  CUSTOMER_NAME_MAX,
+  CUSTOMER_NOTE_MAX,
+  CUSTOMER_PHONE_MAX,
+} from "@inkhaus/shared/admin";
 import { z } from "zod";
 
-/**
- * The limits the API's UpdateCustomerDto validates with. The note's is shared;
- * the other three exist only in that DTO, so they are mirrored here by hand.
- */
-export const CUSTOMER_NAME_MAX = 120;
-export const CUSTOMER_PHONE_MAX = 40;
-export const CUSTOMER_COMPANY_MAX = 120;
-
+// The limits are the shared constants the API's UpdateCustomerDto validates
+// with, so the dialog's message and the API's 400 are about the same number.
 const text = (max: number, what: string) =>
   z.string().trim().max(max, `Keep the ${what} to ${max} characters or fewer.`);
 

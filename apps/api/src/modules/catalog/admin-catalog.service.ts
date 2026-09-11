@@ -94,6 +94,9 @@ const ORDER_BY: Record<ProductSort, Prisma.ProductOrderByWithRelationInput[]> = 
   updated_desc: [{ updatedAt: 'desc' }, { slug: 'asc' }],
 };
 
+export const PRODUCT_CHANGED_MESSAGE =
+  'This product changed while you were editing it. Reload and try again.';
+
 /** the audited shape of a product - what a history entry compares */
 type ProductSnapshot = Record<string, unknown>;
 
@@ -293,8 +296,15 @@ export class AdminCatalogService {
       // empty entry in the history card
       if (changed.length === 0) return;
 
-      await tx.product.update({
-        where: { id: product.id },
+      // Only while the row is still the one read above. The bulk-price check ran
+      // on these values merged with the patch; two owners saving at once - one
+      // raising the bulk price, the other lowering the price - would each pass
+      // on what they read and together leave bulk above price, and a save built
+      // on a stale read would put back whatever the other one just changed.
+      // The second writer gets a 409 and reloads instead. The CHECK constraint
+      // `products_bulk_le_price` is the backstop for anything that gets past.
+      const { count } = await tx.product.updateMany({
+        where: { id: product.id, updatedAt: product.updatedAt },
         data: {
           ...defined({
             name: dto.name,
@@ -322,10 +332,12 @@ export class AdminCatalogService {
             ? { printInchesW: dto.printInches.w, printInchesH: dto.printInches.h }
             : {}),
           // explicit, because a colour-only change touches no product column
-          // and @updatedAt would otherwise stay put
+          // and @updatedAt would otherwise stay put - and it is the version the
+          // next writer's condition is checked against
           updatedAt: new Date(),
         },
       });
+      if (count === 0) throw new ConflictException(PRODUCT_CHANGED_MESSAGE);
 
       if (colors && 'colorSlugs' in diff.after) {
         await tx.productColor.deleteMany({ where: { productId: product.id } });

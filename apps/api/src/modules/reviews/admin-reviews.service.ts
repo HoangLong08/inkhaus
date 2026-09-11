@@ -1,11 +1,12 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import type { Prisma, ReviewStatus } from '@prisma/client';
+import { Prisma, type ReviewStatus } from '@prisma/client';
 
 import { AuditService } from '../../common/audit/audit.service';
 import { paginate, type Paginated } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   buildReviewWhere,
+  lockOrder,
   moderationFields,
   moderationSummary,
   planModeration,
@@ -152,10 +153,17 @@ export class AdminReviewsService {
     actor: ModerationActor,
   ): Promise<{ updated: number }> {
     return this.prisma.$transaction(async (tx) => {
-      const rows = await tx.review.findMany({
-        where: { id: { in: ids } },
-        select: { id: true, status: true },
-      });
+      // Read AND lock the selection up front, in one fixed order. The updates
+      // below would otherwise lock rows in whatever order Postgres scans them,
+      // and two overlapping bulk actions could each end up holding a row the
+      // other needs. With every row already held, the conditional updates can
+      // only miss a row that was deleted, and the counts still say so.
+      const rows = await tx.$queryRaw<{ id: string; status: ReviewStatus }[]>`
+        SELECT "id", "status"::text AS "status"
+        FROM "reviews"
+        WHERE "id" IN (${Prisma.join(lockOrder(ids))})
+        ORDER BY "id"
+        FOR UPDATE`;
 
       const plan = planModeration(ids, rows, status);
       if (plan.missing.length > 0) {

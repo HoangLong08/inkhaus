@@ -14,7 +14,6 @@ import {
   ArrayMinSize,
   ArrayUnique,
   IsArray,
-  IsBoolean,
   IsIn,
   IsInt,
   IsNumber,
@@ -28,6 +27,8 @@ import {
   NotEquals,
   ValidateNested,
 } from 'class-validator';
+
+import { RawBoolean } from '../../../common/dto/raw-boolean.decorator';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
@@ -151,7 +152,7 @@ export class ProductInputDto {
   colorSlugs!: string[];
 
   @ApiProperty({ description: 'false archives it: checkout refuses it, orders keep it' })
-  @IsBoolean()
+  @RawBoolean()
   active!: boolean;
 
   @ApiProperty({ minimum: SORT.min, maximum: SORT.max })
@@ -176,5 +177,13 @@ export class AdminCreateProductDto extends ProductInputDto {
 /**
  * `PATCH /admin/catalog/products/:slug` - any subset. The slug is not here: it
  * is the storefront URL and the key saved carts point at.
+ *
+ * `skipNullProperties: false` makes "optional" mean "may be left out", not "may
+ * be null": a field sent as null is validated like any other value and refused.
+ * With the default, `{ "type": null }` sailed through, wrote nothing, and still
+ * left a "Changed type" entry in the product's history. `tag` stays nullable -
+ * it carries its own `@IsOptional`, and null is how it is cleared.
  */
-export class AdminUpdateProductDto extends PartialType(ProductInputDto) {}
+export class AdminUpdateProductDto extends PartialType(ProductInputDto, {
+  skipNullProperties: false,
+}) {}

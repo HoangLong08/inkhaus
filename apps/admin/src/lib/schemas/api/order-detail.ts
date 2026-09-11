@@ -46,18 +46,21 @@ export const adminOrderDetailItemSchema = z.object({
   productName: z.string(),
   color: z.object({ slug: z.string(), name: z.string(), hex: z.string() }),
   method: z.string(),
-  /** tier price for one unit, before size upcharges */
+  /** tier price for one unit, before size upcharges, rounded to cents */
   unitPrice: z.number(),
   quantity: z.number().int(),
+  /** what checkout charged for the line - the only total there is */
   lineTotal: z.number(),
+  /**
+   * How many of each size, and its per-unit upcharge. No per-size total on
+   * purpose: checkout priced the line from the unrounded tier price, so the
+   * rounded unit price × quantity is not what was charged.
+   */
   sizes: z.array(
     z.object({
       size: z.string(),
       qty: z.number().int(),
       upcharge: z.number(),
-      /** the tier price plus this size's upcharge */
-      unitPrice: z.number(),
-      lineTotal: z.number(),
     }),
   ),
   design: z

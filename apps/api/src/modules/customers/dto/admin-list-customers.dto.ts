@@ -1,10 +1,14 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { CUSTOMER_SORTS, type CustomerSort } from '@inkhaus/shared';
+import {
+  CUSTOMER_ORDER_FILTERS,
+  CUSTOMER_SORTS,
+  type CustomerOrderFilter,
+  type CustomerSort,
+} from '@inkhaus/shared';
 import { Transform } from 'class-transformer';
 import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 
 import { PaginationDto } from '../../../common/dto/pagination.dto';
-import { CUSTOMER_ORDER_FILTERS, type CustomerOrderFilter } from '../admin-customers.query';
 
 export class AdminListCustomersDto extends PaginationDto {
   @ApiPropertyOptional({

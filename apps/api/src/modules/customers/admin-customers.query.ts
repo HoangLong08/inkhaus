@@ -1,5 +1,5 @@
 import type { OrderStatus, Prisma, QuoteStatus } from '@prisma/client';
-import { REVENUE_STATUSES, type CustomerSort } from '@inkhaus/shared';
+import { REVENUE_STATUSES, type CustomerOrderFilter, type CustomerSort } from '@inkhaus/shared';
 
 import { num } from '../../common/decimal';
 
@@ -8,12 +8,10 @@ import { num } from '../../common/decimal';
  * BY, the fold that turns one grouped order query into per-customer totals, and
  * the diff an edit is audited with. Pure so each rule is a unit test rather than
  * a fixture.
+ *
+ * `?hasOrders=` takes CUSTOMER_ORDER_FILTERS from @inkhaus/shared, the same
+ * list the admin's filter links are built from.
  */
-
-/** `?hasOrders=` - customers who have placed something, or who never have */
-export const CUSTOMER_ORDER_FILTERS = ['yes', 'no'] as const;
-
-export type CustomerOrderFilter = (typeof CUSTOMER_ORDER_FILTERS)[number];
 
 export type CustomerListFilter = { q?: string; hasOrders?: CustomerOrderFilter };
 
@@ -51,8 +49,13 @@ export function buildCustomerWhere(filter: CustomerListFilter): Prisma.CustomerW
  * two rows that compare equal - otherwise one customer could show on page 1 and
  * again on page 2 while another shows on neither.
  *
- * Names and sign-ins are optional; a customer without one goes to the end
- * rather than Postgres' default of the top. `orders_desc` ranks on the relation
+ * Every sortable column sorts both ways - the header flips it on a second
+ * click - and the reverse of a sort is the whole sort reversed, tie-breakers
+ * included, so page 1 of one direction is the last page of the other.
+ *
+ * Names and sign-ins are optional; a customer without one goes to the end in
+ * BOTH directions rather than Postgres' default of the top for one of them:
+ * "never signed in" is not the oldest sign-in. `orders_*` rank on the relation
  * count, which Prisma cannot filter, so drafts count towards the rank even
  * though the Orders column leaves them out - a draft is rare and the order is
  * only ever off by it.
@@ -63,10 +66,16 @@ export function customerOrderBy(sort: CustomerSort): Prisma.CustomerOrderByWithR
       return [{ createdAt: 'asc' }, { id: 'asc' }];
     case 'name_asc':
       return [{ name: { sort: 'asc', nulls: 'last' } }, { email: 'asc' }];
+    case 'name_desc':
+      return [{ name: { sort: 'desc', nulls: 'last' } }, { email: 'desc' }];
     case 'orders_desc':
       return [{ orders: { _count: 'desc' } }, { createdAt: 'desc' }, { id: 'desc' }];
+    case 'orders_asc':
+      return [{ orders: { _count: 'asc' } }, { createdAt: 'asc' }, { id: 'asc' }];
     case 'login_desc':
       return [{ lastLoginAt: { sort: 'desc', nulls: 'last' } }, { createdAt: 'desc' }, { id: 'desc' }];
+    case 'login_asc':
+      return [{ lastLoginAt: { sort: 'asc', nulls: 'last' } }, { createdAt: 'asc' }, { id: 'asc' }];
     case 'created_desc':
     default:
       return [{ createdAt: 'desc' }, { id: 'desc' }];

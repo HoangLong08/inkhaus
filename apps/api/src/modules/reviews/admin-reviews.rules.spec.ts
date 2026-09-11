@@ -4,6 +4,7 @@ import {
   buildReviewWhere,
   bulkIdsError,
   isReviewId,
+  lockOrder,
   moderationFields,
   moderationSummary,
   planModeration,
@@ -12,6 +13,18 @@ import {
 /** a well-formed cuid, distinct per n */
 const id = (n: number) => `c${String(n).padStart(24, '0')}`;
 const ids = (count: number) => Array.from({ length: count }, (_, i) => id(i + 1));
+
+describe('lockOrder', () => {
+  it('puts any selection in one order, so overlapping bulk actions lock alike', () => {
+    const one = [id(3), id(1), id(2)];
+    const other = [id(2), id(3), id(1)];
+
+    expect(lockOrder(one)).toEqual([id(1), id(2), id(3)]);
+    expect(lockOrder(other)).toEqual(lockOrder(one));
+    // a copy - the caller's selection keeps the order it was sent in
+    expect(one).toEqual([id(3), id(1), id(2)]);
+  });
+});
 
 describe('isReviewId', () => {
   it('accepts what @default(cuid()) generates', () => {

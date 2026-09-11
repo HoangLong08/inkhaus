@@ -1,7 +1,7 @@
 import type { OrderEventKind, OrderStatus, PrintMethod, Prisma } from '@prisma/client';
 import { SIZES } from '@inkhaus/shared';
 
-import { num, round2 } from '../../common/decimal';
+import { num } from '../../common/decimal';
 import { parseTrackingNote, toTracking, type Tracking } from './tracking';
 
 /**
@@ -57,13 +57,18 @@ export type AdminOrderEvent = {
   tracking: Tracking | null;
 };
 
+/**
+ * One size of a line: how many, and the per-unit upcharge on top of the tier
+ * price. There is deliberately no per-size total. Checkout priced the line from
+ * the unrounded tier price and stored the unit price rounded to cents, so
+ * "stored unit price × quantity" is not what was charged (21.99 × 24 at 38% off
+ * is 327.21 charged, 327.12 recomputed). The line's own `lineTotal` is the
+ * figure the customer paid; anything derived here would be an invented one.
+ */
 export type AdminOrderSize = {
   size: string;
   qty: number;
   upcharge: number;
-  /** the line's tier price plus this size's upcharge */
-  unitPrice: number;
-  lineTotal: number;
 };
 
 export type AdminOrderItem = {
@@ -145,37 +150,29 @@ export function toAdminOrderDetail(o: AdminOrderRow, previews: PreviewSides): Ad
       phone: o.customer.phone,
       company: o.customer.company,
     },
-    items: o.items.map((i) => {
-      const base = num(i.unitPrice);
-      return {
-        productSlug: i.product.slug,
-        productName: i.product.name,
-        color: { slug: i.color.slug, name: i.color.name, hex: i.color.hex },
-        method: i.method,
-        unitPrice: base,
-        quantity: i.quantity,
-        lineTotal: num(i.lineTotal),
-        sizes: [...i.sizes].sort(bySizeRun).map((s) => {
-          const upcharge = num(s.upcharge);
-          const unitPrice = round2(base + upcharge);
-          return {
-            size: s.size,
-            qty: s.quantity,
-            upcharge,
-            unitPrice,
-            lineTotal: round2(unitPrice * s.quantity),
-          };
-        }),
-        design: i.design
-          ? {
-              publicId: i.design.publicId,
-              name: i.design.name,
-              hasFront: previews.front.has(i.design.id),
-              hasBack: previews.back.has(i.design.id),
-            }
-          : null,
-      };
-    }),
+    items: o.items.map((i) => ({
+      productSlug: i.product.slug,
+      productName: i.product.name,
+      color: { slug: i.color.slug, name: i.color.name, hex: i.color.hex },
+      method: i.method,
+      unitPrice: num(i.unitPrice),
+      quantity: i.quantity,
+      // as stored at checkout - see AdminOrderSize for why nothing is recomputed
+      lineTotal: num(i.lineTotal),
+      sizes: [...i.sizes].sort(bySizeRun).map((s) => ({
+        size: s.size,
+        qty: s.quantity,
+        upcharge: num(s.upcharge),
+      })),
+      design: i.design
+        ? {
+            publicId: i.design.publicId,
+            name: i.design.name,
+            hasFront: previews.front.has(i.design.id),
+            hasBack: previews.back.has(i.design.id),
+          }
+        : null,
+    })),
     subtotal: num(o.subtotal),
     discount: num(o.discount),
     shipping: num(o.shipping),

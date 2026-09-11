@@ -1,4 +1,4 @@
-import { REVIEW_BULK_MAX, type ReviewStatusCode } from '@inkhaus/shared';
+import { REVIEW_BULK_MAX, REVIEW_ID_PATTERN, type ReviewStatusCode } from '@inkhaus/shared';
 import type { Prisma } from '@prisma/client';
 
 /**
@@ -7,11 +7,19 @@ import type { Prisma } from '@prisma/client';
  * asks these, and writes.
  */
 
-/** what Prisma's `@default(cuid())` produces: a "c" and 24 lowercase letters or digits */
-export const REVIEW_ID_PATTERN = /^c[a-z0-9]{24}$/;
-
+/** REVIEW_ID_PATTERN (shared with the admin): what Prisma's `@default(cuid())` produces */
 export function isReviewId(value: unknown): value is string {
   return typeof value === 'string' && REVIEW_ID_PATTERN.test(value);
+}
+
+/**
+ * The order a bulk action locks its rows in: sorted, so every transaction
+ * takes them in the same order. Two moderators whose selections overlap then
+ * queue behind each other instead of each holding a row the other is waiting
+ * for - a deadlock Postgres would break by failing one of them.
+ */
+export function lockOrder(ids: readonly string[]): string[] {
+  return [...ids].sort();
 }
 
 /**

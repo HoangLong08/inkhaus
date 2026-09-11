@@ -158,7 +158,37 @@ async function seedProducts() {
       continue;
     }
 
-    const product = await prisma.product.create({
+    // Everything the product needs is looked up first, and the row, its colour
+    // links and its photos then go in as ONE nested create, which Prisma runs
+    // as a single transaction. Created one after another, a failure halfway -
+    // an unknown colour, a dropped connection - left a product with some of
+    // its colours, and because the seed is create-only that half-built blank
+    // was then kept forever.
+    const colors: Prisma.ProductColorCreateWithoutProductInput[] = [];
+    for (const [order, c] of p.colors.entries()) {
+      const slug = COLOR_SLUG_BY_HEX.get(c.hex.toLowerCase());
+      if (!slug) throw new Error(`Colour ${c.hex} on ${p.slug} is not in COLORS`);
+      const color = await prisma.color.findUniqueOrThrow({ where: { slug }, select: { id: true } });
+      colors.push({ color: { connect: { id: color.id } }, sortOrder: order });
+    }
+
+    const images: Prisma.ProductImageUncheckedCreateWithoutProductInput[] = [];
+    for (const [order, img] of (p.images ?? []).entries()) {
+      const color = img.color
+        ? await prisma.color.findUnique({ where: { slug: img.color }, select: { id: true } })
+        : null;
+      images.push({
+        src: img.src,
+        src2x: img.src2x ?? null,
+        alt: img.alt,
+        width: img.w,
+        height: img.h,
+        colorId: color?.id ?? null,
+        sortOrder: order,
+      });
+    }
+
+    await prisma.product.create({
       data: {
         slug: p.slug,
         name: p.name,
@@ -183,35 +213,10 @@ async function seedProducts() {
         printInchesH: new Prisma.Decimal(p.printInches.h),
         active: true,
         sortOrder: i,
+        colors: { create: colors },
+        images: { create: images },
       },
     });
-
-    for (const [order, c] of p.colors.entries()) {
-      const slug = COLOR_SLUG_BY_HEX.get(c.hex.toLowerCase());
-      if (!slug) throw new Error(`Colour ${c.hex} on ${p.slug} is not in COLORS`);
-      const color = await prisma.color.findUniqueOrThrow({ where: { slug } });
-      await prisma.productColor.create({
-        data: { productId: product.id, colorId: color.id, sortOrder: order },
-      });
-    }
-
-    for (const [order, img] of (p.images ?? []).entries()) {
-      const color = img.color
-        ? await prisma.color.findUnique({ where: { slug: img.color } })
-        : null;
-      await prisma.productImage.create({
-        data: {
-          productId: product.id,
-          src: img.src,
-          src2x: img.src2x ?? null,
-          alt: img.alt,
-          width: img.w,
-          height: img.h,
-          colorId: color?.id ?? null,
-          sortOrder: order,
-        },
-      });
-    }
 
     created++;
   }

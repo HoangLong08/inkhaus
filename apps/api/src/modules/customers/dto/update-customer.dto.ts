@@ -1,5 +1,10 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { CUSTOMER_NOTE_MAX } from '@inkhaus/shared';
+import {
+  CUSTOMER_COMPANY_MAX,
+  CUSTOMER_NAME_MAX,
+  CUSTOMER_NOTE_MAX,
+  CUSTOMER_PHONE_MAX,
+} from '@inkhaus/shared';
 import { Transform } from 'class-transformer';
 import { IsOptional, IsString, MaxLength } from 'class-validator';
 
@@ -13,27 +18,29 @@ const BlankIsNull = () => Transform(({ value }) => normaliseText(value));
  * `""`) to clear one. There is deliberately no `email` - it is the customer's
  * identity, and the global `forbidNonWhitelisted` pipe answers a body that
  * carries one with a 400 instead of quietly ignoring it.
+ *
+ * The limits are the shared constants the admin's edit dialog checks too.
  */
 export class UpdateCustomerDto {
-  @ApiPropertyOptional({ nullable: true, maxLength: 120 })
+  @ApiPropertyOptional({ nullable: true, maxLength: CUSTOMER_NAME_MAX })
   @IsOptional()
   @BlankIsNull()
   @IsString()
-  @MaxLength(120)
+  @MaxLength(CUSTOMER_NAME_MAX)
   name?: string | null;
 
-  @ApiPropertyOptional({ nullable: true, maxLength: 40 })
+  @ApiPropertyOptional({ nullable: true, maxLength: CUSTOMER_PHONE_MAX })
   @IsOptional()
   @BlankIsNull()
   @IsString()
-  @MaxLength(40)
+  @MaxLength(CUSTOMER_PHONE_MAX)
   phone?: string | null;
 
-  @ApiPropertyOptional({ nullable: true, maxLength: 120 })
+  @ApiPropertyOptional({ nullable: true, maxLength: CUSTOMER_COMPANY_MAX })
   @IsOptional()
   @BlankIsNull()
   @IsString()
-  @MaxLength(120)
+  @MaxLength(CUSTOMER_COMPANY_MAX)
   company?: string | null;
 
   @ApiPropertyOptional({

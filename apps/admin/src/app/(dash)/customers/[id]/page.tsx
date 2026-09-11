@@ -66,7 +66,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
       <div className="space-y-6">
         <div>
           <Button asChild variant="link" size="sm" className="h-auto p-0">
-            <Link href="/customers">
+            <Link href="/customers" data-testid="customer-back">
               <ArrowLeft />
               Customers
             </Link>
@@ -107,7 +107,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
             {showDesigns ? (
               <TabsContent value="designs">
                 <Suspense fallback={<CustomerDesignsSkeleton />}>
-                  <CustomerDesigns email={customer.email} />
+                  <CustomerDesigns customerId={id} designCount={customer.stats.designCount} />
                 </Suspense>
               </TabsContent>
             ) : null}
