@@ -164,8 +164,10 @@ test.describe("order detail", () => {
     await expect(page.locator("h1")).toBeVisible();
     await expect(page.getByTestId("packing-slip-print")).toBeVisible();
 
-    // the fixture's two sizes, M and 2XL - and no money anywhere on the page
-    await expect(slip.locator("[data-size]")).toHaveCount(2);
+    // the fixture's two sizes, M and 2XL - and no money anywhere on the page.
+    // Rows only: shadcn's Button stamps its own `data-size` on the print and
+    // back buttons, which sit inside the slip too.
+    await expect(slip.locator("tr[data-size]")).toHaveCount(2);
     expect(await slip.innerText()).not.toContain("$");
   });
 
