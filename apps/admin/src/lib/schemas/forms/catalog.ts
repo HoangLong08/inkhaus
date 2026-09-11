@@ -3,6 +3,8 @@ import { TIER_LIMITS, validateTiers } from "@inkhaus/shared/pricing";
 import { CATEGORIES, GARMENT_TYPES, PRINT_METHODS } from "@inkhaus/shared/taxonomy";
 import { z } from "zod";
 
+import { COLOR_SLUG_PATTERN, PRODUCT_SLUG_PATTERN, SIZE_CODE_PATTERN } from "../params";
+
 /**
  * Catalog input, shared by the form that collects it and the route handler
  * that receives it. The limits are `CATALOG_LIMITS`, which the API DTOs
@@ -34,7 +36,6 @@ function capitalize(text: string) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-const SIZE_CODE = /^[A-Z0-9]{1,6}$/;
 const HEX = /^#[0-9A-Fa-f]{6}$/;
 
 // ---------------------------------------------------------------- products
@@ -56,7 +57,7 @@ const productFieldsShape = z.object({
   /** empty clears it */
   tag: z.string().trim().max(P.tag, `Keep the tag to ${P.tag} characters.`),
   /** size codes; none means the default apparel run */
-  sizes: z.array(z.string().regex(SIZE_CODE)).max(20),
+  sizes: z.array(z.string().regex(SIZE_CODE_PATTERN)).max(20),
   price: money("a price", P.price.min, P.price.max),
   bulkPrice: money("a bulk price", P.price.min, P.price.max),
   methods: z.array(z.enum(PRINT_METHODS)).min(1, "Pick at least one print method."),
@@ -105,7 +106,7 @@ export const productInputSchema = productFieldsShape
     slug: z
       .string()
       .trim()
-      .regex(/^[a-z0-9-]{2,60}$/, "Use 2-60 lowercase letters, digits or dashes.")
+      .regex(PRODUCT_SLUG_PATTERN, "Use 2-60 lowercase letters, digits or dashes.")
       // /catalog/products/new is this app's create page, so "new" could never be opened
       .refine((slug) => slug !== "new", 'The slug cannot be "new".'),
   })
@@ -131,7 +132,7 @@ export const colorInputSchema = z.object({
   slug: z
     .string()
     .trim()
-    .regex(/^[a-z0-9-]{2,40}$/, "Use 2-40 lowercase letters, digits or dashes."),
+    .regex(COLOR_SLUG_PATTERN, "Use 2-40 lowercase letters, digits or dashes."),
   name: z
     .string()
     .trim()
@@ -153,7 +154,7 @@ export type ColorUpdateInput = z.infer<typeof colorUpdateInputSchema>;
 // ------------------------------------------------------------------- sizes
 
 export const sizeInputSchema = z.object({
-  code: z.string().trim().regex(SIZE_CODE, "Use 1-6 capital letters or digits."),
+  code: z.string().trim().regex(SIZE_CODE_PATTERN, "Use 1-6 capital letters or digits."),
   label: z
     .string()
     .trim()

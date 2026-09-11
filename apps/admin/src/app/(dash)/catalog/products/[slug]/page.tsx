@@ -13,6 +13,7 @@ import { requireAdmin } from "@/lib/dal";
 import { at, count } from "@/lib/format";
 import { getQueryClient } from "@/lib/query-client";
 import { queryKeys } from "@/lib/query-keys";
+import { productSlugParamSchema } from "@/lib/schemas/params";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -25,7 +26,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
  * are server rendered, and a save refreshes them with `router.refresh()`.
  */
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
-  const [{ slug }, user] = await Promise.all([params, requireAdmin()]);
+  const [{ slug: raw }, user] = await Promise.all([params, requireAdmin()]);
+
+  // a segment no slug could be never reaches the API
+  const parsed = productSlugParamSchema.safeParse(raw);
+  if (!parsed.success) notFound();
+  const slug = parsed.data;
+
   const queryClient = getQueryClient();
 
   const [product, options, sizes, colors] = await Promise.all([
@@ -49,7 +56,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <div className="space-y-6">
         <div>
           <Button asChild variant="link" size="sm" className="h-auto p-0">
-            <Link href="/catalog">
+            <Link href="/catalog" data-testid="product-back">
               <ArrowLeft />
               Products
             </Link>
