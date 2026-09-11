@@ -169,7 +169,13 @@ test("signing a colleague out ends their session on their next request", async (
     const target = row(page, STAFF_EMAIL);
     await target.getByTestId("staff-revoke-sessions").click();
     await expect(page.getByTestId("staff-revoke-dialog")).toBeVisible();
+    // The row updates optimistically; the colleague's next request only fails
+    // once the DELETE has actually ended their sessions, so wait for it.
+    const revoked = page.waitForResponse(
+      (res) => res.url().includes("/api/admin/staff/") && res.url().endsWith("/sessions") && res.request().method() === "DELETE",
+    );
     await page.getByTestId("staff-revoke-confirm").click();
+    expect((await revoked).ok(), "the sessions were ended server side").toBe(true);
     await expect(page.getByTestId("staff-revoke-dialog")).toBeHidden();
 
     // nothing left to end - and their access is untouched, which is the

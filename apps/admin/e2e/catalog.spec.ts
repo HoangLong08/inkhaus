@@ -81,6 +81,10 @@ test.describe("catalog as owner", () => {
     await expect(page.getByTestId("product-new")).toBeVisible();
 
     await page.getByTestId("products-search").fill(TEST_PRODUCT);
+    // The search box navigates after a debounce. The archived row is already on
+    // screen before that lands, and a click in between is undone when the late
+    // navigation carries the page back to the list - so wait for it first.
+    await expect(page).toHaveURL(new RegExp(`[?&]q=${TEST_PRODUCT}`));
     const row = page.locator(`[data-testid="product-row"][data-slug="${TEST_PRODUCT}"]`);
     await expect(row).toHaveAttribute("data-active", "false");
     await expect(page.getByTestId("products-meta")).toContainText(/\d/);

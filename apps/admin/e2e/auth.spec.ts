@@ -153,6 +153,13 @@ test.describe("admin sign-in", () => {
     await page.goto(`/catalog/products/${TEST_PRODUCT}`);
     await expect(page.getByTestId("product-save")).toBeEnabled();
 
+    // the customer profile is hydrated and its edit dialog writes through the BFF
+    await page.goto("/customers");
+    const customer = await page.getByTestId("customer-row").first().getAttribute("data-id");
+    expect(customer, "expected at least one customer in the list").toBeTruthy();
+    await page.goto(`/customers/${customer}`);
+    await expect(page.getByTestId("customer-edit-open")).toBeEnabled();
+
     expect(direct, "every API call must be server-to-server").toEqual([]);
   });
 

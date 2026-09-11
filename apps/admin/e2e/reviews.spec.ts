@@ -68,7 +68,13 @@ test.describe("reviews", () => {
     expect(target, "the seeded five-star pending review").toBeDefined();
 
     await page.goto(FIXTURES);
+    // The badge flips optimistically, before the write lands. Reloading on the
+    // badge alone aborts the request in flight, so wait for the BFF to answer.
+    const saved = page.waitForResponse(
+      (res) => res.url().endsWith(`/api/admin/reviews/${target!.id}`) && res.request().method() === "PATCH",
+    );
     await moveOne(page, target!.id, "review-publish");
+    expect((await saved).ok(), "the publish reached the server").toBe(true);
     await expect(row(page, target!.id)).toHaveAttribute("data-status", "PUBLISHED");
     await expect(row(page, target!.id).getByTestId("status-badge")).toHaveAttribute(
       "data-status",
@@ -108,7 +114,13 @@ test.describe("reviews", () => {
       await row(page, review.id).getByTestId("review-select").click();
     }
     await expect(page.getByTestId("review-select-all")).toHaveAttribute("data-state", "indeterminate");
+    // as above: the badges move before the batch commits, and the reload below
+    // must not race it
+    const saved = page.waitForResponse(
+      (res) => res.url().endsWith("/api/admin/reviews/bulk") && res.request().method() === "POST",
+    );
     await page.getByTestId("bulk-reject").click();
+    expect((await saved).ok(), "the batch reached the server").toBe(true);
 
     for (const review of [first, second]) {
       await expect(row(page, review.id)).toHaveAttribute("data-status", "REJECTED");
