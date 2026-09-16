@@ -4,7 +4,9 @@ import { CalendarDays, Loader2 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { DateRange } from "react-day-picker";
+import { cn } from "cn";
 
+import { TOOLBAR_BUTTON } from "@/components/common/toolbar-styles";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -114,7 +116,7 @@ export default function DateRangePicker({
           data-testid={`${prefix}-date-trigger`}
           data-from={from ?? ""}
           data-to={to ?? ""}
-          className="font-normal"
+          className={cn(TOOLBAR_BUTTON, "font-normal")}
         >
           {pending ? <Loader2 className="animate-spin" /> : <CalendarDays />}
           {describe(from, to, placeholder)}

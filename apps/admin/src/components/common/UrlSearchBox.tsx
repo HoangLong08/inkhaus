@@ -4,6 +4,7 @@ import { Loader2, Search, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
+import { TOOLBAR_BUTTON } from "@/components/common/toolbar-styles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -124,7 +125,7 @@ export default function UrlSearchBox({
         {label}
       </Label>
       <div className="relative w-full max-w-sm">
-        <Search className="text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2" />
+        <Search className="text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2" />
         <Input
           id={testId}
           type="search"
@@ -133,7 +134,8 @@ export default function UrlSearchBox({
           maxLength={100}
           placeholder={placeholder}
           data-testid={testId}
-          className="pl-8"
+          // h-8/text-xs so the box matches the buttons beside it - see toolbar-styles
+          className="h-8 pl-8 text-xs md:text-xs"
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={(event) => {
             if (event.key !== "Enter") return;
@@ -142,7 +144,7 @@ export default function UrlSearchBox({
           }}
         />
         {pending ? (
-          <Loader2 className="text-muted-foreground absolute right-2.5 top-1/2 size-4 -translate-y-1/2 animate-spin" />
+          <Loader2 className="text-muted-foreground absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 animate-spin" />
         ) : null}
       </div>
 
@@ -150,6 +152,7 @@ export default function UrlSearchBox({
         <Button
           variant="ghost"
           size="sm"
+          className={TOOLBAR_BUTTON}
           data-testid={clearTestId}
           onClick={() => {
             setValue("");
