@@ -438,6 +438,25 @@ conventions are what keep it from being rewritten every time the UI moves.
   `revenue-total`'s and `customer-stat`'s `data-value` are the raw numbers the
   label formats. A customer profile's values carry `data-field` (the Google row
   also `data-linked`).
+- **The shared list ids are on every list now, not just `/orders`.** `list-page`,
+  `list-footer`, `list-range`, `page-size`, `pager` and `pager-*` appear on
+  `/orders`, `/customers`, `/quotes`, `/catalog` and `/reviews`. Three lists
+  deliberately have **no** `list-footer` — `/staff`, `/catalog/colors` and
+  `/catalog/sizes` take no `limit` and report no `meta.pages`, so there is
+  nothing for a pager or a page-size control to point at. `/reviews` has a
+  `list-footer` but no `page-size`: its 20 is the API's, and is what keeps a
+  select-all inside `REVIEW_BULK_MAX`.
+- **A list that renders a `ListFooter` must render `PageSizeLinks` and `Pager`
+  nowhere else.** Two elements sharing `data-testid="page-size"` is a Playwright
+  strict-mode failure, not a layout bug. `/quotes` used to put it in
+  `ListHeader`'s actions slot and `/catalog` in a hand-rolled footer row; both
+  were removed in the same commit that gave them a `ListFooter`.
+- **A list's rows now live in a scroll container.** A test that needs a row must
+  let Playwright scroll to it, which every `locator.click()` does by itself.
+  `e2e/orders.spec.ts` reads a raw `boundingBox()` and fires `page.mouse.click()`
+  at it; that is legal **only** because the case under test filters the list down
+  to one row, which is therefore on screen. Do not copy that idiom onto an
+  unfiltered list.
 - The list footer's ids. `list-range` is the "Showing 1–20 of 134" line, with the
   three raw numbers on `data-from` / `data-to` / `data-total` so nothing has to
   parse an en dash. `pager-first` and `pager-last` are omitted - not disabled -
