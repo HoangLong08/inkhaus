@@ -145,6 +145,23 @@ it, not an approximation.
   `(dash)/layout.tsx` sets the header with `h-(--app-header-h)` and
   `common/ListPage.tsx` subtracts it from `100svh`. Neither may hard-code 3.5rem.
 
+**The type is Inter and JetBrains Mono, loaded with `next/font/google`** in
+`app/layout.tsx` and wired into `--font-sans` / `--font-mono` in `@theme`, so
+every `font-sans` and `font-mono` already written picks them up.
+
+- `next/font` fetches at **build** time and self-hosts the woff2 out of
+  `/_next/static`, which is the only reason a webfont does not violate §5. A
+  `<link rel="stylesheet">` to a font CDN — or a `@import url(...)` in
+  `globals.css` — is a runtime request to a third party. Never add one.
+- It is a build-time API, not a component, so nothing in the root layout becomes
+  a client component and `/login` keeps its no-`Providers` tree.
+- The system stack stays behind each face as the fallback. Do not remove it: it
+  is what a build with no network renders.
+- `body` sets `font-feature-settings: "cv11", "ss01"` and nothing else. Naming
+  only those two leaves `font-variant-numeric` alone, so `tabular-nums` still
+  aligns every money column. Do not add `'opsz'` — pinning Inter's optical size
+  gives 10.5px table text display-weight hairlines.
+
 ## 3. zod at four boundaries. No exceptions.
 
 Schemas live in `src/lib/schemas/{api,params,forms}/`, one file per feature, and

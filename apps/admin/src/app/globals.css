@@ -30,8 +30,12 @@
   --color-moss: #2f7d4f;
   --color-amber: #9a6b00;
 
-  --font-sans: ui-sans-serif, system-ui, "Segoe UI", sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+  /* Loaded and self-hosted by next/font in app/layout.tsx, which puts the two
+     --font-* variables on <html>. The old system stack stays behind each as the
+     fallback, so a build with no network still renders sensibly. */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-mono:
+    var(--font-jetbrains-mono), ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
 }
 
 /* The same colours, named by role, for shadcn's components. Every oklch here is
@@ -236,6 +240,12 @@
 
   body {
     @apply bg-background text-foreground font-sans;
+    /* Inter's own character variants: cv11 is the single-storey `a`, ss01 the
+       alternate digits. Both read better at the 10.5px this app's tables run at.
+       Naming only these two leaves font-variant-numeric alone, so every
+       `tabular-nums` money column still lines up - the two properties are
+       separate and the low-level one only wins for the features it names. */
+    font-feature-settings: "cv11", "ss01";
     -webkit-font-smoothing: antialiased;
   }
 
