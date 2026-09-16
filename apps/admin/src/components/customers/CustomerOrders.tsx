@@ -2,9 +2,9 @@ import { PackageOpen } from "lucide-react";
 import Link from "next/link";
 
 import ListEmpty from "@/components/common/ListEmpty";
+import TableCard from "@/components/common/TableCard";
 import StatusBadge from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Card, CardFooter } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -43,7 +43,22 @@ export default function CustomerOrders({
   }
 
   return (
-    <Card className="gap-0 overflow-hidden p-0">
+    // No `fill`: this sits in a Tabs panel beside the profile card, in ordinary
+    // document flow, not in a ListPage. It takes the density and nothing else.
+    <TableCard
+      footer={
+        <div className="bg-muted/50 flex items-center justify-between gap-2 border-t px-3 py-2">
+          <p className="text-muted-foreground text-xs">
+            {count(orderCount)} placed {orderCount === 1 ? "order" : "orders"} in total
+          </p>
+          <Button asChild variant="link" size="sm" className="h-auto p-0 text-xs">
+            <Link href={hrefWith("/orders", {}, { q: email })} data-testid="customer-orders-all">
+              All orders
+            </Link>
+          </Button>
+        </div>
+      }
+    >
       <Table>
         <TableHeader>
           <TableRow>
@@ -63,7 +78,7 @@ export default function CustomerOrders({
               data-status={order.status}
             >
               <TableCell>
-                <Button asChild variant="link" size="sm" className="h-auto p-0 font-mono">
+                <Button asChild variant="link" size="sm" className="h-auto p-0 font-mono text-xs">
                   <Link href={`/orders/${order.number}`} data-testid="customer-order-link">
                     {order.number}
                   </Link>
@@ -85,17 +100,6 @@ export default function CustomerOrders({
           ))}
         </TableBody>
       </Table>
-
-      <CardFooter className="bg-muted/50 justify-between gap-2 border-t px-4 py-2.5">
-        <p className="text-muted-foreground text-xs">
-          {count(orderCount)} placed {orderCount === 1 ? "order" : "orders"} in total
-        </p>
-        <Button asChild variant="link" size="sm" className="h-auto p-0">
-          <Link href={hrefWith("/orders", {}, { q: email })} data-testid="customer-orders-all">
-            All orders
-          </Link>
-        </Button>
-      </CardFooter>
-    </Card>
+    </TableCard>
   );
 }

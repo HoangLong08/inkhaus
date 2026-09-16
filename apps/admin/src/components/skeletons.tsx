@@ -68,10 +68,12 @@ export type SkeletonColumn = {
  * roughly how wide each value runs - and the skeleton lines up with it.
  *
  * `dense` mirrors what the real page renders: a list built on `TableCard` has a
- * tinted 36px header, 36px rows and ruled cells. Leave it off and the skeleton is
- * the pre-TableCard layout, which is still what most lists render. Getting it
- * wrong costs a reflow at the moment the data lands, which is the one thing this
- * file exists to prevent.
+ * tinted 36px header, 36px rows and ruled cells. Every list page passes it now.
+ * The two callers that do not are `/catalog/pricing`'s tier editor and its
+ * preview, which are a form and its read-out rather than a list - their cells
+ * hold 36px inputs, which a 36px row has nowhere to put. Getting this wrong
+ * costs a reflow at the moment the data lands, which is the one thing this file
+ * exists to prevent.
  *
  * `fill` is the same flag the real `TableCard` takes, and a skeleton inside a
  * `ListPage` needs it for the same reason the page does: without it the

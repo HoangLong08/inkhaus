@@ -35,6 +35,9 @@ export default function Loading() {
         <div className="space-y-2">
           <Skeleton className="h-9 w-64 rounded-lg" />
           <TableSkeleton
+            // CustomerOrders is a TableCard now - dense, but not `fill`: the
+            // profile page is ordinary document flow, not a ListPage
+            dense
             rows={3}
             columns={[
               { label: "Order", bar: "h-4 w-28" },

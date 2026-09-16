@@ -2,9 +2,9 @@ import { FileText } from "lucide-react";
 import Link from "next/link";
 
 import ListEmpty from "@/components/common/ListEmpty";
+import TableCard from "@/components/common/TableCard";
 import StatusBadge from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Card, CardFooter } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -36,7 +36,18 @@ export default function CustomerQuotes({
   }
 
   return (
-    <Card className="gap-0 overflow-hidden p-0">
+    // No `fill`: a Tabs panel on the profile page, in ordinary document flow.
+    <TableCard
+      footer={
+        quoteCount > quotes.length ? (
+          <div className="bg-muted/50 border-t px-3 py-2">
+            <p className="text-muted-foreground text-xs">
+              The latest {quotes.length} of {count(quoteCount)}.
+            </p>
+          </div>
+        ) : null
+      }
+    >
       <Table>
         <TableHeader>
           <TableRow>
@@ -55,7 +66,7 @@ export default function CustomerQuotes({
               data-status={quote.status}
             >
               <TableCell>
-                <Button asChild variant="link" size="sm" className="h-auto p-0">
+                <Button asChild variant="link" size="sm" className="h-auto p-0 text-xs">
                   <Link href={`/quotes/${quote.id}`} data-testid="customer-quote-link">
                     {on(quote.createdAt)}
                   </Link>
@@ -72,14 +83,6 @@ export default function CustomerQuotes({
           ))}
         </TableBody>
       </Table>
-
-      {quoteCount > quotes.length ? (
-        <CardFooter className="bg-muted/50 border-t px-4 py-2.5">
-          <p className="text-muted-foreground text-xs">
-            The latest {quotes.length} of {count(quoteCount)}.
-          </p>
-        </CardFooter>
-      ) : null}
-    </Card>
+    </TableCard>
   );
 }
