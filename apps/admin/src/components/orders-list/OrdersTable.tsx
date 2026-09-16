@@ -117,7 +117,7 @@ export default function OrdersTable({
   const shown = COLUMNS.filter((column) => cols.includes(column.id));
 
   return (
-    <TableCard>
+    <TableCard fill>
       <Table>
         <TableHeader>
           <TableRow>

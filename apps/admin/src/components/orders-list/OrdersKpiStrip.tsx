@@ -37,7 +37,9 @@ import { hrefWith, type Params } from "@/lib/url";
 const SEGMENT =
   "flex min-w-[50%] flex-1 items-center gap-1.5 border-r border-b px-3 py-1.5 last:border-r-0 sm:min-w-[130px] xl:border-b-0";
 
-const SHELL = "bg-card flex flex-wrap items-stretch overflow-hidden rounded-md border";
+// rounded-xl: 11px under the font-size ladder, which is the radius the design
+// this follows actually renders on its strip - a step above the table's card
+const SHELL = "bg-card flex shrink-0 flex-wrap items-stretch overflow-hidden rounded-xl border";
 
 export default async function OrdersKpiStrip({
   active,
@@ -82,7 +84,10 @@ export default async function OrdersKpiStrip({
             className={cn(SEGMENT, "hover:bg-accent transition", isActive && "bg-accent")}
           >
             {Icon ? <Icon className={cn("size-3.5 shrink-0", color)} aria-hidden /> : null}
-            <span className="text-muted-foreground truncate text-[0.6875rem]">{label}</span>
+            {/* text-xs, not the 11px literal this used to carry: that was a
+                hand-made step below a 12px text-xs, and under the font-size
+                ladder it lands at 9.6px. The ladder does that shrinking now. */}
+            <span className="text-muted-foreground truncate text-xs">{label}</span>
             <span className="ml-auto text-sm font-semibold tabular-nums">{count(n)}</span>
           </Link>
         );

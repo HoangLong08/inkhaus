@@ -38,25 +38,38 @@ export default function OrdersToolbar({
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="min-w-64 flex-1">
-        <UrlSearchBox
-          param="q"
-          aliases={["email"]}
-          label="Search orders"
-          placeholder="Order number, email or name…"
-          testId="orders-search"
-          clearTestId="orders-search-clear"
+    // Two groups, not one wrapping row: what narrows the list on the left, what
+    // acts on it or on the view on the right. The search box used to be
+    // `flex-1`, which swallowed every pixel the other controls did not want and
+    // left a 700px input beside four small buttons.
+    <div className="flex shrink-0 flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="w-full sm:w-64">
+          <UrlSearchBox
+            param="q"
+            aliases={["email"]}
+            label="Search orders"
+            placeholder="Order number, email or name…"
+            testId="orders-search"
+            clearTestId="orders-search-clear"
+          />
+        </div>
+        <DateRangePicker
+          prefix="orders"
+          from={params.from}
+          to={params.to}
+          placeholder="Placed any day"
         />
       </div>
-      <DateRangePicker prefix="orders" from={params.from} to={params.to} placeholder="Placed any day" />
-      <OrdersColumnsMenu
-        cols={params.cols}
-        sort={params.sort}
-        page={params.page}
-        linkParams={linkParams}
-      />
-      {actions}
+      <div className="flex flex-wrap items-center gap-2">
+        <OrdersColumnsMenu
+          cols={params.cols}
+          sort={params.sort}
+          page={params.page}
+          linkParams={linkParams}
+        />
+        {actions}
+      </div>
     </div>
   );
 }

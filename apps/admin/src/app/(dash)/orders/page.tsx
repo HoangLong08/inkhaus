@@ -3,6 +3,7 @@ import { Suspense } from "react";
 
 import ListFooter from "@/components/common/ListFooter";
 import ListHeader from "@/components/common/ListHeader";
+import ListPage from "@/components/common/ListPage";
 import OrdersToolbar from "@/components/orders/OrdersToolbar";
 import OrdersEmpty from "@/components/orders-list/OrdersEmpty";
 import OrdersExportButton from "@/components/orders-list/OrdersExportButton";
@@ -39,7 +40,7 @@ export default async function OrdersPage({
   const emptyReason = meta.total > 0 ? "page" : filtered ? "filtered" : "none";
 
   return (
-    <div className="space-y-2">
+    <ListPage>
       <ListHeader
         title="Orders"
         description="Every order the storefront has taken. The queue counts are all-time; the table follows the filters you set."
@@ -92,6 +93,6 @@ export default async function OrdersPage({
           }
         />
       )}
-    </div>
+    </ListPage>
   );
 }

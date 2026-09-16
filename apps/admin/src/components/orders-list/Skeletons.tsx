@@ -1,3 +1,4 @@
+import ListPage from "@/components/common/ListPage";
 import { OrdersKpiStripSkeleton } from "@/components/orders-list/OrdersKpiStrip";
 import { ListFooterSkeleton, OrdersTableSkeleton } from "@/components/skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,28 +14,31 @@ import { Skeleton } from "@/components/ui/skeleton";
  */
 export function OrdersListSkeleton() {
   return (
-    <div className="space-y-2">
+    <ListPage>
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-        <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-7 w-40" />
         <div className="flex flex-col items-start gap-1.5 sm:items-end">
           <Skeleton className="h-3 w-80" />
-          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-3.5 w-48" />
         </div>
       </div>
 
       <OrdersKpiStripSkeleton />
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="min-w-64 flex-1">
-          <Skeleton className="h-8 w-full max-w-sm" />
+      {/* the same two groups the real toolbar splits into */}
+      <div className="flex shrink-0 flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <Skeleton className="h-8 w-full sm:w-64" />
+          <Skeleton className="h-8 w-36" />
         </div>
-        <Skeleton className="h-8 w-36" />
-        <Skeleton className="h-8 w-24" />
-        <Skeleton className="h-8 w-28" />
+        <div className="flex flex-wrap items-center gap-2">
+          <Skeleton className="h-8 w-28" />
+          <Skeleton className="h-8 w-24" />
+        </div>
       </div>
 
       <OrdersTableSkeleton />
       <ListFooterSkeleton />
-    </div>
+    </ListPage>
   );
 }

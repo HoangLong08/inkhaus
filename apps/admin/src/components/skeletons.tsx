@@ -72,55 +72,65 @@ export type SkeletonColumn = {
  * the pre-TableCard layout, which is still what most lists render. Getting it
  * wrong costs a reflow at the moment the data lands, which is the one thing this
  * file exists to prevent.
+ *
+ * `fill` is the same flag the real `TableCard` takes, and a skeleton inside a
+ * `ListPage` needs it for the same reason the page does: without it the
+ * placeholder table is only as tall as its rows and the footer sits halfway up
+ * the screen, then jumps to the bottom when the data lands.
  */
 export function TableSkeleton({
   columns,
   rows = 10,
   dense = false,
+  fill = false,
 }: {
   columns: readonly SkeletonColumn[];
   rows?: number;
   /** the page wraps its table in `TableCard` */
   dense?: boolean;
+  /** the page is a `ListPage`, so the card takes the height that is left */
+  fill?: boolean;
 }) {
-  const Shell = dense ? TableCard : PlainTableCard;
-
-  return (
-    <Shell>
-      <Table>
-        <TableHeader>
-          <TableRow>
+  const table = (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          {columns.map((column) => (
+            <TableHead
+              key={column.label}
+              className={column.align === "right" ? "text-right" : undefined}
+            >
+              {column.label}
+            </TableHead>
+          ))}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {Array.from({ length: rows }, (_, i) => (
+          <TableRow key={i}>
             {columns.map((column) => (
-              <TableHead
+              <TableCell
                 key={column.label}
                 className={column.align === "right" ? "text-right" : undefined}
               >
-                {column.label}
-              </TableHead>
+                <Skeleton
+                  className={cn(
+                    column.bar ?? "h-4 w-24",
+                    column.align === "right" && "ml-auto",
+                  )}
+                />
+              </TableCell>
             ))}
           </TableRow>
-        </TableHeader>
-        <TableBody>
-          {Array.from({ length: rows }, (_, i) => (
-            <TableRow key={i}>
-              {columns.map((column) => (
-                <TableCell
-                  key={column.label}
-                  className={column.align === "right" ? "text-right" : undefined}
-                >
-                  <Skeleton
-                    className={cn(
-                      column.bar ?? "h-4 w-24",
-                      column.align === "right" && "ml-auto",
-                    )}
-                  />
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Shell>
+        ))}
+      </TableBody>
+    </Table>
+  );
+
+  return dense ? (
+    <TableCard fill={fill}>{table}</TableCard>
+  ) : (
+    <PlainTableCard>{table}</PlainTableCard>
   );
 }
 
@@ -152,8 +162,9 @@ const ORDER_COLUMNS: SkeletonColumn[] = [
 ];
 
 export function OrdersTableSkeleton({ rows = 10 }: { rows?: number }) {
-  // /orders is the list built on TableCard; the others are not yet
-  return <TableSkeleton columns={ORDER_COLUMNS} rows={rows} dense />;
+  // /orders is the list built on TableCard inside a ListPage; the others are
+  // not yet
+  return <TableSkeleton columns={ORDER_COLUMNS} rows={rows} dense fill />;
 }
 
 export function OrderDetailSkeleton() {
