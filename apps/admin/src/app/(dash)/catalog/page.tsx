@@ -6,15 +6,15 @@ import Link from "next/link";
 
 import FilterLinks from "@/components/common/FilterLinks";
 import ListEmpty from "@/components/common/ListEmpty";
+import ListFooter from "@/components/common/ListFooter";
 import ListHeader from "@/components/common/ListHeader";
-import PageSizeLinks from "@/components/common/PageSizeLinks";
+import ListPage from "@/components/common/ListPage";
 import { ROW_LINK } from "@/components/common/row-link";
 import SortableHead from "@/components/common/SortableHead";
+import TableCard from "@/components/common/TableCard";
 import UrlSearchBox from "@/components/common/UrlSearchBox";
-import Pager from "@/components/Pager";
 import StatusBadge from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -81,9 +81,10 @@ export default async function ProductsPage({
   const canCreate = can(user.role, "catalog.create") && options.priceEditsEnabled;
 
   return (
-    <div className="space-y-6">
+    <ListPage>
       <ListHeader
         title="Products"
+        description="Every blank the storefront can print on, archived ones included."
         meta={`${count(meta.total)} products · page ${meta.page} of ${meta.pages}`}
         metaTestId="products-meta"
         actions={
@@ -98,14 +99,16 @@ export default async function ProductsPage({
         }
       />
 
-      <div className="space-y-3">
-        <UrlSearchBox
-          label="Search products"
-          placeholder="Name or slug"
-          testId="products-search"
-          clearTestId="products-search-clear"
-        />
-        <div className="flex flex-wrap gap-x-6 gap-y-3">
+      <div className="flex shrink-0 flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="w-full sm:w-64">
+            <UrlSearchBox
+              label="Search products"
+              placeholder="Name or slug"
+              testId="products-search"
+              clearTestId="products-search-clear"
+            />
+          </div>
           <FilterLinks
             base="/catalog"
             param="active"
@@ -114,6 +117,8 @@ export default async function ProductsPage({
             params={linkParams}
             ariaLabel="Filter by status"
           />
+        </div>
+        <div className="flex flex-wrap gap-x-6 gap-y-2">
           <FilterLinks
             base="/catalog"
             param="category"
@@ -123,17 +128,17 @@ export default async function ProductsPage({
             ariaLabel="Filter by category"
             label={categoryLabel}
           />
+          <FilterLinks
+            base="/catalog"
+            param="sort"
+            values={PRODUCT_SORTS}
+            active={params.sort ?? "sort_asc"}
+            params={linkParams}
+            ariaLabel="Sort products"
+            allLabel={null}
+            label={sortLabel}
+          />
         </div>
-        <FilterLinks
-          base="/catalog"
-          param="sort"
-          values={PRODUCT_SORTS}
-          active={params.sort ?? "sort_asc"}
-          params={linkParams}
-          ariaLabel="Sort products"
-          allLabel={null}
-          label={sortLabel}
-        />
       </div>
 
       {data.length === 0 ? (
@@ -144,7 +149,7 @@ export default async function ProductsPage({
           reason="filtered"
         />
       ) : (
-        <Card className="overflow-hidden p-0">
+        <TableCard fill>
           <Table>
             <TableHeader>
               <TableRow>
@@ -176,7 +181,9 @@ export default async function ProductsPage({
                   data-slug={product.slug}
                   data-active={String(product.active)}
                 >
-                  <TableCell>
+                  {/* name over slug · type: two lines, so it states its own py-
+                      and TableCard's `py-0` steps aside for it */}
+                  <TableCell className="py-1.5 leading-tight">
                     {/* a plain <a>, not a Button variant="link": the Button was
                         only ever here for the link colour, which a row link does
                         not want, and it swallowed the focus ring. */}
@@ -195,7 +202,8 @@ export default async function ProductsPage({
                   <TableCell className="text-muted-foreground">
                     {CATEGORY_LABEL[product.category]}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  {/* price over floor - two lines again */}
+                  <TableCell className="py-1.5 text-right leading-tight tabular-nums">
                     <div className="font-semibold">{usd(product.price)}</div>
                     <div className="text-muted-foreground text-xs">floor {usd(product.bulkPrice)}</div>
                   </TableCell>
@@ -213,13 +221,21 @@ export default async function ProductsPage({
               ))}
             </TableBody>
           </Table>
-        </Card>
+        </TableCard>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <PageSizeLinks base="/catalog" params={linkParams} active={params.limit} />
-        <Pager base="/catalog" page={meta.page} pages={meta.pages} params={linkParams} />
-      </div>
-    </div>
+      {data.length > 0 ? (
+        <ListFooter
+          base="/catalog"
+          page={meta.page}
+          pages={meta.pages}
+          limit={params.limit}
+          total={meta.total}
+          shown={data.length}
+          noun="products"
+          params={linkParams}
+        />
+      ) : null}
+    </ListPage>
   );
 }
