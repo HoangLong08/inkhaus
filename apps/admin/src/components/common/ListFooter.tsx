@@ -31,6 +31,7 @@ export default function ListFooter({
   params = {},
   sizes,
   sizeParam,
+  hideSize = false,
 }: {
   base: string;
   page: number;
@@ -48,6 +49,13 @@ export default function ListFooter({
   params?: Params;
   sizes?: readonly number[];
   sizeParam?: string;
+  /**
+   * For a list whose page size is fixed on purpose and has no `limit` in its
+   * URL - `/reviews`, where the API's 20 is what keeps a select-all inside
+   * `REVIEW_BULK_MAX`. The range line and the pager still earn their place; a
+   * control over a parameter that does not exist does not.
+   */
+  hideSize?: boolean;
 }) {
   const from = total === 0 ? 0 : (page - 1) * limit + 1;
   const to = (page - 1) * limit + shown;
@@ -77,19 +85,21 @@ export default function ListFooter({
       </p>
 
       <div className="order-1 flex w-full items-center justify-between gap-3 sm:order-2 sm:w-auto sm:gap-6">
-        <div className="flex items-center gap-2">
-          <span aria-hidden className="text-xs font-medium">
-            Rows
-          </span>
-          <PageSizeLinks
-            base={base}
-            params={params}
-            active={limit}
-            sizes={sizes}
-            param={sizeParam}
-            hideLabel
-          />
-        </div>
+        {hideSize ? null : (
+          <div className="flex items-center gap-2">
+            <span aria-hidden className="text-xs font-medium">
+              Rows
+            </span>
+            <PageSizeLinks
+              base={base}
+              params={params}
+              active={limit}
+              sizes={sizes}
+              param={sizeParam}
+              hideLabel
+            />
+          </div>
+        )}
         <Pager base={base} page={page} pages={pages} params={params} compact />
       </div>
     </div>

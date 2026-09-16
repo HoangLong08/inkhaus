@@ -3,9 +3,10 @@ import { Inbox, SearchX } from "lucide-react";
 
 import FilterLinks from "@/components/common/FilterLinks";
 import ListEmpty from "@/components/common/ListEmpty";
+import ListFooter from "@/components/common/ListFooter";
 import ListHeader from "@/components/common/ListHeader";
+import ListPage from "@/components/common/ListPage";
 import UrlSearchBox from "@/components/common/UrlSearchBox";
-import Pager from "@/components/Pager";
 import ReviewsTable from "@/components/reviews/ReviewsTable";
 import StatusFilterLinks from "@/components/StatusFilterLinks";
 import { adminApi } from "@/lib/api";
@@ -38,21 +39,23 @@ export default async function ReviewsPage({
   const queueIsEmpty = params.status === "PENDING" && !params.q && !params.rating;
 
   return (
-    <div className="space-y-6">
+    <ListPage>
       <ListHeader
         title="Reviews"
+        description="The moderation queue. Tick several to publish or reject them in one go."
         meta={`${meta.total} total · page ${meta.page} of ${meta.pages}`}
         metaTestId="reviews-meta"
       />
 
-      <UrlSearchBox
-        label="Search reviews"
-        placeholder="Author, handle or review text"
-        testId="reviews-search"
-        clearTestId="reviews-search-clear"
-      />
-
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+      <div className="flex shrink-0 flex-wrap items-center gap-x-6 gap-y-2">
+        <div className="w-full sm:w-64">
+          <UrlSearchBox
+            label="Search reviews"
+            placeholder="Author, handle or review text"
+            testId="reviews-search"
+            clearTestId="reviews-search-clear"
+          />
+        </div>
         <StatusFilterLinks
           base="/reviews"
           statuses={REVIEW_STATUSES}
@@ -90,7 +93,21 @@ export default async function ReviewsPage({
         />
       )}
 
-      <Pager base="/reviews" page={meta.page} pages={meta.pages} params={params} />
-    </div>
+      {data.length > 0 ? (
+        <ListFooter
+          base="/reviews"
+          page={meta.page}
+          pages={meta.pages}
+          limit={meta.limit}
+          total={meta.total}
+          shown={data.length}
+          noun="reviews"
+          params={params}
+          // the page size is the API's 20 and is not in the URL - see the
+          // schema, where it keeps a select-all inside REVIEW_BULK_MAX
+          hideSize
+        />
+      ) : null}
+    </ListPage>
   );
 }

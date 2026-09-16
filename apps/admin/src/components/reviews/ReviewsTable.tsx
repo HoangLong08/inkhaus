@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { TOOLBAR_BUTTON } from "@/components/common/toolbar-styles";
+import TableCard from "@/components/common/TableCard";
 import RatingStars from "@/components/reviews/RatingStars";
 import StatusBadge from "@/components/StatusBadge";
 import {
@@ -19,7 +21,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -221,51 +222,58 @@ export default function ReviewsTable({
 
   return (
     <>
-      <Card className="gap-0 overflow-hidden p-0">
-        <div
-          role="toolbar"
-          aria-label="Bulk actions"
-          className="flex min-h-12 flex-wrap items-center gap-2 border-b px-4 py-2"
-        >
-          {/* one live region that is always there, so the count is announced */}
-          <p aria-live="polite" className="text-muted-foreground mr-auto text-sm">
+      <TableCard
+        fill
+        toolbar={
+          // the strip `TableCard` grew a `toolbar` slot for: inside the border,
+          // above the table, on the card's own px-3 gutter and type scale
+          <div
+            role="toolbar"
+            aria-label="Bulk actions"
+            className="flex min-h-10 shrink-0 flex-wrap items-center gap-2 border-b px-3 py-1.5"
+          >
+            {/* one live region that is always there, so the count is announced */}
+            <p aria-live="polite" className="text-muted-foreground mr-auto text-xs">
+              {chosen.length > 0 ? (
+                <>
+                  <span className="text-foreground font-semibold tabular-nums">{count(chosen.length)}</span>{" "}
+                  selected
+                </>
+              ) : (
+                "Tick reviews to publish or reject several at once."
+              )}
+            </p>
             {chosen.length > 0 ? (
               <>
-                <span className="text-foreground font-semibold tabular-nums">{count(chosen.length)}</span>{" "}
-                selected
+                {bulk.isPending ? (
+                  <Loader2 aria-hidden className="text-muted-foreground size-3.5 animate-spin" />
+                ) : null}
+                <Button
+                  size="sm"
+                  className={TOOLBAR_BUTTON}
+                  data-testid="bulk-publish"
+                  disabled={bulkBlocked}
+                  onClick={() => bulk.mutate({ ids: chosen.map((review) => review.id), status: "PUBLISHED" })}
+                >
+                  <Check />
+                  Publish
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className={TOOLBAR_BUTTON}
+                  data-testid="bulk-reject"
+                  disabled={bulkBlocked}
+                  onClick={() => bulk.mutate({ ids: chosen.map((review) => review.id), status: "REJECTED" })}
+                >
+                  <X />
+                  Reject
+                </Button>
               </>
-            ) : (
-              "Tick reviews to publish or reject several at once."
-            )}
-          </p>
-          {chosen.length > 0 ? (
-            <>
-              {bulk.isPending ? (
-                <Loader2 aria-hidden className="text-muted-foreground size-4 animate-spin" />
-              ) : null}
-              <Button
-                size="sm"
-                data-testid="bulk-publish"
-                disabled={bulkBlocked}
-                onClick={() => bulk.mutate({ ids: chosen.map((review) => review.id), status: "PUBLISHED" })}
-              >
-                <Check />
-                Publish
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                data-testid="bulk-reject"
-                disabled={bulkBlocked}
-                onClick={() => bulk.mutate({ ids: chosen.map((review) => review.id), status: "REJECTED" })}
-              >
-                <X />
-                Reject
-              </Button>
-            </>
-          ) : null}
-        </div>
-
+            ) : null}
+          </div>
+        }
+      >
         <Table>
           <TableHeader>
             <TableRow>
@@ -323,37 +331,40 @@ export default function ReviewsTable({
                     />
                   </TableCell>
 
-                  <TableCell className="min-w-64 max-w-xl whitespace-normal">
+                  {/* the tallest cell in the app: a byline plus up to three
+                      clamped lines. It states py-2 so TableCard's `py-0` stands
+                      aside and the text does not butt the rules. */}
+                  <TableCell className="min-w-64 max-w-xl py-2 whitespace-normal">
                     <div className="flex flex-wrap items-baseline gap-x-2">
                       <span className="font-medium">{review.author}</span>
                       {review.handle ? (
-                        <span className="text-muted-foreground text-xs">{review.handle}</span>
+                        <span className="text-muted-foreground">{review.handle}</span>
                       ) : null}
-                      <time dateTime={review.createdAt} className="text-muted-foreground text-xs">
+                      <time dateTime={review.createdAt} className="text-muted-foreground">
                         {at(review.createdAt)}
                       </time>
                     </div>
-                    <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm">{review.body}</p>
+                    <p className="mt-1 line-clamp-3 whitespace-pre-wrap">{review.body}</p>
                   </TableCell>
 
                   <TableCell>
                     <RatingStars rating={review.rating} />
                   </TableCell>
 
-                  <TableCell className="whitespace-normal">
+                  {/* name over slug - two lines, so it says py- */}
+                  <TableCell className="py-1.5 leading-tight whitespace-normal">
                     {review.product ? (
                       <div className="grid">
-                        <span className="text-sm">{review.product.name}</span>
-                        <span className="text-muted-foreground font-mono text-xs">
-                          {review.product.slug}
-                        </span>
+                        <span>{review.product.name}</span>
+                        <span className="text-muted-foreground font-mono">{review.product.slug}</span>
                       </div>
                     ) : (
-                      <span className="text-muted-foreground text-xs">Whole shop</span>
+                      <span className="text-muted-foreground">Whole shop</span>
                     )}
                   </TableCell>
 
-                  <TableCell className="text-xs">
+                  {/* who over when - two lines again */}
+                  <TableCell className="py-1.5 leading-tight">
                     {review.moderatedAt ? (
                       <div className="grid">
                         <span className="max-w-40 truncate">
@@ -388,7 +399,8 @@ export default function ReviewsTable({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="size-8"
+                          // 28px with a 14px glyph, so it fits a 36px row
+                          className="size-7 [&_svg]:size-3.5"
                           data-testid="review-actions"
                           aria-label={`Actions for the review by ${review.author}`}
                           disabled={isBusy}
@@ -443,7 +455,7 @@ export default function ReviewsTable({
             })}
           </TableBody>
         </Table>
-      </Card>
+      </TableCard>
 
       {/* One dialog for the table, a sibling of every menu rather than a child
           of one: a menu unmounts its portal on select, and anything inside it
