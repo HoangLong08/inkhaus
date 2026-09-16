@@ -75,11 +75,32 @@ your way, change the rule here in the same commit — do not work around it.
   `h-9 px-3` tinted headers, `h-9` rows with `px-3 py-0` cells, a rule on every
   cell and a zebra stripe down through descendant variants that outrank the
   primitive's own utilities by specificity, inside the same `@layer utilities`.
-  Two consequences to know: a per-cell padding override at the call site now loses
-  silently, and the stripe is written `:not(:hover):not([data-state=selected])` so
-  that `TableRow`'s own hover and selected colours still win - a plain
-  `nth-child(even)` would outrank both. `ListFooter` sits **below** the card, not
-  inside it.
+  The stripe is written `:not(:hover):not([data-state=selected])` so that
+  `TableRow`'s own hover and selected colours still win - a plain
+  `nth-child(even)` would outrank both. A cell that needs its own vertical
+  padding - a two-line cell, a clamped review body - **states it**, and
+  `[&_tbody_td:not([class*='py-'])]` steps aside for it; a cell that says nothing
+  gets `py-0` and a 36px row. `ListFooter` sits **below** the card, not inside it;
+  the `footer` slot is for a rail that genuinely belongs inside the border.
+- **`fill` is what makes a `TableCard` work inside a `ListPage`**, and it is
+  mandatory there. It gives the card `min-h-0 flex-1` and pushes the same down
+  onto the primitive's own `[data-slot=table-container]`, which is the box that
+  scrolls. That div is reached by a child-combinator variant, (0,2,0), because
+  `ui/table.tsx` is generated and takes no `containerClassName`; `>` rather than
+  `_` so a table nested in a cell is not caught. `min-h-0` on **both** levels is
+  the whole trick - a column flex item's automatic minimum is its min-content
+  height, so without it a 100-row table refuses to shrink and pushes the footer
+  off the screen. `overflow-hidden` stays on the card and does **not** break the
+  sticky header: sticky resolves against the nearest scroll container, which is
+  that inner div, and the header never leaves it. What the clip does is keep the
+  table's square corners inside the radius.
+- **The sticky header's bottom rule is an inset shadow, on the `<th>`.** Tailwind
+  preflight sets `border-collapse: collapse`, so a collapsed border belongs to the
+  table's border grid rather than to the cell, and `TableHeader`'s `[&_tr]:border-b`
+  stays behind the instant the header scrolls. A shadow is painted by the box that
+  moves. It is on the cell and not on the `<thead>` because a `table-header-group`
+  is neither a reliable `position: sticky` box in older engines nor a reliable
+  `box-shadow` box under `border-collapse`.
 - **A table has a stretched row link or a sticky actions column, never both.** The
   row link is a real `<a>` whose `::after` is `absolute inset-0` over a `relative`
   `<tr>` (`OrdersTable`, `CustomersTable`, the quotes and catalog lists). A
