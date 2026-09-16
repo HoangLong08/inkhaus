@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import Link from "next/link";
 import { cn } from "cn";
 
@@ -41,15 +41,97 @@ export default function Pager({
   page,
   pages,
   params = {},
+  compact = false,
 }: {
   base: string;
   page: number;
   pages: number;
   params?: Params;
+  /**
+   * The footer form: four icon buttons around a "Page 3 of 7" count, instead of
+   * the row of page numbers. Off by default, so a page opts in by rendering a
+   * `ListFooter` rather than by every list changing at once.
+   */
+  compact?: boolean;
 }) {
   if (pages <= 1) return null;
 
   const link = (n: number) => hrefWith(base, params, { page: n });
+  // An edge button is left out rather than disabled when there is nowhere to go:
+  // a disabled <a> is not a thing, and aria-disabled on a link that still
+  // navigates is worse than no link at all. `pager-previous` has always done this.
+  const edge = cn(
+    buttonVariants({ variant: compact ? "outline" : "ghost", size: compact ? "icon-sm" : "icon" }),
+    compact && "[&_svg]:size-3.5",
+  );
+  const step = compact ? edge : cn(buttonVariants({ variant: "ghost" }), "gap-1 px-2.5");
+
+  // The compact form reads "Page 3 of 7  « ‹ › »": the count first, then the four
+  // steps together, rather than the count wedged between prev and next.
+  if (compact) {
+    return (
+      <Pagination data-testid="pager" className="mx-0 w-auto items-center justify-end gap-3">
+        <span
+          data-testid="pager-count"
+          data-page={page}
+          data-pages={pages}
+          className="text-xs font-medium whitespace-nowrap tabular-nums"
+        >
+          Page {page} of {pages}
+        </span>
+        <PaginationContent>
+          <PaginationItem>
+            {page > 1 ? (
+              <Link
+                href={link(1)}
+                aria-label="Go to the first page"
+                data-testid="pager-first"
+                className={edge}
+              >
+                <ChevronsLeft />
+              </Link>
+            ) : null}
+          </PaginationItem>
+          <PaginationItem>
+            {page > 1 ? (
+              <Link
+                href={link(page - 1)}
+                aria-label="Go to previous page"
+                data-testid="pager-previous"
+                className={edge}
+              >
+                <ChevronLeft />
+              </Link>
+            ) : null}
+          </PaginationItem>
+          <PaginationItem>
+            {page < pages ? (
+              <Link
+                href={link(page + 1)}
+                aria-label="Go to next page"
+                data-testid="pager-next"
+                className={edge}
+              >
+                <ChevronRight />
+              </Link>
+            ) : null}
+          </PaginationItem>
+          <PaginationItem>
+            {page < pages ? (
+              <Link
+                href={link(pages)}
+                aria-label="Go to the last page"
+                data-testid="pager-last"
+                className={edge}
+              >
+                <ChevronsRight />
+              </Link>
+            ) : null}
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
+    );
+  }
 
   return (
     <Pagination data-testid="pager">
@@ -57,10 +139,23 @@ export default function Pager({
         <PaginationItem>
           {page > 1 ? (
             <Link
+              href={link(1)}
+              aria-label="Go to the first page"
+              data-testid="pager-first"
+              className={edge}
+            >
+              <ChevronsLeft />
+            </Link>
+          ) : null}
+        </PaginationItem>
+
+        <PaginationItem>
+          {page > 1 ? (
+            <Link
               href={link(page - 1)}
               aria-label="Go to previous page"
               data-testid="pager-previous"
-              className={cn(buttonVariants({ variant: "ghost" }), "gap-1 px-2.5")}
+              className={step}
             >
               <ChevronLeft />
               <span className="hidden sm:block">Previous</span>
@@ -96,10 +191,23 @@ export default function Pager({
               href={link(page + 1)}
               aria-label="Go to next page"
               data-testid="pager-next"
-              className={cn(buttonVariants({ variant: "ghost" }), "gap-1 px-2.5")}
+              className={step}
             >
               <span className="hidden sm:block">Next</span>
               <ChevronRight />
+            </Link>
+          ) : null}
+        </PaginationItem>
+
+        <PaginationItem>
+          {page < pages ? (
+            <Link
+              href={link(pages)}
+              aria-label="Go to the last page"
+              data-testid="pager-last"
+              className={edge}
+            >
+              <ChevronsRight />
             </Link>
           ) : null}
         </PaginationItem>

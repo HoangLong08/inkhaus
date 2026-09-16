@@ -15,18 +15,23 @@ export default function PageSizeLinks({
   active,
   sizes = PAGE_SIZES,
   param = "limit",
+  hideLabel = false,
 }: {
   base: string;
   params?: Params;
   active: number;
   sizes?: readonly number[];
   param?: string;
+  /** the caller already prints "Rows" beside it - `ListFooter` does */
+  hideLabel?: boolean;
 }) {
   return (
     <nav aria-label="Rows per page" className="flex items-center gap-1">
-      <span aria-hidden className="text-muted-foreground mr-1 text-xs">
-        Rows
-      </span>
+      {hideLabel ? null : (
+        <span aria-hidden className="text-muted-foreground mr-1 text-xs">
+          Rows
+        </span>
+      )}
       {sizes.map((size) => {
         const isActive = size === active;
         return (
