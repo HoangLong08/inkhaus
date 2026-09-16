@@ -44,7 +44,10 @@ export default async function DashLayout({ children }: { children: React.ReactNo
       <SidebarProvider defaultOpen={defaultOpen}>
         <AppSidebar user={user} />
         <SidebarInset>
-          <header className="bg-background/90 sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b backdrop-blur">
+          {/* h-(--app-header-h) rather than h-14, same 3.5rem: a list page sizes
+              itself `calc(100svh - var(--app-header-h))`, and the two must not be
+              able to drift. The number lives in globals.css. */}
+          <header className="bg-background/90 h-(--app-header-h) sticky top-0 z-10 flex shrink-0 items-center gap-2 border-b backdrop-blur">
             <div className="flex w-full items-center gap-2 px-4">
               <SidebarTrigger className="-ml-1" data-testid="sidebar-toggle" />
               <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />

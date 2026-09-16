@@ -78,13 +78,15 @@ your way, change the rule here in the same commit — do not work around it.
   the nearest positioned ancestor, so pinning that cell shrinks the row's link down
   to it. A list that wants both puts "Open" in the actions menu instead.
 
-## 2. Colour comes from the token map, never from a raw hex.
+## 2. Colour, density and type all come from the token map.
 
-`src/app/globals.css` is the single source of truth, in three layers: the INKHAUS
+`src/app/globals.css` is the single source of truth, in five parts: the INKHAUS
 ramp in `@theme` (`ink`/`ink-2`/`ink-3`, `paper`/`paper-2`/`paper-3`, `line`,
 `acid`, `flame`, `sky`, `moss`, `amber`), the shadcn roles aliased onto it in
-`:root` and `.dark`, and `@theme inline` wiring the two together. Every oklch in
-that file is the computed conversion of the hex above it, not an approximation.
+`:root` and `.dark`, `@theme inline` wiring the two together, the **root
+font-size ladder**, and an `@layer base` block holding the focus ring and the
+scrollbars. Every oklch in that file is the computed conversion of the hex above
+it, not an approximation.
 
 - Prefer the semantic token (`bg-card`, `text-muted-foreground`, `border`) in new
   code. The raw ramp names still work and older code uses them; both resolve to
@@ -105,6 +107,43 @@ that file is the computed conversion of the hex above it, not an approximation.
 - **Colour is never the only signal.** Every status badge spells its status out.
 - `@theme inline`, not `@theme`, for the shadcn aliases — otherwise a utility
   freezes the `:root` value and `.dark` does nothing.
+- **A translucent token is `color-mix(in oklab, var(--token) N%, transparent)`.**
+  Never `hsl(var(--token) / N)`: these tokens are complete oklch colours, not the
+  bare HSL channel triplets that idiom assumes, so the `hsl()` form parses to
+  nothing and the declaration is dropped **silently** — a green build, a rule
+  that does nothing, and a UA default in its place. `color-mix` is also what
+  Tailwind v4 emits for its own `/30` modifiers, so hand-written CSS and
+  `bg-muted/30` agree by construction rather than by eye.
+
+**The root font-size ladder is the app's density knob**, and it is the reason a
+`h-9` row measures 31.5px on a laptop rather than 36:
+
+```css
+@media screen and (min-width: 1024px) { :root { font-size: 87.5%; } }   /* 14px */
+@media screen and (min-width: 1920px) { :root { font-size: 93.75%; } }  /* 15px */
+@media screen and (min-width: 2400px) { :root { font-size: 100%; } }    /* 16px */
+```
+
+- **Every length in a component is `rem`.** That is the only reason one rule can
+  move type, control heights, gaps, padding and the radius ramp together. A `px`
+  literal in a `className` is a thing that will not scale with the rest, and it
+  will look wrong at exactly one of the three steps. The two sanctioned
+  exceptions are a hairline `border` and `ring-[3px]`: a focus ring that thins
+  out with the density is a focus ring that stops being seen.
+- `--radius-sm` and `--radius-md` are `calc(var(--radius) - 4px)` and `- 2px`, a
+  rem/px mix the ladder shrinks on one side only. Keep `--radius` at or above
+  ~0.3rem or `--radius-sm` goes negative and CSS clamps it to 0.
+- **`screen` is not optional.** `(print)`'s packing slip has no `@media print`
+  block of its own — it uses Tailwind `print:*` variants, which compile into
+  one — so a `screen`-scoped query does not match while printing and `:root`
+  falls back to 100%. Drop the keyword and every slip prints 12.5% small.
+- Media Queries L4 §1.3 evaluates units in a media query against the *initial*
+  font size, so Tailwind's rem breakpoints stay pinned at 640/768/1024/1280/1536
+  CSS px. There is no feedback loop, and `hooks/use-mobile.ts`'s px `matchMedia`
+  is unaffected either way.
+- **`--app-header-h` is the one place the app header's height is written.**
+  `(dash)/layout.tsx` sets the header with `h-(--app-header-h)` and
+  `common/ListPage.tsx` subtracts it from `100svh`. Neither may hard-code 3.5rem.
 
 ## 3. zod at four boundaries. No exceptions.
 
@@ -415,6 +454,11 @@ The e2e suite runs against its own build dir (`.next-e2e`) and its own ports, an
 reseeds the database. It leaves `next-env.d.ts` pointing at `.next-e2e`; the next
 `npm run dev` points it back. **Never commit that file aimed at `.next-e2e`** —
 `typecheck` fails on a checkout that has never run the suite.
+
+**The suite's viewport is 1280×720** — `playwright.config.ts` spreads
+`devices["Desktop Chrome"]` and overrides nothing. 1280 is above the ladder's
+1024 step, so every spec runs at **87.5% / a 14px root**. A test that reasons
+about a pixel size must be written against that, not against 16px.
 
 Two things about running it twice:
 

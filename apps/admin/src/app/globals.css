@@ -43,7 +43,18 @@
    `border border-line bg-paper` sitting on a `paper` body, and shadcn's Card
    should look like the ones already here. */
 :root {
+  /* Keep this at or above ~0.3rem. `--radius-sm` is `calc(var(--radius) - 4px)`,
+     a rem/px mix, and the ladder below shrinks the rem side but not the px side:
+     at 87.5% this is 7px and --radius-sm is 3px. Go much smaller and it goes
+     negative, which CSS clamps to 0 rather than warning about. */
   --radius: 0.5rem; /* rounded-lg, which is what the existing cards use */
+
+  /* The app header's height, in one place, because the list pages subtract it
+     from the viewport to size themselves. `(dash)/layout.tsx` sets the header
+     with `h-(--app-header-h)` and `common/ListPage.tsx` subtracts it from
+     100svh; neither hard-codes the other's number. It is rem, so it rides the
+     ladder below: 56px at 100%, 49px at 87.5%. */
+  --app-header-h: 3.5rem;
 
   --background: oklch(0.9878 0.0013 106.4); /* paper   #fbfbfa */
   --foreground: oklch(0.2053 0.0081 274.5); /* ink     #16171b */
@@ -124,6 +135,52 @@
   --sidebar-ring: oklch(0.64 0.16 261.1);
 }
 
+/* The density knob for the whole back office, and the only one.
+
+   Every length in this app is rem, so shrinking the root shrinks the app: at
+   87.5% a `h-9` table row is 31.5px rather than 36 and `text-xs` is 10.5px
+   rather than 12. That is a scale, not a zoom - it moves type, control heights,
+   gaps, padding and the radius ramp together, in one rule, with no class to
+   maintain and nothing to keep in sync.
+
+   Four things about how it is written, each load bearing:
+
+   - `%`, never `px`. A percentage is relative to the browser's own font size,
+     so a reader who has set theirs to 20px still gets 17.5px here. `font-size:
+     14px` on :root would throw that away, which is WCAG 1.4.4.
+   - `screen` is mandatory. It is what keeps the print stylesheet out of this.
+     The packing slip under `(print)` has no @media print block of its own - it
+     uses Tailwind `print:*` variants, which compile into `@media print` - so a
+     `screen`-scoped query simply does not match while printing and :root falls
+     back to 100%. Drop the keyword and every packing slip prints 12.5% small.
+   - No feedback loop with the breakpoints. Media Queries L4 s1.3 evaluates
+     units in a media query against the *initial* font size, not the computed
+     one, so Tailwind v4's rem breakpoints stay pinned at 640/768/1024/1280/1536
+     CSS px and cannot chase this rule round in a circle.
+   - It is unlayered on purpose. It sets :root's own font-size, which no
+     Tailwind utility competes for, so there is nothing for a layer to arbitrate
+     - and being outside the layers means a future `@layer` reshuffle cannot
+     quietly demote it.
+
+   To undo it: delete the three lines. Nothing else in the app depends on them. */
+@media screen and (min-width: 1024px) {
+  :root {
+    font-size: 87.5%; /* 14px */
+  }
+}
+
+@media screen and (min-width: 1920px) {
+  :root {
+    font-size: 93.75%; /* 15px */
+  }
+}
+
+@media screen and (min-width: 2400px) {
+  :root {
+    font-size: 100%; /* 16px */
+  }
+}
+
 /* `inline` is what makes .dark work at all: the utility resolves to
    var(--background) at use time instead of freezing the :root value. */
 @theme inline {
@@ -202,5 +259,77 @@
   :where(a, button, input, select, textarea):focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
+  }
+
+  /* Scrollbars, because this app has one in a dozen menus, popovers and command
+     palettes and none of them should read as furniture. 6px everywhere, drawn
+     in the same muted grey as the rest of the chrome so it follows the theme
+     into dark mode instead of staying a fixed grey against an ink background.
+
+     `color-mix(in oklab, …)`, never `hsl(var(--token) / a)`. These tokens are
+     complete oklch colours, not the bare HSL channel triplets that idiom
+     assumes, so `hsl(oklch(…) / .3)` parses to nothing and the whole
+     declaration is dropped - silently, leaving the UA default and the
+     impression that the rule did nothing. color-mix is also exactly what
+     Tailwind v4 emits for its own `/30` opacity modifiers, so these agree with
+     every `bg-muted/30` in the app by construction. */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--muted-foreground) 30%, transparent);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in oklab, var(--muted-foreground) 50%, transparent);
+  }
+
+  /* One exception: a data table's horizontal bar, at 14px, because it is the
+     only scrollbar in this app anyone aims at rather than flicks past - a wide
+     list is dragged sideways deliberately, often repeatedly.
+
+     Keyed on the primitive's own slot rather than a class, because `ui/table.tsx`
+     is generated and takes no className for its container. Every <Table> in the
+     app matches; the ones that never overflow never draw a bar and pay nothing.
+
+     The thumb is inset by a transparent 3px border with `background-clip:
+     padding-box`, so the visible thumb is ~8px inside a 14px gutter: a big hit
+     target that still looks like a hairline. */
+  [data-slot="table-container"]::-webkit-scrollbar:horizontal {
+    height: 14px;
+  }
+
+  [data-slot="table-container"]::-webkit-scrollbar-track:horizontal {
+    background: color-mix(in oklab, var(--muted) 40%, transparent);
+  }
+
+  [data-slot="table-container"]::-webkit-scrollbar-thumb:horizontal {
+    background: color-mix(in oklab, var(--muted-foreground) 45%, transparent);
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    border-radius: 7px;
+  }
+
+  [data-slot="table-container"]::-webkit-scrollbar-thumb:horizontal:hover {
+    background: color-mix(in oklab, var(--muted-foreground) 70%, transparent);
+    background-clip: padding-box;
+  }
+
+  [data-slot="table-container"]::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* Firefox has neither per-axis control nor a pixel width; `thin` is as close
+     as it gets. Stated so the two engines at least agree on the colour. */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--muted-foreground) 30%, transparent) transparent;
   }
 }
