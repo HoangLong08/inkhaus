@@ -15,6 +15,7 @@ import TableCard from "@/components/common/TableCard";
 import UrlSearchBox from "@/components/common/UrlSearchBox";
 import StatusBadge from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -118,7 +119,7 @@ export default async function ProductsPage({
             ariaLabel="Filter by status"
           />
         </div>
-        <div className="flex flex-wrap gap-x-6 gap-y-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <FilterLinks
             base="/catalog"
             param="category"
@@ -128,6 +129,10 @@ export default async function ProductsPage({
             ariaLabel="Filter by category"
             label={categoryLabel}
           />
+          {/* what narrows the list, then how it is ordered. A gap alone did not
+              read as a break - every chip is the same shape, so the eye ran
+              straight from "Tech" into "Shelf order". */}
+          <Separator orientation="vertical" className="data-[orientation=vertical]:h-5" />
           <FilterLinks
             base="/catalog"
             param="sort"

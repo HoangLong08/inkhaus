@@ -91,7 +91,9 @@ export default function StaffRow({
       data-active={member.isActive}
       data-self={member.isSelf}
     >
-      <TableCell>
+      {/* name over email: two lines, so it states its own py- and TableCard's
+          `py-0` steps aside for it */}
+      <TableCell className="py-1.5 leading-tight">
         <div className="flex items-center gap-2">
           <span className="font-medium">{label}</span>
           {member.isSelf ? <Badge variant="secondary">You</Badge> : null}

@@ -51,20 +51,24 @@ export default async function StaffPage() {
       <ListPage>
         <ListHeader
           title="Staff"
-          description={
-            <>
-              Nobody can change their own role or turn off their own access, and the last active
-              owner can be neither demoted nor deactivated. Addresses in{" "}
-              <code className="font-mono">ADMIN_BOOTSTRAP_EMAILS</code> are restored as active
-              owners by every <code className="font-mono">npm run db:seed</code> — take an address
-              out of that variable before deactivating it here.
-            </>
-          }
+          description="Who can sign in to the back office, and what each of them may do."
           meta={`${count(active)} active · ${count(staff.data.length - active)} deactivated · ${count(staff.activeOwners)} active ${staff.activeOwners === 1 ? "owner" : "owners"}`}
           actions={canManage ? <InviteStaffDialog /> : null}
         />
 
         <StaffTable actor={{ id: user.id, role: user.role }} canManage={canManage} />
+
+        {/* Below the table, not in ListHeader's `description`: this is a caveat
+            about what the controls above refuse to do, not a sentence saying
+            what the list is. Three right-aligned lines in the heading drowned
+            the heading. */}
+        <p className="text-muted-foreground max-w-prose shrink-0 text-xs">
+          Nobody can change their own role or turn off their own access, and the last active owner
+          can be neither demoted nor deactivated. Addresses in{" "}
+          <code className="font-mono">ADMIN_BOOTSTRAP_EMAILS</code> are restored as active owners by
+          every <code className="font-mono">npm run db:seed</code> — take an address out of that
+          variable before deactivating it here.
+        </p>
       </ListPage>
     </HydrationBoundary>
   );

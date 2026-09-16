@@ -19,6 +19,7 @@ import { followUpState, formatFollowUp, todayUtc } from "@/components/quotes/quo
 import QuoteStatusControl from "@/components/quotes/QuoteStatusControl";
 import StatusFilterLinks from "@/components/StatusFilterLinks";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -85,7 +86,7 @@ export default async function QuotesPage({
             params={linkParams}
           />
         </div>
-        <div className="flex flex-wrap gap-x-6 gap-y-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <FilterLinks
             base="/quotes"
             param="assignee"
@@ -96,6 +97,9 @@ export default async function QuotesPage({
             allLabel="Anyone"
             label={assigneeLabel}
           />
+          {/* who owns it, then when it is due - two questions, so a rule between
+              them. A gap alone did not read as a break. */}
+          <Separator orientation="vertical" className="data-[orientation=vertical]:h-5" />
           <FilterLinks
             base="/quotes"
             param="followUp"

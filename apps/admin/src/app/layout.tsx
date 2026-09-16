@@ -28,7 +28,12 @@ import "./globals.css";
  * which is the entire point of having it.
  */
 const inter = Inter({
-  subsets: ["latin"],
+  // "vietnamese" as well as latin: this app is English, but the data in it is
+  // not - a customer called Nguyễn renders ễ and ộ from a fallback face
+  // otherwise, which is a visible change of font in the middle of a word.
+  // next/font ships one file per subset, so the cost is a file nobody without
+  // those glyphs on screen ever downloads.
+  subsets: ["latin", "vietnamese"],
   display: "swap",
   variable: "--font-inter",
 });
