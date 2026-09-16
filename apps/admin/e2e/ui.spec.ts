@@ -52,22 +52,37 @@ test.describe("back office UI", () => {
     const before = await page.getByTestId("order-timeline").locator("li").count();
 
     await page.getByTestId("status-select").click();
-    await page.getByTestId("status-option").filter({ hasText: "Paid" }).click();
+    // by data-status, not by label: the label is translated, the code is not
+    await page.locator('[data-testid="status-option"][data-status="PAID"]').click();
     await page.getByTestId("status-save").click();
 
     // The badge beside the heading and the timeline are separate client leaves
     // reading one cache entry, so both move on the optimistic write.
     await expect(page.getByTestId("status-badge").first()).toHaveAttribute("data-status", "PAID");
     await expect(page.getByTestId("order-timeline").locator("li")).toHaveCount(before + 1);
-    await expect(page.getByText("Moved to Paid")).toBeVisible();
+    // that a toast appeared, not what it says - the two assertions above already
+    // cover the thing that actually moved
+    await expect(page.locator("[data-sonner-toast]").first()).toBeVisible();
   });
 
   test("the breadcrumb tracks the route", async ({ page }) => {
     await signIn(page, "owner");
-    await expect(page.getByTestId("breadcrumb-current")).toHaveText("Overview");
+
+    // Compared with the nav's own label rather than a literal, the nav.spec
+    // idiom: this is about routing, not about what a section is called in the
+    // viewer's language.
+    const navLabel = async (section: string) => {
+      const text = (
+        await page.locator(`[data-testid="nav-link"][data-section="${section}"]`).innerText()
+      ).trim();
+      expect(text, `expected a label on the ${section} nav link`).not.toBe("");
+      return text;
+    };
+
+    await expect(page.getByTestId("breadcrumb-current")).toHaveText(await navLabel("overview"));
 
     await page.goto("/quotes");
-    await expect(page.getByTestId("breadcrumb-current")).toHaveText("Bulk quotes");
+    await expect(page.getByTestId("breadcrumb-current")).toHaveText(await navLabel("quotes"));
 
     // Any order will do - this is about routing, not order state. Deliberately
     // NOT findActionableOrder: the seed ships two PENDING_PAYMENT orders and the

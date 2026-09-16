@@ -1,0 +1,139 @@
+{
+  "Common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "retry": "Try again",
+    "clear": "Clear",
+    "all": "All",
+    "search": "Search"
+  },
+
+  "Status": {
+    "DRAFT": "Draft",
+    "PENDING_PAYMENT": "Pending payment",
+    "PAID": "Paid",
+    "IN_PRODUCTION": "In production",
+    "SHIPPED": "Shipped",
+    "DELIVERED": "Delivered",
+    "CANCELLED": "Cancelled",
+    "REFUNDED": "Refunded",
+
+    "NEW": "New",
+    "CONTACTED": "Contacted",
+    "WON": "Won",
+    "LOST": "Lost",
+
+    "PENDING": "Pending",
+    "PUBLISHED": "Published",
+    "REJECTED": "Rejected",
+
+    "ACTIVE": "Active",
+    "INACTIVE": "Inactive"
+  },
+
+  "Role": {
+    "OWNER": "Owner",
+    "STAFF": "Staff"
+  },
+
+  "Carrier": {
+    "USPS": "USPS",
+    "UPS": "UPS",
+    "FEDEX": "FedEx",
+    "DHL": "DHL",
+    "OTHER": "Other"
+  },
+
+  "PrintMethod": {
+    "DTG": "DTG",
+    "SCREEN_PRINT": "Screen print",
+    "EMBROIDERY": "Embroidery",
+    "PUFF": "Puff",
+    "LEATHER_PATCH": "Leather patch",
+    "SUBLIMATION": "Sublimation",
+    "UV_PRINT": "UV print",
+    "ENGRAVING": "Engraving",
+    "DIGITAL_PRINT": "Digital print"
+  },
+
+  "Nav": {
+    "group": "Back office",
+    "expand": "Show {section} shortcuts",
+    "section": {
+      "overview": "Overview",
+      "orders": "Orders",
+      "quotes": "Bulk quotes",
+      "customers": "Customers",
+      "catalog": "Catalog",
+      "reviews": "Reviews",
+      "staff": "Staff"
+    },
+    "child": {
+      "mine": "Mine",
+      "products": "Products",
+      "colors": "Colours",
+      "sizes": "Sizes",
+      "pricing": "Price tiers"
+    }
+  },
+
+  "Breadcrumb": {
+    "new": "New",
+    "record": {
+      "quotes": "Quote",
+      "customers": "Customer"
+    }
+  },
+
+  "Chrome": {
+    "brandSub": "back office",
+    "themeToggle": {
+      "aria": "Change theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "languageToggle": {
+      "aria": "Change language",
+      "en": "English",
+      "vi": "Tiếng Việt",
+      "error": "Could not change the language"
+    },
+    "user": {
+      "signOut": "Sign out",
+      "signingOut": "Signing out…",
+      "confirmTitle": "Sign out?",
+      "confirmBody": "This ends the session for {user} on this device. You will need to sign in with Google again to get back in.",
+      "stay": "Stay signed in"
+    }
+  },
+
+  "Login": {
+    "brand": "INKHAUS",
+    "brandSub": "Back office",
+    "title": "Sign in",
+    "description": "Staff accounts only.",
+    "submit": "Sign in with Google",
+    "footer": "Only the addresses already on the allowlist. Sessions last 12 hours.",
+    "errorTitle": "Sign-in failed",
+    "errors": {
+      "CANCELLED": "Sign-in was cancelled.",
+      "EXPIRED": "That sign-in link has expired. Please try again.",
+      "NO_CODE": "Google did not return an authorization code.",
+      "EXCHANGE": "Could not complete sign-in with Google. Please try again.",
+      "NOT_ALLOWED": "That account is not allowed in the back office.",
+      "UNREACHABLE": "Could not reach the INKHAUS API.",
+      "RATE_LIMITED": "Too many sign-in attempts. Wait a minute and try again.",
+      "NOT_CONFIGURED": "Google sign-in is not configured yet.",
+      "UNKNOWN": "Sign-in failed. Please try again."
+    }
+  },
+
+  "Errors": {
+    "pageTitle": "Something went wrong",
+    "alertTitle": "This page could not be loaded",
+    "digest": "digest {digest}",
+    "retry": "Try again"
+  }
+}

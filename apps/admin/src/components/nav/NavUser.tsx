@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronsUpDown, LogOut } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
 import { logout } from "@/app/actions";
@@ -39,6 +40,7 @@ function initials(user: AdminUser) {
 }
 
 export function NavUser({ user }: { user: AdminUser }) {
+  const t = useTranslations("Chrome.user");
   const { isMobile } = useSidebar();
   const [pending, startTransition] = useTransition();
   const [confirming, setConfirming] = useState(false);
@@ -62,7 +64,10 @@ export function NavUser({ user }: { user: AdminUser }) {
                   load-bearing fact in a tool where it decides what you may do -
                   an operator needs to know at a glance whether they can refund.
                   The email moves into the menu, one click away.
-                  One element, one line: e2e reads this exact string. */}
+                  One element, one line: e2e reads this exact string - which is
+                  also why the role here stays the lower-cased CODE and is not
+                  translated. It is a machine fact in a data-shaped slot; the
+                  translated role name belongs on a StatusBadge, not here. */}
               <span
                 className="flex-1 truncate text-left text-sm font-medium"
                 data-testid="current-user"
@@ -98,7 +103,7 @@ export function NavUser({ user }: { user: AdminUser }) {
                 it - including a logout in flight. */}
             <DropdownMenuItem data-testid="sign-out" onSelect={() => setConfirming(true)}>
               <LogOut />
-              Sign out
+              {t("signOut")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -112,15 +117,14 @@ export function NavUser({ user }: { user: AdminUser }) {
         >
           <AlertDialogContent data-testid="sign-out-dialog">
             <AlertDialogHeader>
-              <AlertDialogTitle>Sign out?</AlertDialogTitle>
+              <AlertDialogTitle>{t("confirmTitle")}</AlertDialogTitle>
               <AlertDialogDescription>
-                This ends the session for {user.name ?? user.email} on this device. You will need to
-                sign in with Google again to get back in.
+                {t("confirmBody", { user: user.name ?? user.email })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel data-testid="sign-out-cancel" disabled={pending}>
-                Stay signed in
+                {t("stay")}
               </AlertDialogCancel>
               {/* `onClick` + a transition rather than <form action={logout}>:
                   calling the "use server" function is a plain RPC, and the
@@ -139,7 +143,7 @@ export function NavUser({ user }: { user: AdminUser }) {
                 }}
               >
                 <LogOut />
-                {pending ? "Signing out…" : "Sign out"}
+                {pending ? t("signingOut") : t("signOut")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

@@ -1,4 +1,5 @@
 import { loadRootEnv } from "@inkhaus/env";
+import createNextIntlPlugin from "next-intl/plugin";
 
 // There is no apps/admin/.env.local - the whole monorepo shares the one at the
 // repo root. Values already in the environment win, which is what lets the e2e
@@ -20,4 +21,13 @@ const nextConfig = {
   transpilePackages: ['@inkhaus/shared'],
 };
 
-export default nextConfig;
+// The one sanctioned edit to this file for UI work (AGENTS.md s7). All the
+// plugin does is alias `next-intl/config` to the request module below, so that
+// getTranslations() and getLocale() can find it.
+//
+// The path is relative on purpose: under Turbopack the plugin refuses an
+// absolute one. No `turbopack: {}` key is needed to go with it - the plugin
+// spreads `config.turbopack` and writes its own `resolveAlias`, and on Next 16
+// it takes that branch whether or not the TURBOPACK env var is set. It wires the
+// webpack alias too, so `next build --webpack` still resolves.
+export default createNextIntlPlugin('./src/i18n/request.ts')(nextConfig);

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 
@@ -12,6 +13,10 @@ import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui
  * everywhere else the accent is reserved for state, not decoration.
  */
 export function BrandHeader() {
+  // "INKHAUS" and "IH" are the brand and are never translated; only the line
+  // under them says what this particular app is.
+  const t = useTranslations("Chrome");
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -24,7 +29,7 @@ export function BrandHeader() {
               <span className="truncate text-sm font-black uppercase tracking-tight">
                 INKHAUS
               </span>
-              <span className="text-muted-foreground truncate text-xs">back office</span>
+              <span className="text-muted-foreground truncate text-xs">{t("brandSub")}</span>
             </div>
           </Link>
         </SidebarMenuButton>

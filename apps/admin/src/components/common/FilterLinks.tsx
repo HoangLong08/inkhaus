@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
-import { humanize } from "@/lib/format";
+import { useStatusLabel } from "@/i18n/labels";
 import { hrefWith, type Params } from "@/lib/url";
 
 type Props = {
@@ -18,7 +19,11 @@ type Props = {
   params?: Params;
   testId?: string;
   ariaLabel: string;
-  /** the link that clears `param`; `null` leaves it out */
+  /**
+   * The link that clears `param`. `null` leaves it out; `undefined` takes the
+   * translated default. Neither may be a default parameter any more - the value
+   * comes from a hook, and a hook cannot be called in a parameter list.
+   */
   allLabel?: string | null;
   /** how a value is shown; the value itself is always on `data-value` */
   label?: (value: string) => string;
@@ -48,10 +53,20 @@ export default function FilterLinks({
   params = {},
   testId = "filter-link",
   ariaLabel,
-  allLabel = "All",
-  label = humanize,
+  allLabel,
+  label,
 }: Props) {
-  const entries: (string | undefined)[] = allLabel === null ? [...values] : [undefined, ...values];
+  const t = useTranslations("Common");
+  // Called unconditionally, because `label` used to be a default parameter and a
+  // hook cannot live there. The `t.has()` guard inside is what keeps the
+  // non-status rows working: `sort_asc` and friends are not in the Status table,
+  // so they fall through to humanize() exactly as they did before.
+  const statusLabel = useStatusLabel();
+  const show = label ?? statusLabel;
+  const clearLabel = allLabel === undefined ? t("all") : allLabel;
+
+  const entries: (string | undefined)[] =
+    clearLabel === null ? [...values] : [undefined, ...values];
 
   return (
     <nav aria-label={ariaLabel} className="flex flex-wrap gap-1.5">
@@ -79,7 +94,7 @@ export default function FilterLinks({
               data-value={dataValue}
               {...mirror}
             >
-              {value === undefined ? allLabel : label(value)}
+              {value === undefined ? clearLabel : show(value)}
             </Link>
           </Button>
         );

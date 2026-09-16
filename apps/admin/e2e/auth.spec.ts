@@ -47,7 +47,13 @@ test.describe("admin sign-in", () => {
     await signIn(page, "owner");
 
     await expect(page).toHaveURL(new RegExp("/$"));
-    await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+    // Compared with the nav's own label rather than a literal, the nav.spec
+    // idiom: the page is translated, so "Overview" is only one of its names.
+    // `current-user` below is NOT translated - the role there is a machine fact.
+    const overview = page.locator('[data-testid="nav-link"][data-section="overview"]');
+    const label = (await overview.innerText()).trim();
+    expect(label).not.toBe("");
+    await expect(page.getByRole("heading", { name: label })).toBeVisible();
     await expect(page.getByTestId("current-user")).toContainText("owner");
     expect(await sessionCookie(page)).not.toBeNull();
   });
@@ -60,8 +66,10 @@ test.describe("admin sign-in", () => {
   test("a valid Google account that is NOT on the allowlist is refused", async ({ page }) => {
     await signIn(page, "outsider");
 
-    await expect(page).toHaveURL(/\/login\?error=/);
-    await expect(page.getByTestId("login-error")).toContainText("not allowed");
+    // The URL carries a CODE, not a sentence, so this asserts the machine fact
+    // and the alert's visibility rather than its wording.
+    await expect(page).toHaveURL(/\/login\?error=NOT_ALLOWED/);
+    await expect(page.getByTestId("login-error")).toBeVisible();
     expect(await sessionCookie(page), "a refused sign-in must leave no session").toBeNull();
   });
 
@@ -76,8 +84,8 @@ test.describe("admin sign-in", () => {
   test("cancelling at the consent screen returns without a session", async ({ page }) => {
     await signIn(page, "cancel");
 
-    await expect(page).toHaveURL(/\/login\?error=/);
-    await expect(page.getByTestId("login-error")).toContainText("cancelled");
+    await expect(page).toHaveURL(/\/login\?error=CANCELLED/);
+    await expect(page.getByTestId("login-error")).toBeVisible();
     expect(await sessionCookie(page)).toBeNull();
   });
 
@@ -95,8 +103,8 @@ test.describe("admin sign-in", () => {
     forged.searchParams.set("state", "not-the-state-we-issued");
 
     await page.goto(forged.toString());
-    await expect(page).toHaveURL(/\/login\?error=/);
-    await expect(page.getByTestId("login-error")).toContainText("expired");
+    await expect(page).toHaveURL(/\/login\?error=EXPIRED/);
+    await expect(page.getByTestId("login-error")).toBeVisible();
     expect(await sessionCookie(page)).toBeNull();
   });
 

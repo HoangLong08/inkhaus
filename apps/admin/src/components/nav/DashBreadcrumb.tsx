@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment } from "react";
 
-import { breadcrumbFor } from "@/components/nav/nav-config";
+import { breadcrumbFor, type Crumb } from "@/components/nav/nav-config";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -13,6 +13,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { useKeyLabel } from "@/i18n/labels";
 
 /**
  * section › sub-section › record, read off `nav-config.ts` - never a
@@ -28,6 +29,12 @@ import {
  */
 export function DashBreadcrumb() {
   const crumbs = breadcrumbFor(usePathname());
+  const label = useKeyLabel();
+
+  // The Crumb union is what keeps a record id out of t(): a `text` crumb is an
+  // order number or a slug and is printed exactly as it arrived.
+  const read = (crumb: Crumb) => (crumb.kind === "key" ? label(crumb.labelKey) : crumb.text);
+  const mono = (crumb: Crumb) => (crumb.kind === "text" && crumb.mono ? "font-mono" : undefined);
 
   return (
     <Breadcrumb>
@@ -39,20 +46,17 @@ export function DashBreadcrumb() {
               {i > 0 ? <BreadcrumbSeparator className="hidden sm:block" /> : null}
               <BreadcrumbItem className={last ? undefined : "hidden sm:block"}>
                 {last ? (
-                  <BreadcrumbPage
-                    className={crumb.mono ? "font-mono" : undefined}
-                    data-testid="breadcrumb-current"
-                  >
-                    {crumb.label}
+                  <BreadcrumbPage className={mono(crumb)} data-testid="breadcrumb-current">
+                    {read(crumb)}
                   </BreadcrumbPage>
                 ) : (
                   <BreadcrumbLink asChild>
                     <Link
                       href={crumb.href}
-                      className={crumb.mono ? "font-mono" : undefined}
+                      className={mono(crumb)}
                       data-testid="breadcrumb-link"
                     >
-                      {crumb.label}
+                      {read(crumb)}
                     </Link>
                   </BreadcrumbLink>
                 )}

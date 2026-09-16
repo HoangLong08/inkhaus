@@ -1,0 +1,139 @@
+{
+  "Common": {
+    "save": "Lưu",
+    "cancel": "Huỷ",
+    "close": "Đóng",
+    "retry": "Thử lại",
+    "clear": "Xoá lọc",
+    "all": "Tất cả",
+    "search": "Tìm kiếm"
+  },
+
+  "Status": {
+    "DRAFT": "Nháp",
+    "PENDING_PAYMENT": "Chờ thanh toán",
+    "PAID": "Đã thanh toán",
+    "IN_PRODUCTION": "Đang sản xuất",
+    "SHIPPED": "Đã gửi hàng",
+    "DELIVERED": "Đã giao",
+    "CANCELLED": "Đã huỷ",
+    "REFUNDED": "Đã hoàn tiền",
+
+    "NEW": "Mới",
+    "CONTACTED": "Đã liên hệ",
+    "WON": "Chốt được",
+    "LOST": "Không chốt",
+
+    "PENDING": "Chờ duyệt",
+    "PUBLISHED": "Đã đăng",
+    "REJECTED": "Đã từ chối",
+
+    "ACTIVE": "Đang hoạt động",
+    "INACTIVE": "Ngừng hoạt động"
+  },
+
+  "Role": {
+    "OWNER": "Chủ sở hữu",
+    "STAFF": "Nhân viên"
+  },
+
+  "Carrier": {
+    "USPS": "USPS",
+    "UPS": "UPS",
+    "FEDEX": "FedEx",
+    "DHL": "DHL",
+    "OTHER": "Khác"
+  },
+
+  "PrintMethod": {
+    "DTG": "DTG",
+    "SCREEN_PRINT": "In lụa",
+    "EMBROIDERY": "Thêu",
+    "PUFF": "In nổi",
+    "LEATHER_PATCH": "Patch da",
+    "SUBLIMATION": "In chuyển nhiệt",
+    "UV_PRINT": "In UV",
+    "ENGRAVING": "Khắc",
+    "DIGITAL_PRINT": "In kỹ thuật số"
+  },
+
+  "Nav": {
+    "group": "Quản trị",
+    "expand": "Hiện lối tắt của {section}",
+    "section": {
+      "overview": "Tổng quan",
+      "orders": "Đơn hàng",
+      "quotes": "Báo giá sỉ",
+      "customers": "Khách hàng",
+      "catalog": "Danh mục",
+      "reviews": "Đánh giá",
+      "staff": "Nhân sự"
+    },
+    "child": {
+      "mine": "Của tôi",
+      "products": "Sản phẩm",
+      "colors": "Màu sắc",
+      "sizes": "Kích cỡ",
+      "pricing": "Bậc giá"
+    }
+  },
+
+  "Breadcrumb": {
+    "new": "Tạo mới",
+    "record": {
+      "quotes": "Báo giá",
+      "customers": "Khách hàng"
+    }
+  },
+
+  "Chrome": {
+    "brandSub": "hậu đài",
+    "themeToggle": {
+      "aria": "Đổi giao diện",
+      "light": "Sáng",
+      "dark": "Tối",
+      "system": "Theo hệ thống"
+    },
+    "languageToggle": {
+      "aria": "Đổi ngôn ngữ",
+      "en": "English",
+      "vi": "Tiếng Việt",
+      "error": "Không đổi được ngôn ngữ"
+    },
+    "user": {
+      "signOut": "Đăng xuất",
+      "signingOut": "Đang đăng xuất…",
+      "confirmTitle": "Đăng xuất?",
+      "confirmBody": "Thao tác này kết thúc phiên của {user} trên thiết bị này. Bạn sẽ phải đăng nhập lại bằng Google.",
+      "stay": "Ở lại"
+    }
+  },
+
+  "Login": {
+    "brand": "INKHAUS",
+    "brandSub": "Hậu đài",
+    "title": "Đăng nhập",
+    "description": "Chỉ dành cho tài khoản nhân sự.",
+    "submit": "Đăng nhập bằng Google",
+    "footer": "Chỉ những địa chỉ đã có trong danh sách cho phép. Phiên kéo dài 12 giờ.",
+    "errorTitle": "Đăng nhập thất bại",
+    "errors": {
+      "CANCELLED": "Bạn đã huỷ đăng nhập.",
+      "EXPIRED": "Liên kết đăng nhập đã hết hạn. Vui lòng thử lại.",
+      "NO_CODE": "Google không trả về mã uỷ quyền.",
+      "EXCHANGE": "Không hoàn tất được đăng nhập với Google. Vui lòng thử lại.",
+      "NOT_ALLOWED": "Tài khoản này không được phép vào hậu đài.",
+      "UNREACHABLE": "Không kết nối được tới INKHAUS API.",
+      "RATE_LIMITED": "Thử đăng nhập quá nhiều lần. Đợi một phút rồi thử lại.",
+      "NOT_CONFIGURED": "Đăng nhập Google chưa được cấu hình.",
+      "UNKNOWN": "Đăng nhập thất bại. Vui lòng thử lại."
+    }
+  },
+
+  "Errors": {
+    "pageTitle": "Đã có lỗi xảy ra",
+    "alertTitle": "Không tải được trang này",
+    "digest": "digest {digest}",
+    "retry": "Thử lại"
+  }
+}

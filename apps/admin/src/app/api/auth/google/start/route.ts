@@ -13,8 +13,9 @@ import { safeNext } from "@/lib/safe-next";
  * needs no client JavaScript at all.
  */
 export async function POST(request: NextRequest) {
+  // a CODE, not a sentence - /login owns the words; see the callback's fail()
   if (!isGoogleConfigured()) {
-    redirect("/login?error=" + encodeURIComponent("Google sign-in is not configured yet."));
+    redirect("/login?error=NOT_CONFIGURED");
   }
 
   const form = await request.formData();

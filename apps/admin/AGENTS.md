@@ -191,6 +191,16 @@ it, not an approximation.
 - **`--app-header-h` is the one place the app header's height is written.**
   `(dash)/layout.tsx` sets the header with `h-(--app-header-h)` and
   `common/ListPage.tsx` subtracts it from `100svh`. Neither may hard-code 3.5rem.
+- **A label in a fixed-width chrome slot is at most 16 characters in *every*
+  locale** — a sidebar item, a table head, a filter chip, a `size="sm"` button.
+  Vietnamese runs 15–30% longer than English and this app is a 14px root with
+  `h-9` rows and `px-3` cells, so the two languages have to share one layout.
+  `--sidebar-width` is 16rem in generated `ui/sidebar.tsx` and **widening it is a
+  fork**; `SidebarMenuButton` truncates, so a label that does not fit silently
+  becomes an ellipsis rather than a visible bug. A Vietnamese string that will
+  not fit is therefore a design change, not a translation: shorten the English
+  too. "Bulk quotes" → "Báo giá sỉ", not "Báo giá số lượng lớn".
+  `npm run i18n:check` enforces the 16 on the `Nav` namespace.
 
 **The type is Inter and JetBrains Mono, loaded with `next/font/google`** in
 `app/layout.tsx` and wired into `--font-sans` / `--font-mono` in `@theme`, so
@@ -290,6 +300,14 @@ Also frozen: `lib/{api-guard,api-response,dal,format,session,query-client,url}.t
 `components/{common,nav,providers,ui}/**`, `StatusBadge`, `StatusFilterLinks`,
 `Pager`, `skeletons` (use `TableSkeleton` with your own columns).
 
+The i18n work changed five of those under §9 and they are listed here so the next
+reader knows it was deliberate: `nav-config.ts` carries `labelKey`s instead of
+titles, `NavMain` / `DashBreadcrumb` / `NavUser` / `BrandHeader` / `ThemeToggle`
+read them, `StatusBadge` and `common/FilterLinks.tsx` take their label from
+`@/i18n/labels` instead of `humanize`, and `components/nav/` gained
+`LanguageToggle.tsx`. `lib/format.ts` was **not** touched and must not be:
+numbers, money and dates stay en-US / USD / UTC in every locale.
+
 - `adminApi.lookups` (`staffDirectory`, `catalogOptions`) is shared reference
   data. Read it from there; do not add a second copy to a feature file.
 - `requestRaw(path)` returns the upstream `Response` unread, for a body that must
@@ -357,8 +375,8 @@ an HttpOnly cookie and stays that way.
   disable it on that line with the reason (`-- same-origin BFF image; this app
   runs no image optimizer`). Never point either at the API's origin.
 - Every BFF handler starts with `await requireCapability(action)` from
-  `src/lib/api-guard.ts` — or `requireAdminApi()` for `/me`, which is about the
-  session itself — **not** `requireAdmin()`. The latter calls `redirect()`,
+  `src/lib/api-guard.ts` — or `requireAdminApi()` for `/me` and `/locale`, which
+  are about the viewer rather than about a feature — **not** `requireAdmin()`. The latter calls `redirect()`,
   which in a Route Handler is a 307 to an HTML page; `fetch` follows it and
   reports a 200 with a login document in the body. `proxy.ts` answers `/api/*`
   with a 401 for the same reason.
@@ -410,7 +428,7 @@ conventions are what keep it from being rewritten every time the UI moves.
   | area | ids |
   |---|---|
   | login | `google-form`, `google-signin`, `login-error` |
-  | chrome | `user-menu`, `current-user`, `sign-out`, `sign-out-dialog`, `sign-out-{confirm,cancel}`, `sidebar-toggle`, `breadcrumb-current`, `breadcrumb-link`, `theme-toggle`, `theme-{light,dark,system}`, `nav-link` (data-section), `nav-expand` (data-section), `nav-sub-link` (data-section, data-value), `owners-only` |
+  | chrome | `user-menu`, `current-user`, `sign-out`, `sign-out-dialog`, `sign-out-{confirm,cancel}`, `sidebar-toggle`, `breadcrumb-current`, `breadcrumb-link`, `theme-toggle`, `theme-{light,dark,system}`, `language-toggle`, `language-{en,vi}`, `nav-link` (data-section), `nav-expand` (data-section), `nav-sub-link` (data-section, data-value), `owners-only` |
   | shared | `status-badge` (data-status), `status-filter` (data-status, data-count), `pager`, `pager-{first,previous,page,next,last}`, `pager-count` (data-page, data-pages), `list-page`, `list-footer`, `list-empty` (data-reason), `list-range` (data-from, data-to, data-total), `filter-link` (data-param, data-value), `sort-head` (data-sort, data-active), `page-size` (data-limit), `{prefix}-date-{trigger,apply,clear,preset}` |
   | overview | `stat-tile` (data-status, data-count), `recent-order` (data-number), `recent-orders-all`, `range-link` (data-range), `revenue-total` (data-value), `revenue-chart` (data-empty), `series-table`, `top-product` (data-slug), `quote-funnel` (data-created), `attention-item` (data-kind, data-id, data-email, data-number) |
   | orders | `orders-meta`, `orders-search`, `orders-search-clear`, `orders-columns`, `orders-column` (data-column, data-visible), `order-row` (data-number, data-status, data-total), `order-row-link`, `order-customer-link` (data-customer-id), `orders-export` (data-capped), `orders-export-capped`, `orders-empty` (data-reason), `orders-empty-action` |
@@ -474,7 +492,13 @@ conventions are what keep it from being rewritten every time the UI moves.
   to agree with the row count below them.
 - **Machine-readable values go on a `data-*` attribute, not in the label** —
   `data-status="PENDING_PAYMENT"` beside the text "Pending payment", so a test
-  never has to know about `humanize()`.
+  never has to know what that status is called this week, or in which language.
+  **A test compares a label to another label, never to a literal.**
+  `e2e/nav.spec.ts` reads the nav's own `innerText` and asserts the breadcrumb
+  matches it; `auth.spec.ts` and `ui.spec.ts` do the same for the `<h1>` and the
+  breadcrumb. That idiom is the model: it survives a rename, a rewording and a
+  translation, and it is stronger than the literal it replaced because it
+  asserts the two places actually agree.
 - **Radix portals its overlays.** `Select`, `DropdownMenu`, `Dialog`, `Tooltip`
   and `Popover` render into a portal that does not exist until the trigger is
   activated, and a `SelectItem` is `[role="option"]`, not an `<option>`. A test
@@ -495,6 +519,13 @@ conventions are what keep it from being rewritten every time the UI moves.
   anywhere in its tree. Every shadcn component it uses is plain markup or a Slot.
   This is why `Providers` is mounted in `(dash)/layout.tsx` and only
   `ThemeProvider` — which fetches nothing — sits in the root layout.
+  It is translated **server-side only**, with `await getTranslations()`; the intl
+  provider is a client component and is mounted in `(dash)` for exactly the same
+  reason the query provider is. A sign-in failure travels in the URL as a **code**
+  (`?error=NOT_ALLOWED`), never as a sentence — a page cannot translate a string
+  it was handed already written. The codes are `LOGIN_ERROR_CODES` in
+  `src/i18n/login-errors.ts`, typed off the `Login.errors` catalogue, and
+  `e2e/auth.spec.ts` asserts the code in the URL rather than the wording.
 - Form controls are labelled through `<FormLabel>` / `<FormField>`, which wires
   `htmlFor`, `aria-describedby` and `aria-invalid` for you. A bare `<Input>` with
   a placeholder for a label is a bug.
@@ -514,13 +545,28 @@ block above is not a formality.
   landing straight back on the error.
 - **`loading.tsx` does not cover runtime data read in a layout.** Keep
   `(dash)/layout.tsx`'s awaits to `requireAdmin()` and `cookies()`, and fetch page
-  data in `page.tsx`, or the skeleton never appears.
+  data in `page.tsx`, or the skeleton never appears. `getLocale()` and
+  `getMessages()` are allowed alongside them: neither is a fetch — both read
+  `src/i18n/request.ts`, which reads the very cookie store that layout already
+  awaits — and both are React-cached.
+- **No route in this app is statically rendered, and none may be.** The root
+  layout reads the locale cookie to set `<html lang>`, which makes every route
+  dynamic. Harmless today — `(dash)` and `(print)` are already `force-dynamic`
+  and `/login` awaits its `searchParams` — but a new page here cannot be static,
+  and reaching for `generateStaticParams` or `'use cache'` to make it so will
+  fight the language switch instead.
 - `proxy.ts`, not `middleware.ts`. The middleware convention is deprecated, and
   the `edge` runtime is not available in `proxy`.
 - `params` and `searchParams` are Promises — in route handlers as well as pages.
   `await` them, then zod-parse.
-- Do not add a PWA, a service worker or the image optimizer here. See
-  `next.config.mjs`, which needs no edits for UI work.
+- Do not add a PWA, a service worker or the image optimizer here.
+  `next.config.mjs` needs no edits for UI work, with exactly one exception
+  already taken: the `createNextIntlPlugin('./src/i18n/request.ts')` wrap, which
+  only aliases `next-intl/config` to that module. The path must stay **relative**
+  — Turbopack refuses an absolute one — and no `turbopack: {}` key goes with it,
+  because the plugin spreads `config.turbopack` and writes its own
+  `resolveAlias`. It wires the webpack alias too, so `next build --webpack` still
+  resolves.
 
 ## 8. Commands.
 
@@ -528,6 +574,7 @@ block above is not a formality.
 npm run dev -w @inkhaus/admin        # :4322
 npm run typecheck -w @inkhaus/admin  # tsc 7
 npm run lint -w @inkhaus/admin
+npm run i18n:check -w @inkhaus/admin # the message catalogues; see s9
 npm run build -w @inkhaus/admin
 npm run test:e2e:admin               # from the repo root; needs `npm run db:up`
 npx shadcn@latest add <component>    # from apps/admin
@@ -554,3 +601,122 @@ Two things about running it twice:
   an order to *act on* must use `findActionableOrder`; one that just needs an
   order number should read `data-number` off the list instead, or it fails on
   fixture exhaustion rather than on its own subject.
+
+## 9. Language: English and Vietnamese, from a cookie.
+
+The back office is bilingual. `next-intl` in its **without-i18n-routing** mode:
+the locale is a cookie, and there is **no `/vi` prefix and no `[locale]`
+segment**. This is a staff tool that is never indexed, so a prefix would buy no
+SEO and cost every href in the app — `hrefWith()` and every list control built on
+it. `src/proxy.ts` is not involved and must not become involved.
+
+**Only words are translated.** Numbers, money and dates stay `en-US` / `USD` /
+`UTC` and are formatted by `lib/format.ts`, which is frozen and stays frozen.
+`$1,234.56` and "Sep 5, 2026, 11:30 PM UTC" read the same for every operator, and
+the UTC rule in §4 is untouched. Two consequences, both enforced:
+
+- **A message never contains an ICU formatting function** — no `{x, number}`,
+  `{x, date}`, `{x, time}`, no `::` skeletons, and `useFormatter()` is not used
+  in this app. Format with `lib/format.ts` and interpolate the **string**.
+- **A plural never uses `#`**, which the message's own locale would format. Pass
+  the pre-formatted value beside the raw count:
+  `t("owners", { count: n, formatted: count(n) })` against
+  `"{count, plural, one {{formatted} owner} other {{formatted} owners}}"`.
+  Vietnamese has exactly one plural category, so its branch is `other` alone. A
+  TypeScript ternary over a count is not pluralisation and is not allowed.
+
+### Where the pieces are
+
+| file | what |
+|---|---|
+| `messages/{en,vi}.json` | the catalogues, one file per locale, top-level key = namespace |
+| `src/i18n/config.ts` | `LOCALES`, `DEFAULT_LOCALE`, the cookie name and its attributes |
+| `src/i18n/request.ts` | the one place the locale is decided, once per request |
+| `src/i18n/errors.ts` | `onError` / `getMessageFallback` — **not** inherited by the client provider, so they are wired twice |
+| `src/i18n/messages.ts` | `pick()` and `CHROME_NAMESPACES` |
+| `src/i18n/labels.ts` | the code→label tables that replaced `humanize()` |
+| `src/i18n/login-errors.ts` | the `?error=` codes, typed off the catalogue |
+| `src/i18n/IntlClientProvider.tsx` | the client boundary, mounted in `(dash)` only |
+| `scripts/i18n-check.mjs` | seven assertions; `npm run i18n:check` |
+
+### Where the provider goes, and where it does not
+
+`IntlClientProvider` is mounted in `(dash)/layout.tsx`, **outside `Providers`**
+and nowhere else. Outside, because a switch is a `router.refresh()`: that changes
+its `messages` prop, React reconciles `Providers` in place rather than
+remounting it, and the TanStack `QueryClient` and its whole cache survive.
+
+- **`/login` and `(print)` have no provider at all** and translate with
+  `await getTranslations()`. For `/login` that is the §6 rule, not a preference.
+  `(print)`'s only client component takes its one label as a prop.
+- `global-error.tsx` and `(print)/error.tsx` stay English permanently: each
+  replaces the root layout, neither can `await getLocale()`, and they are reached
+  when the thing that broke may be the stylesheet.
+- It ships `pick(messages, CHROME_NAMESPACES)`, not the whole catalogue.
+  `(dash)` is `force-dynamic`, so **every navigation re-streams whatever the
+  provider holds**. A page that needs its own namespace nests a second provider
+  from its Server Component; nested providers do not merge, so spread both sets.
+
+### Labels are keys, never sentences
+
+`humanize()` de-snake-cased an enum code into English and cannot be translated by
+construction. It survives in `lib/format.ts` as the **unknown-code fallback
+inside `src/i18n/labels.ts`, and nothing else** — the API is a separate
+deployment (§3.4) and a status this build has never heard of must still render.
+
+- `useCodeLabel(ns)` in a shared or client component, `getCodeLabel(ns)` in an
+  `async` one. `ns` is `Status`, `Role`, `Carrier` or `PrintMethod`.
+- `nav-config.ts` carries `labelKey`, a fully qualified key. `Crumb` is a union:
+  `kind: "key"` is translated, `kind: "text"` is printed verbatim — which is how
+  the rule that an order number must never be title-cased became a type.
+- **`@inkhaus/shared` is never translated and never gains a dependency.**
+  `PRINT_METHOD_LABEL` and `CARRIER_LABEL` are not display-only: `apps/api`
+  round-trips the print-method label as a **wire value** and
+  `shared-contract.spec.ts` pins the two together. This app keys its own
+  translations off the **code**; `i18n:check` asserts the `en` catalogue still
+  agrees with those tables.
+
+### Key convention
+
+`PascalCase` namespace, either a route area or one of the cross-cutting ones
+(`Common`, `Status`, `Role`, `Carrier`, `PrintMethod`, `Nav`, `Breadcrumb`,
+`Chrome`, `List`, `Errors`, `Login`). Inside it: `camelCase` keys, except a code
+table, whose keys are the enum value **verbatim**. At most two levels below the
+namespace. A key names *what the string is*, not what it says
+(`emptyFiltered.title`, not `noOrdersMatch`), from the fixed suffix set
+`.title .description .label .placeholder .aria .action .confirm .cancel
+.success .error .meta .hint`. ICU placeholders are `camelCase` and match the
+variable name at the call site. Both catalogues always carry the same keys and
+the same placeholders.
+
+### Proving nothing is half-translated
+
+Four layers, because the e2e suite runs a **production** build where a missing
+key renders `Orders.title` rather than crashing, and every spec matches on
+`data-testid` so it sails straight past:
+
+1. `npm run typecheck` — `labels.ts` fails, naming the code, when a shared enum
+   gains a value that either catalogue lacks.
+2. `npm run i18n:check` — key parity, placeholder parity, the ICU bans, enum
+   coverage, every namespace and `labelKey` written in `src/`, and the 16-char
+   chrome budget from §2.
+3. `npm run dev` — `onError` **throws** on a missing key outside production,
+   client and server alike, so it is an error overlay you cannot walk past.
+4. production — `getMessageFallback` renders `"Namespace.key"` and `onError`
+   logs it. Visible and greppable, never a blank cell and never a crash.
+
+**Layer 2 is not redundant with layer 1.** `tsconfig.json` sets
+`incremental: true`, and a warm `tsconfig.tsbuildinfo` will not re-check after a
+change to a `.json` file alone — a catalogue-only edit can pass a green
+`typecheck` and still be broken. `i18n:check` always runs.
+
+`e2e/i18n.spec.ts` never asserts Vietnamese copy. It asserts that a label
+**changed**, that `<html lang>` followed, that every `data-*` value did **not**
+move, and that money still matches `/^\$[\d,]+\.\d{2}$/` and a timestamp still
+ends in `UTC` — the last two being the regression test for "only words are
+translated".
+
+**A signed-out visitor cannot switch**, and that is accepted. `proxy.ts` answers
+`PUT /api/admin/locale` with 401 when there is no session, and `/login` has no
+toggle because a second `<form>` would break §6. The first visit ever is English;
+every visit after a choice honours it.

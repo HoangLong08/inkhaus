@@ -4,6 +4,7 @@ import type { AdminRoleCode } from "@inkhaus/shared/orders";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
 import {
@@ -28,6 +29,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
+import { useKeyLabel } from "@/i18n/labels";
 
 /**
  * The sidebar, drawn from `nav-config.ts` and filtered by `can()` - the UI third
@@ -35,6 +37,7 @@ import {
  * "owners only" anyway, but a link that always leads there is noise.
  */
 export function NavMain({ role }: { role: AdminRoleCode }) {
+  const t = useTranslations();
   const pathname = usePathname();
   // Reading the query string is what lets a filter child light up. Note this
   // needs a <Suspense> boundary in a prerendered tree - safe here only because
@@ -44,7 +47,7 @@ export function NavMain({ role }: { role: AdminRoleCode }) {
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Back office</SidebarGroupLabel>
+      <SidebarGroupLabel>{t("Nav.group")}</SidebarGroupLabel>
       <SidebarMenu>
         {sections.map((section) => (
           <NavSectionItem
@@ -68,7 +71,10 @@ function NavSectionItem({
   inSection: boolean;
   lit: ReturnType<typeof activeChildren>;
 }) {
+  const t = useTranslations();
+  const label = useKeyLabel();
   const children = section.children ?? [];
+  const title = label(section.labelKey);
 
   // Controlled, and synced to navigation: a section opens when you go into it
   // and folds when you leave, and the chevron still toggles it in between. The
@@ -88,10 +94,10 @@ function NavSectionItem({
         {/* A link, not a collapsible trigger: every section is a real
             destination, and sidebar-07's stock markup makes the parent
             unclickable. The chevron gets its own hit target below. */}
-        <SidebarMenuButton asChild tooltip={section.title} isActive={inSection && lit.size === 0}>
+        <SidebarMenuButton asChild tooltip={title} isActive={inSection && lit.size === 0}>
           <Link href={section.href} data-testid="nav-link" data-section={section.id}>
             <section.icon />
-            <span>{section.title}</span>
+            <span>{title}</span>
           </Link>
         </SidebarMenuButton>
 
@@ -100,7 +106,10 @@ function NavSectionItem({
             <CollapsibleTrigger asChild>
               <SidebarMenuAction
                 className="data-[state=open]:rotate-90"
-                aria-label={`Show ${section.title.toLowerCase()} shortcuts`}
+                // No .toLowerCase() on the section name any more: lower-casing a
+                // noun mid-sentence is an English habit, and it is wrong on a
+                // Vietnamese one. The English reads "Show Orders shortcuts".
+                aria-label={t("Nav.expand", { section: title })}
                 data-testid="nav-expand"
                 data-section={section.id}
               >
@@ -118,7 +127,7 @@ function NavSectionItem({
                         data-section={section.id}
                         data-value={child.value}
                       >
-                        <span>{child.title}</span>
+                        <span>{label(child.labelKey)}</span>
                       </Link>
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>

@@ -15,20 +15,22 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { humanize } from "@/lib/format";
-
 /**
  * The one list of what the back office contains. The sidebar, the breadcrumb and
  * the role filter all read it, so a new section is one entry here rather than
  * three edits that have to agree.
  *
- * FROZEN after Phase 0. Every section the plan calls for is already listed.
+ * FROZEN after Phase 0. Every section the plan calls for is already listed. It
+ * carries `labelKey`s, never sentences: this module is machine-readable, and the
+ * words live in messages/{en,vi}.json. `i18n-check` assertion 6 asserts that
+ * every key written here resolves in both catalogues.
  */
 
 export type NavChild = {
   /** machine value - `data-value` on the sidebar link */
   value: string;
-  title: string;
+  /** a fully qualified message key, so the consumer needs no namespace */
+  labelKey: string;
   /**
    * A path, optionally with a query string. With one (`/orders?status=PAID`)
    * it is a FILTER: lit when the path is equal and every param matches. Without
@@ -44,7 +46,8 @@ export type NavChild = {
 export type NavSection = {
   /** `data-section` on every link the sidebar draws for it */
   id: string;
-  title: string;
+  /** a fully qualified message key, so the consumer needs no namespace */
+  labelKey: string;
   href: string;
   icon: LucideIcon;
   capability?: AdminAction;
@@ -53,7 +56,7 @@ export type NavSection = {
    * id itself, in monospace - an order number or a product slug is worth
    * reading; a cuid is not, so customers and quotes say "Customer" / "Quote".
    */
-  recordLabel?: string;
+  recordLabelKey?: string;
   children?: readonly NavChild[];
 };
 
@@ -69,24 +72,25 @@ export const ORDER_QUEUES: readonly OrderStatusCode[] = [
   "SHIPPED",
 ];
 
+/** a status child reads its label straight out of the shared Status table */
 const byStatus = (base: string, statuses: readonly string[]): NavChild[] =>
   statuses.map((status) => ({
     value: status,
-    title: humanize(status),
+    labelKey: `Status.${status}`,
     href: `${base}?status=${status}`,
   }));
 
 export const NAV: readonly NavSection[] = [
   {
     id: "overview",
-    title: "Overview",
+    labelKey: "Nav.section.overview",
     href: "/",
     icon: LayoutDashboard,
     capability: "stats.view",
   },
   {
     id: "orders",
-    title: "Orders",
+    labelKey: "Nav.section.orders",
     href: "/orders",
     icon: Package,
     capability: "orders.view",
@@ -94,40 +98,45 @@ export const NAV: readonly NavSection[] = [
   },
   {
     id: "quotes",
-    title: "Bulk quotes",
+    labelKey: "Nav.section.quotes",
     href: "/quotes",
     icon: FileText,
     capability: "quotes.manage",
-    recordLabel: "Quote",
+    recordLabelKey: "Breadcrumb.record.quotes",
     children: [
       ...byStatus("/quotes", QUOTE_STATUSES),
-      { value: "mine", title: "Mine", href: "/quotes?assignee=me" },
+      { value: "mine", labelKey: "Nav.child.mine", href: "/quotes?assignee=me" },
     ],
   },
   {
     id: "customers",
-    title: "Customers",
+    labelKey: "Nav.section.customers",
     href: "/customers",
     icon: Users,
     capability: "customers.view",
-    recordLabel: "Customer",
+    recordLabelKey: "Breadcrumb.record.customers",
   },
   {
     id: "catalog",
-    title: "Catalog",
+    labelKey: "Nav.section.catalog",
     href: "/catalog",
     icon: Shirt,
     capability: "catalog.view",
     children: [
-      { value: "products", title: "Products", href: "/catalog", recordBase: "/catalog/products" },
-      { value: "colors", title: "Colours", href: "/catalog/colors" },
-      { value: "sizes", title: "Sizes", href: "/catalog/sizes" },
-      { value: "pricing", title: "Price tiers", href: "/catalog/pricing" },
+      {
+        value: "products",
+        labelKey: "Nav.child.products",
+        href: "/catalog",
+        recordBase: "/catalog/products",
+      },
+      { value: "colors", labelKey: "Nav.child.colors", href: "/catalog/colors" },
+      { value: "sizes", labelKey: "Nav.child.sizes", href: "/catalog/sizes" },
+      { value: "pricing", labelKey: "Nav.child.pricing", href: "/catalog/pricing" },
     ],
   },
   {
     id: "reviews",
-    title: "Reviews",
+    labelKey: "Nav.section.reviews",
     href: "/reviews",
     icon: Star,
     capability: "reviews.moderate",
@@ -135,7 +144,7 @@ export const NAV: readonly NavSection[] = [
   },
   {
     id: "staff",
-    title: "Staff",
+    labelKey: "Nav.section.staff",
     href: "/staff",
     icon: UserCog,
     capability: "staff.view",
@@ -191,7 +200,15 @@ export function activeChildren(section: NavSection, pathname: string, search: Se
 
 /* -------------------------------------------------------------- breadcrumb */
 
-export type Crumb = { label: string; href: string; mono?: boolean };
+/**
+ * A crumb is either a key to translate or a string to print verbatim, and the
+ * union is how this file's own rule is expressed in the type system: an order
+ * number like INK-2024-0001 must never be title-cased, and a record id must
+ * never reach `t()`. A reviewer can see which branch is which at a glance.
+ */
+export type Crumb =
+  | { kind: "key"; labelKey: string; href: string }
+  | { kind: "text"; text: string; href: string; mono?: boolean };
 
 function decode(segment: string) {
   try {
@@ -207,18 +224,21 @@ function decode(segment: string) {
  * current page.
  */
 export function breadcrumbFor(pathname: string): Crumb[] {
-  if (pathname === "/") return [{ label: "Overview", href: "/" }];
+  if (pathname === "/") return [{ kind: "key", labelKey: "Nav.section.overview", href: "/" }];
 
   const section = NAV.find((s) => s.href !== "/" && ownsPath(s.href, pathname));
   if (!section) {
-    // a route nobody registered: say what the URL says rather than nothing
+    // a route nobody registered: say what the URL says rather than nothing. The
+    // URL is not copy, so it is printed, never translated.
     const [first, ...rest] = pathname.split("/").filter(Boolean);
-    const crumbs: Crumb[] = [{ label: decode(first), href: `/${first}` }];
-    if (rest.length) crumbs.push({ label: rest.map(decode).join("/"), href: pathname, mono: true });
+    const crumbs: Crumb[] = [{ kind: "text", text: decode(first), href: `/${first}` }];
+    if (rest.length) {
+      crumbs.push({ kind: "text", text: rest.map(decode).join("/"), href: pathname, mono: true });
+    }
     return crumbs;
   }
 
-  const crumbs: Crumb[] = [{ label: section.title, href: section.href }];
+  const crumbs: Crumb[] = [{ kind: "key", labelKey: section.labelKey, href: section.href }];
 
   let recordBase = section.href;
   const sub = section.children?.find(
@@ -227,7 +247,7 @@ export function breadcrumbFor(pathname: string): Crumb[] {
       (pathname === child.href || ownsPath(child.recordBase ?? child.href, pathname)),
   );
   if (sub) {
-    crumbs.push({ label: sub.title, href: sub.href });
+    crumbs.push({ kind: "key", labelKey: sub.labelKey, href: sub.href });
     recordBase = sub.recordBase ?? sub.href;
   }
 
@@ -236,9 +256,13 @@ export function breadcrumbFor(pathname: string): Crumb[] {
     : [];
   if (rest.length > 0) {
     const id = rest.map(decode).join("/");
-    if (section.recordLabel) crumbs.push({ label: section.recordLabel, href: pathname });
-    else if (id === "new") crumbs.push({ label: "New", href: pathname });
-    else crumbs.push({ label: id, href: pathname, mono: true });
+    if (section.recordLabelKey) {
+      crumbs.push({ kind: "key", labelKey: section.recordLabelKey, href: pathname });
+    } else if (id === "new") {
+      crumbs.push({ kind: "key", labelKey: "Breadcrumb.new", href: pathname });
+    } else {
+      crumbs.push({ kind: "text", text: id, href: pathname, mono: true });
+    }
   }
 
   return crumbs;

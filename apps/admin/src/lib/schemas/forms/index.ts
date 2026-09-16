@@ -10,3 +10,4 @@ export * from "./customers";
 export * from "./catalog";
 export * from "./reviews";
 export * from "./staff";
+export * from "./locale";

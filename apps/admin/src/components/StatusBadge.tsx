@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { humanize } from "@/lib/format";
+import { useStatusLabel } from "@/i18n/labels";
 
 /**
  * Colour carries meaning here, so it is never the only signal - the label is
@@ -130,8 +130,14 @@ export function statusColor(status: string): string {
 }
 
 /**
- * `data-status` carries the raw enum value so a test never has to know about
- * humanize(); the text stays the human label.
+ * `data-status` carries the raw enum value so a test never has to know about the
+ * label; the text stays the human label, now in the viewer's language.
+ *
+ * `useStatusLabel` is a hook, which is fine here: this is a shared component -
+ * no "use client", not async - so it runs as a Server Component inside the
+ * server-rendered tables and as a Client Component inside the leaves, and
+ * next-intl's `useTranslations` works in both. It is not reachable from
+ * (print), which has no provider.
  */
 export default function StatusBadge({
   status,
@@ -140,6 +146,7 @@ export default function StatusBadge({
   status: string;
   className?: string;
 }) {
+  const label = useStatusLabel();
   const Icon = ICON[status];
 
   return (
@@ -150,7 +157,7 @@ export default function StatusBadge({
       className={cn(tones({ tone: TONE[status] }), className)}
     >
       {Icon ? <Icon aria-hidden /> : null}
-      {humanize(status)}
+      {label(status)}
     </Badge>
   );
 }

@@ -1,5 +1,6 @@
 import { AlertCircle } from "lucide-react";
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { loginErrorCode } from "@/i18n/login-errors";
 import { safeNext } from "@/lib/safe-next";
 
 export const metadata: Metadata = { title: "Sign in — INKHAUS Back Office" };
@@ -27,35 +29,45 @@ export const metadata: Metadata = { title: "Sign in — INKHAUS Back Office" };
  *
  * Two constraints an e2e test enforces: this page must work with scripting off,
  * and it must contain exactly one <form>.
+ *
+ * It is translated SERVER-SIDE ONLY, with `getTranslations()`. There is no
+ * NextIntlClientProvider anywhere above it - that would be a client component in
+ * this tree, which is exactly what the rule above forbids - and `?error=` is a
+ * CODE rather than a sentence, because a page cannot translate a string it was
+ * handed already written.
  */
 export default async function LoginPage({
   searchParams,
 }: {
   searchParams: Promise<{ next?: string; error?: string }>;
 }) {
-  const { next, error } = await searchParams;
+  const [{ next, error }, t] = await Promise.all([searchParams, getTranslations("Login")]);
+
+  // An unrecognised code - an old bookmark, a hand-typed URL - still says
+  // something useful rather than rendering the raw code at the operator.
+  const code = loginErrorCode(error);
 
   return (
     <main className="bg-muted flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm space-y-6">
         <div>
-          <p className="text-lg font-black uppercase tracking-tight">INKHAUS</p>
-          <p className="text-muted-foreground text-sm">Back office</p>
+          <p className="text-lg font-black uppercase tracking-tight">{t("brand")}</p>
+          <p className="text-muted-foreground text-sm">{t("brandSub")}</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Sign in</CardTitle>
-            <CardDescription>Staff accounts only.</CardDescription>
+            <CardTitle>{t("title")}</CardTitle>
+            <CardDescription>{t("description")}</CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-4">
             {/* Alert already sets role="alert" */}
-            {error ? (
+            {code ? (
               <Alert variant="destructive" data-testid="login-error">
                 <AlertCircle />
-                <AlertTitle>Sign-in failed</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
+                <AlertTitle>{t("errorTitle")}</AlertTitle>
+                <AlertDescription>{t(`errors.${code}`)}</AlertDescription>
               </Alert>
             ) : null}
 
@@ -68,15 +80,13 @@ export default async function LoginPage({
                 data-testid="google-signin"
               >
                 <GoogleMark />
-                Sign in with Google
+                {t("submit")}
               </Button>
             </form>
           </CardContent>
 
           <CardFooter>
-            <p className="text-muted-foreground text-xs">
-              Only the addresses already on the allowlist. Sessions last 12 hours.
-            </p>
+            <p className="text-muted-foreground text-xs">{t("footer")}</p>
           </CardFooter>
         </Card>
       </div>

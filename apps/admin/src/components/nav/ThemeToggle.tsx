@@ -1,6 +1,7 @@
 "use client";
 
 import { Monitor, Moon, Sun, SunMoon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 
 import { Button } from "@/components/ui/button";
@@ -13,9 +14,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const OPTIONS = [
-  { value: "light", label: "Light", icon: Sun },
-  { value: "dark", label: "Dark", icon: Moon },
-  { value: "system", label: "System", icon: Monitor },
+  { value: "light", icon: Sun },
+  { value: "dark", icon: Moon },
+  { value: "system", icon: Monitor },
 ] as const;
 
 /**
@@ -28,6 +29,7 @@ const OPTIONS = [
  * the menu, which only mounts on the client when the menu is opened.
  */
 export function ThemeToggle({ className }: { className?: string }) {
+  const t = useTranslations("Chrome.themeToggle");
   const { theme, setTheme } = useTheme();
 
   return (
@@ -38,7 +40,7 @@ export function ThemeToggle({ className }: { className?: string }) {
           size="icon"
           className={className}
           data-testid="theme-toggle"
-          aria-label="Change theme"
+          aria-label={t("aria")}
         >
           <SunMoon className="size-4" />
         </Button>
@@ -52,7 +54,7 @@ export function ThemeToggle({ className }: { className?: string }) {
               data-testid={`theme-${option.value}`}
             >
               <option.icon className="size-4" />
-              {option.label}
+              {t(option.value)}
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { getLocale } from "next-intl/server";
 
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 
@@ -60,11 +61,24 @@ export const metadata: Metadata = {
  * theme too, and it issues no requests - the sign-in page stays a pure server
  * render with no data fetching. The query provider, which does fetch, is mounted
  * one level down in (dash)/layout.tsx instead.
+ *
+ * The intl provider is mounted one level down for the *same* reason, and a
+ * stricter one: it is a client component, and /login must have none. Only
+ * `getLocale()` runs here, which is server-side, so that <html lang> is right on
+ * every page including /login and the packing slip. The fonts above already load
+ * the "vietnamese" subset, so the glyphs were paid for before this line existed.
+ *
+ * Reading the locale means reading a cookie, so every route in this app is now
+ * dynamic. Harmless today - (dash) and (print) are already force-dynamic and
+ * /login awaits its searchParams - but it is why a new statically rendered route
+ * here is no longer possible. See AGENTS.md s7.
  */
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
+
   return (
     <html
-      lang="en"
+      lang={locale}
       suppressHydrationWarning
       className={`${inter.variable} ${jetbrainsMono.variable}`}
     >

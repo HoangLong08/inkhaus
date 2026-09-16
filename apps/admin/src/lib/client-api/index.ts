@@ -3,6 +3,7 @@ import { adminUserSchema } from "@/lib/schemas/api";
 import { catalogClient } from "./catalog";
 import { call } from "./core";
 import { customersClient } from "./customers";
+import { localeClient } from "./locale";
 import { orderClient } from "./order";
 import { quotesClient } from "./quotes";
 import { reviewsClient } from "./reviews";
@@ -17,6 +18,7 @@ import { staffClient } from "./staff";
  */
 export const clientApi = {
   me: () => call("/me", adminUserSchema),
+  locale: localeClient,
   order: orderClient,
   quotes: quotesClient,
   customers: customersClient,
