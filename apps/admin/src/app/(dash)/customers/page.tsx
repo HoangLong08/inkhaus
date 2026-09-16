@@ -1,15 +1,16 @@
-import ListEmpty from "@/components/common/ListEmpty";
 import { CUSTOMER_ORDER_FILTERS } from "@inkhaus/shared/admin";
 import { SearchX } from "lucide-react";
 
 import FilterLinks from "@/components/common/FilterLinks";
+import ListEmpty from "@/components/common/ListEmpty";
+import ListFooter from "@/components/common/ListFooter";
 import ListHeader from "@/components/common/ListHeader";
+import ListPage from "@/components/common/ListPage";
 import UrlSearchBox from "@/components/common/UrlSearchBox";
 import CustomersTable from "@/components/customers/CustomersTable";
-import Pager from "@/components/Pager";
 import { adminApi } from "@/lib/api";
 import { count } from "@/lib/format";
-import { customersQuerySchema } from "@/lib/schemas/params";
+import { customersLinkParams, customersQuerySchema } from "@/lib/schemas/params";
 
 export const metadata = { title: "Customers — INKHAUS Back Office" };
 
@@ -30,31 +31,36 @@ export default async function CustomersPage({
   // ?hasOrders= is dropped rather than passed to the API.
   const params = customersQuerySchema.parse(await searchParams);
   const { data, meta } = await adminApi.customers.list(params);
+  const linkParams = customersLinkParams(params);
 
   return (
-    <div className="space-y-6">
+    <ListPage>
       <ListHeader
         title="Customers"
+        description="One row per address: everyone who has ordered, asked for a quote or saved a design."
         meta={`${count(meta.total)} total · page ${meta.page} of ${meta.pages}`}
         metaTestId="customers-meta"
       />
 
-      <UrlSearchBox
-        label="Search customers"
-        placeholder="Email, name, company or phone…"
-        testId="customers-search"
-        clearTestId="customers-search-clear"
-      />
-
-      <FilterLinks
-        base="/customers"
-        param="hasOrders"
-        values={CUSTOMER_ORDER_FILTERS}
-        active={params.hasOrders}
-        params={params}
-        ariaLabel="Filter customers by orders"
-        label={(value) => ORDER_FILTER_LABEL[value] ?? value}
-      />
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="w-full sm:w-64">
+          <UrlSearchBox
+            label="Search customers"
+            placeholder="Email, name, company or phone…"
+            testId="customers-search"
+            clearTestId="customers-search-clear"
+          />
+        </div>
+        <FilterLinks
+          base="/customers"
+          param="hasOrders"
+          values={CUSTOMER_ORDER_FILTERS}
+          active={params.hasOrders}
+          params={linkParams}
+          ariaLabel="Filter customers by orders"
+          label={(value) => ORDER_FILTER_LABEL[value] ?? value}
+        />
+      </div>
 
       {data.length === 0 ? (
         <ListEmpty
@@ -64,10 +70,20 @@ export default async function CustomersPage({
           reason="filtered"
         />
       ) : (
-        <CustomersTable customers={data} params={params} />
+        <>
+          <CustomersTable customers={data} params={params} />
+          <ListFooter
+            base="/customers"
+            page={meta.page}
+            pages={meta.pages}
+            limit={params.limit}
+            total={meta.total}
+            shown={data.length}
+            noun="customers"
+            params={linkParams}
+          />
+        </>
       )}
-
-      <Pager base="/customers" page={meta.page} pages={meta.pages} params={params} />
-    </div>
+    </ListPage>
   );
 }

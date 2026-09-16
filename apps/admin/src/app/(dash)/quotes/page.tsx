@@ -1,4 +1,3 @@
-import ListEmpty from "@/components/common/ListEmpty";
 import {
   QUOTE_ASSIGNEE_KEYWORDS,
   QUOTE_FOLLOW_UP_FILTERS,
@@ -9,6 +8,7 @@ import { AlarmClock, SearchX } from "lucide-react";
 import Link from "next/link";
 
 import FilterLinks from "@/components/common/FilterLinks";
+import ListEmpty from "@/components/common/ListEmpty";
 import ListHeader from "@/components/common/ListHeader";
 import PageSizeLinks from "@/components/common/PageSizeLinks";
 import { ROW_LINK } from "@/components/common/row-link";

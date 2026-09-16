@@ -3,8 +3,8 @@ import Link from "next/link";
 
 import { ROW_LINK } from "@/components/common/row-link";
 import SortableHead from "@/components/common/SortableHead";
+import TableCard from "@/components/common/TableCard";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -39,7 +39,7 @@ export default function CustomersTable({
   const head = { base: BASE, params, sort };
 
   return (
-    <Card className="overflow-hidden p-0">
+    <TableCard fill>
       <Table>
         <TableHeader>
           <TableRow>
@@ -77,7 +77,9 @@ export default function CustomersTable({
                   ) : null}
                 </div>
               </TableCell>
-              <TableCell className="max-w-56">
+              {/* two lines, so it states its own py- and TableCard's `py-0`
+                  steps aside for it - see the DENSITY block there */}
+              <TableCell className="max-w-56 py-1.5 leading-tight">
                 <div className="truncate">{customer.name ?? "—"}</div>
                 {customer.company ? (
                   <div className="text-muted-foreground truncate text-xs">{customer.company}</div>
@@ -100,6 +102,6 @@ export default function CustomersTable({
           ))}
         </TableBody>
       </Table>
-    </Card>
+    </TableCard>
   );
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import ListEmpty from "@/components/common/ListEmpty";
 import { can } from "@inkhaus/shared/admin";
 import type { AdminRoleCode } from "@inkhaus/shared/orders";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -9,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import ColorDialog from "@/components/catalog/ColorDialog";
+import ListEmpty from "@/components/common/ListEmpty";
 import StatusBadge from "@/components/StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";

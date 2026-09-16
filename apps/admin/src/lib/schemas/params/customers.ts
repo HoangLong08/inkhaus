@@ -1,7 +1,7 @@
 import { CUSTOMER_ORDER_FILTERS, CUSTOMER_SORTS } from "@inkhaus/shared/admin";
 import { z } from "zod";
 
-import { pageParam, searchParam } from "./common";
+import { DEFAULT_PAGE_SIZE, limitParam, pageParam, searchParam } from "./common";
 
 const customersQueryShape = z.object({
   q: searchParam,
@@ -13,6 +13,7 @@ const customersQueryShape = z.object({
   // a second time is a real sort; only a hand-typed one lands here.
   sort: z.enum(CUSTOMER_SORTS).optional().catch(undefined),
   page: pageParam,
+  limit: limitParam,
 });
 
 /**
@@ -22,6 +23,18 @@ const customersQueryShape = z.object({
 export const customersQuerySchema = customersQueryShape.catch(() => customersQueryShape.parse({}));
 
 export type CustomersQuery = z.infer<typeof customersQuerySchema>;
+
+/**
+ * What every control on this page carries in its links. The default page size is
+ * left unspelled, so a plain `/customers` link and every filter, sort and pager
+ * link built from these params stay free of `?limit=20`.
+ */
+export function customersLinkParams(params: CustomersQuery) {
+  return {
+    ...params,
+    limit: params.limit === DEFAULT_PAGE_SIZE ? undefined : params.limit,
+  };
+}
 
 /**
  * A customer id from a URL segment. The API issues cuids; this accepts anything

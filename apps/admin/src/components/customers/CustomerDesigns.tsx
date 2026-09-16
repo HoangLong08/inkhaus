@@ -1,6 +1,6 @@
-import ListEmpty from "@/components/common/ListEmpty";
 import { ImageOff, Palette, TriangleAlert } from "lucide-react";
 
+import ListEmpty from "@/components/common/ListEmpty";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";

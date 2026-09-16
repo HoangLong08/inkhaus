@@ -1,4 +1,3 @@
-import ListEmpty from "@/components/common/ListEmpty";
 import { can, PRODUCT_SORTS, type ProductSort } from "@inkhaus/shared/admin";
 import { CATEGORIES, CATEGORY_LABEL, GARMENT_TYPE_LABEL } from "@inkhaus/shared/taxonomy";
 import { cn } from "cn";
@@ -6,6 +5,7 @@ import { Plus, SearchX } from "lucide-react";
 import Link from "next/link";
 
 import FilterLinks from "@/components/common/FilterLinks";
+import ListEmpty from "@/components/common/ListEmpty";
 import ListHeader from "@/components/common/ListHeader";
 import PageSizeLinks from "@/components/common/PageSizeLinks";
 import { ROW_LINK } from "@/components/common/row-link";
