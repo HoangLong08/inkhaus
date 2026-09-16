@@ -50,13 +50,24 @@ your way, change the rule here in the same commit — do not work around it.
   for `ui/*`, so a generated file is recognisable at a glance. A plain module
   that is not a component (`nav/nav-config.ts`) is lowercase.
 - **List controls are shared, not rebuilt per page.** `components/common/` has
-  `ListHeader`, `TableCard`, `ListFooter`, `UrlSearchBox`, `FilterLinks`,
-  `SortableHead`, `PageSizeLinks`, `DateRangePicker` and `OwnersOnly`; `Pager` and
-  `StatusBadge` sit one level up.
+  `ListPage`, `ListHeader`, `TableCard`, `ListFooter`, `UrlSearchBox`,
+  `FilterLinks`, `SortableHead`, `PageSizeLinks`, `DateRangePicker` and
+  `OwnersOnly`; `Pager` and `StatusBadge` sit one level up.
   Every one of them takes the page's zod-parsed params and builds its links with
   `hrefWith()` from `src/lib/url.ts`: keep every other param, drop `page`. A
   control that assembles its own query string from the one key it knows about is
   how the status chips used to throw away the search.
+- **A list page owns the viewport, and `ListPage` is how.** It is
+  `calc(100svh - var(--app-header-h))`, a flex column, `gap-2`, with the shell's
+  `px-4 py-8 md:px-8` cancelled by negative margins and a `p-3` gutter of its own.
+  Every child keeps its natural height except the `TableCard`, which **must**
+  carry `fill` — without it the table is only as tall as its rows and the footer
+  strands halfway up the screen. Do not reach for `min-h-0` on `(dash)`'s shared
+  `<main>` to get the same effect: `SidebarProvider` is `min-h-svh`, a floor
+  rather than a height, so collapsing main's min-content contribution stops the
+  provider growing and **clips** the twelve non-list pages instead of scrolling
+  them. `/customers/[id]` is deliberately not a `ListPage`: its tables sit in
+  `Tabs` inside a `lg:grid-cols-[2fr_1fr]`, and locking the page fights that grid.
 - **A list's table lives in `TableCard`, and that is where its density lives.**
   `ui/table.tsx` is generated and has 19 importers - the packing slip, the tier
   editor, the overview's tables - so its `th { h-10 px-2 }` and `td { p-2 }` are
@@ -364,7 +375,7 @@ conventions are what keep it from being rewritten every time the UI moves.
   |---|---|
   | login | `google-form`, `google-signin`, `login-error` |
   | chrome | `user-menu`, `current-user`, `sign-out`, `sign-out-dialog`, `sign-out-{confirm,cancel}`, `sidebar-toggle`, `breadcrumb-current`, `breadcrumb-link`, `theme-toggle`, `theme-{light,dark,system}`, `nav-link` (data-section), `nav-expand` (data-section), `nav-sub-link` (data-section, data-value), `owners-only` |
-  | shared | `status-badge` (data-status), `status-filter` (data-status, data-count), `pager`, `pager-{first,previous,page,next,last}`, `pager-count` (data-page, data-pages), `list-footer`, `list-range` (data-from, data-to, data-total), `filter-link` (data-param, data-value), `sort-head` (data-sort, data-active), `page-size` (data-limit), `{prefix}-date-{trigger,apply,clear,preset}` |
+  | shared | `status-badge` (data-status), `status-filter` (data-status, data-count), `pager`, `pager-{first,previous,page,next,last}`, `pager-count` (data-page, data-pages), `list-page`, `list-footer`, `list-range` (data-from, data-to, data-total), `filter-link` (data-param, data-value), `sort-head` (data-sort, data-active), `page-size` (data-limit), `{prefix}-date-{trigger,apply,clear,preset}` |
   | overview | `stat-tile` (data-status, data-count), `recent-order` (data-number), `recent-orders-all`, `range-link` (data-range), `revenue-total` (data-value), `revenue-chart` (data-empty), `series-table`, `top-product` (data-slug), `quote-funnel` (data-created), `attention-item` (data-kind, data-id, data-email, data-number) |
   | orders | `orders-meta`, `orders-search`, `orders-search-clear`, `orders-columns`, `orders-column` (data-column, data-visible), `order-row` (data-number, data-status, data-total), `order-row-link`, `order-customer-link` (data-customer-id), `orders-export` (data-capped), `orders-export-capped`, `orders-empty` (data-reason), `orders-empty-action` |
   | order detail | `status-select`, `status-option` (data-status), `status-note`, `status-save`, `no-moves`, `order-timeline`, `status-confirm-dialog`, `status-confirm`, `status-confirm-cancel`, `status-tracking-carrier`, `status-tracking-carrier-option` (data-carrier), `status-tracking-number`, `tracking-carrier`, `tracking-carrier-option` (data-carrier), `tracking-number`, `tracking-save`, `tracking-link`, `order-note-input`, `order-note-save`, `timeline-event` (data-kind, data-status), `timeline-actor`, `timeline-tracking-link`, `customer-link`, `design-preview` (data-design, data-side), `quote-origin-link`, `packing-slip-link`, `packing-slip`, `packing-slip-print`, `packing-slip-back`, `order-back`, `order-not-found-back`, `packing-slip-not-found-back` |
