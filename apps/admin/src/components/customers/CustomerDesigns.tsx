@@ -1,15 +1,9 @@
+import ListEmpty from "@/components/common/ListEmpty";
 import { ImageOff, Palette, TriangleAlert } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import { adminApi, ApiError } from "@/lib/api";
 import { count, on } from "@/lib/format";
 
@@ -51,17 +45,12 @@ export default async function CustomerDesigns({
 
   if (designs.length === 0) {
     return (
-      <Card>
-        <Empty className="py-10">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <Palette />
-            </EmptyMedia>
-            <EmptyTitle>No saved designs</EmptyTitle>
-            <EmptyDescription>Nothing has been saved from the studio under this address.</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </Card>
+      <ListEmpty
+        icon={Palette}
+        title="No saved designs"
+        description="Nothing has been saved from the studio under this address."
+        reason="none"
+      />
     );
   }
 

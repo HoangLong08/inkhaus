@@ -1,6 +1,8 @@
 import type { OrderSort } from "@inkhaus/shared/orders";
+import { cn } from "cn";
 import Link from "next/link";
 
+import { ROW_LINK } from "@/components/common/row-link";
 import SortableHead from "@/components/common/SortableHead";
 import TableCard from "@/components/common/TableCard";
 import StatusBadge from "@/components/StatusBadge";
@@ -154,7 +156,7 @@ export default function OrdersTable({
                 <Link
                   href={`/orders/${order.number}`}
                   data-testid="order-row-link"
-                  className="focus-visible:after:ring-ring/50 font-mono font-semibold underline-offset-4 outline-none after:absolute after:inset-0 hover:underline focus-visible:after:ring-[3px] focus-visible:after:ring-inset"
+                  className={cn(ROW_LINK, "font-mono font-semibold")}
                 >
                   {order.number}
                 </Link>

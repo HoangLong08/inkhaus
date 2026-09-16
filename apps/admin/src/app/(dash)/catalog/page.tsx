@@ -1,24 +1,20 @@
+import ListEmpty from "@/components/common/ListEmpty";
 import { can, PRODUCT_SORTS, type ProductSort } from "@inkhaus/shared/admin";
 import { CATEGORIES, CATEGORY_LABEL, GARMENT_TYPE_LABEL } from "@inkhaus/shared/taxonomy";
+import { cn } from "cn";
 import { Plus, SearchX } from "lucide-react";
 import Link from "next/link";
 
 import FilterLinks from "@/components/common/FilterLinks";
 import ListHeader from "@/components/common/ListHeader";
 import PageSizeLinks from "@/components/common/PageSizeLinks";
+import { ROW_LINK } from "@/components/common/row-link";
 import SortableHead from "@/components/common/SortableHead";
 import UrlSearchBox from "@/components/common/UrlSearchBox";
 import Pager from "@/components/Pager";
 import StatusBadge from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import {
   Table,
   TableBody,
@@ -141,17 +137,12 @@ export default async function ProductsPage({
       </div>
 
       {data.length === 0 ? (
-        <Card>
-          <Empty className="py-10">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <SearchX />
-              </EmptyMedia>
-              <EmptyTitle>No products match</EmptyTitle>
-              <EmptyDescription>Try another category or status, or clear the search.</EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        </Card>
+        <ListEmpty
+          icon={SearchX}
+          title="No products match"
+          description="Try another category or status, or clear the search."
+          reason="filtered"
+        />
       ) : (
         <Card className="overflow-hidden p-0">
           <Table>
@@ -186,19 +177,16 @@ export default async function ProductsPage({
                   data-active={String(product.active)}
                 >
                   <TableCell>
-                    <Button
-                      asChild
-                      variant="link"
-                      size="sm"
-                      className="h-auto p-0 font-semibold after:absolute after:inset-0"
+                    {/* a plain <a>, not a Button variant="link": the Button was
+                        only ever here for the link colour, which a row link does
+                        not want, and it swallowed the focus ring. */}
+                    <Link
+                      href={`/catalog/products/${product.slug}`}
+                      data-testid="product-row-link"
+                      className={cn(ROW_LINK, "font-semibold")}
                     >
-                      <Link
-                        href={`/catalog/products/${product.slug}`}
-                        data-testid="product-row-link"
-                      >
-                        {product.name}
-                      </Link>
-                    </Button>
+                      {product.name}
+                    </Link>
                     <div className="text-muted-foreground text-xs">
                       <span className="font-mono">{product.slug}</span> ·{" "}
                       {GARMENT_TYPE_LABEL[product.type]}

@@ -1,14 +1,17 @@
+import ListEmpty from "@/components/common/ListEmpty";
 import {
   QUOTE_ASSIGNEE_KEYWORDS,
   QUOTE_FOLLOW_UP_FILTERS,
   QUOTE_STATUSES,
 } from "@inkhaus/shared/orders";
+import { cn } from "cn";
 import { AlarmClock, SearchX } from "lucide-react";
 import Link from "next/link";
 
 import FilterLinks from "@/components/common/FilterLinks";
 import ListHeader from "@/components/common/ListHeader";
 import PageSizeLinks from "@/components/common/PageSizeLinks";
+import { ROW_LINK } from "@/components/common/row-link";
 import UrlSearchBox from "@/components/common/UrlSearchBox";
 import Pager from "@/components/Pager";
 import { followUpState, formatFollowUp, todayUtc } from "@/components/quotes/quote-dates";
@@ -16,13 +19,6 @@ import QuoteStatusControl from "@/components/quotes/QuoteStatusControl";
 import StatusFilterLinks from "@/components/StatusFilterLinks";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import {
   Table,
   TableBody,
@@ -107,17 +103,12 @@ export default async function QuotesPage({
       </div>
 
       {data.length === 0 ? (
-        <Card>
-          <Empty className="py-10">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <SearchX />
-              </EmptyMedia>
-              <EmptyTitle>No quotes match</EmptyTitle>
-              <EmptyDescription>Try another filter, or clear the search.</EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        </Card>
+        <ListEmpty
+          icon={SearchX}
+          title="No quotes match"
+          description="Try another filter, or clear the search."
+          reason="filtered"
+        />
       ) : (
         <Card className="overflow-hidden p-0">
           <Table>
@@ -155,7 +146,7 @@ export default async function QuotesPage({
                       <Link
                         href={`/quotes/${quote.id}`}
                         data-testid="quote-row-link"
-                        className="focus-visible:ring-ring rounded-sm font-semibold outline-none after:absolute after:inset-0 hover:underline focus-visible:ring-2"
+                        className={cn(ROW_LINK, "font-semibold")}
                       >
                         {title}
                       </Link>

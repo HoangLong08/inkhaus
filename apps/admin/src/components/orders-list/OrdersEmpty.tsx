@@ -1,16 +1,6 @@
 import { PackageOpen, SearchX } from "lucide-react";
-import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
+import ListEmpty from "@/components/common/ListEmpty";
 
 export type OrdersEmptyReason = "none" | "filtered" | "page";
 
@@ -36,6 +26,10 @@ const COPY: Record<OrdersEmptyReason, { title: string; description: string; acti
  * orders, the filters exclude everything, or the URL asks for a page past the
  * end - an old link, or a list that shrank. Each gets its own words and, where
  * there is one, the way out. `data-reason` says which, for tests.
+ *
+ * The block itself is the shared `ListEmpty`; what is left here is the copy.
+ * The ids stay `orders-empty` / `orders-empty-action` rather than defaulting to
+ * `list-empty`, because `e2e/orders.spec.ts` asserts both by name.
  */
 export default function OrdersEmpty({
   reason,
@@ -46,28 +40,17 @@ export default function OrdersEmpty({
   actionHref?: string;
 }) {
   const copy = COPY[reason];
-  const Icon = reason === "none" ? PackageOpen : SearchX;
 
   return (
-    <Card>
-      <Empty className="py-10" data-testid="orders-empty" data-reason={reason}>
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <Icon />
-          </EmptyMedia>
-          <EmptyTitle>{copy.title}</EmptyTitle>
-          <EmptyDescription>{copy.description}</EmptyDescription>
-        </EmptyHeader>
-        {copy.action && actionHref ? (
-          <EmptyContent>
-            <Button asChild variant="outline" size="sm">
-              <Link href={actionHref} data-testid="orders-empty-action">
-                {copy.action}
-              </Link>
-            </Button>
-          </EmptyContent>
-        ) : null}
-      </Empty>
-    </Card>
+    <ListEmpty
+      icon={reason === "none" ? PackageOpen : SearchX}
+      title={copy.title}
+      description={copy.description}
+      action={copy.action}
+      actionHref={actionHref}
+      actionTestId="orders-empty-action"
+      reason={reason}
+      testId="orders-empty"
+    />
   );
 }

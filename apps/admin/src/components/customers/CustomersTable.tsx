@@ -1,5 +1,7 @@
+import { cn } from "cn";
 import Link from "next/link";
 
+import { ROW_LINK } from "@/components/common/row-link";
 import SortableHead from "@/components/common/SortableHead";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -64,7 +66,7 @@ export default function CustomersTable({
                   <Link
                     href={`${BASE}/${customer.id}`}
                     data-testid="customer-row-link"
-                    className="focus-visible:after:ring-ring truncate font-medium outline-none after:absolute after:inset-0 hover:underline focus-visible:after:ring-2 focus-visible:after:ring-inset"
+                    className={cn(ROW_LINK, "truncate font-medium")}
                   >
                     {customer.email}
                   </Link>

@@ -1,16 +1,10 @@
+import ListEmpty from "@/components/common/ListEmpty";
 import { PackageOpen } from "lucide-react";
 import Link from "next/link";
 
 import StatusBadge from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardFooter } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import {
   Table,
   TableBody,
@@ -39,17 +33,12 @@ export default function CustomerOrders({
 }) {
   if (orders.length === 0) {
     return (
-      <Card>
-        <Empty className="py-10">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <PackageOpen />
-            </EmptyMedia>
-            <EmptyTitle>No orders yet</EmptyTitle>
-            <EmptyDescription>Nothing has been ordered under this address.</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </Card>
+      <ListEmpty
+        icon={PackageOpen}
+        title="No orders yet"
+        description="Nothing has been ordered under this address."
+        reason="none"
+      />
     );
   }
 

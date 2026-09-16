@@ -1,3 +1,4 @@
+import ListEmpty from "@/components/common/ListEmpty";
 import { CUSTOMER_ORDER_FILTERS } from "@inkhaus/shared/admin";
 import { SearchX } from "lucide-react";
 
@@ -6,14 +7,6 @@ import ListHeader from "@/components/common/ListHeader";
 import UrlSearchBox from "@/components/common/UrlSearchBox";
 import CustomersTable from "@/components/customers/CustomersTable";
 import Pager from "@/components/Pager";
-import { Card } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import { adminApi } from "@/lib/api";
 import { count } from "@/lib/format";
 import { customersQuerySchema } from "@/lib/schemas/params";
@@ -64,17 +57,12 @@ export default async function CustomersPage({
       />
 
       {data.length === 0 ? (
-        <Card>
-          <Empty className="py-10">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <SearchX />
-              </EmptyMedia>
-              <EmptyTitle>No customers match</EmptyTitle>
-              <EmptyDescription>Try another part of their email or name, or clear the filter.</EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        </Card>
+        <ListEmpty
+          icon={SearchX}
+          title="No customers match"
+          description="Try another part of their email or name, or clear the filter."
+          reason="filtered"
+        />
       ) : (
         <CustomersTable customers={data} params={params} />
       )}

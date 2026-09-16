@@ -1,16 +1,10 @@
+import ListEmpty from "@/components/common/ListEmpty";
 import { FileText } from "lucide-react";
 import Link from "next/link";
 
 import StatusBadge from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardFooter } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import {
   Table,
   TableBody,
@@ -32,17 +26,12 @@ export default function CustomerQuotes({
 }) {
   if (quotes.length === 0) {
     return (
-      <Card>
-        <Empty className="py-10">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <FileText />
-            </EmptyMedia>
-            <EmptyTitle>No bulk quotes</EmptyTitle>
-            <EmptyDescription>This customer has never asked for a bulk quote.</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </Card>
+      <ListEmpty
+        icon={FileText}
+        title="No bulk quotes"
+        description="This customer has never asked for a bulk quote."
+        reason="none"
+      />
     );
   }
 

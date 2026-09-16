@@ -1,3 +1,4 @@
+import ListEmpty from "@/components/common/ListEmpty";
 import { can, REVIEW_STATUSES } from "@inkhaus/shared/admin";
 import { Inbox, SearchX } from "lucide-react";
 
@@ -7,14 +8,6 @@ import UrlSearchBox from "@/components/common/UrlSearchBox";
 import Pager from "@/components/Pager";
 import ReviewsTable from "@/components/reviews/ReviewsTable";
 import StatusFilterLinks from "@/components/StatusFilterLinks";
-import { Card } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import { adminApi } from "@/lib/api";
 import { requireAdmin } from "@/lib/dal";
 import { REVIEW_RATINGS, reviewsQuerySchema } from "@/lib/schemas/params";
@@ -79,21 +72,16 @@ export default async function ReviewsPage({
       </div>
 
       {data.length === 0 ? (
-        <Card>
-          <Empty className="py-10">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">{queueIsEmpty ? <Inbox /> : <SearchX />}</EmptyMedia>
-              <EmptyTitle>
-                {queueIsEmpty ? "Nothing waiting" : "No reviews match these filters"}
-              </EmptyTitle>
-              <EmptyDescription>
-                {queueIsEmpty
-                  ? "Every submitted review has been published or rejected."
-                  : "Try a different status or rating, or clear the search."}
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        </Card>
+        <ListEmpty
+          icon={queueIsEmpty ? Inbox : SearchX}
+          title={queueIsEmpty ? "Nothing waiting" : "No reviews match these filters"}
+          description={
+            queueIsEmpty
+              ? "Every submitted review has been published or rejected."
+              : "Try a different status or rating, or clear the search."
+          }
+          reason={queueIsEmpty ? "none" : "filtered"}
+        />
       ) : (
         <ReviewsTable
           reviews={data}

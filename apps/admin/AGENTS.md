@@ -101,8 +101,23 @@ your way, change the rule here in the same commit — do not work around it.
   moves. It is on the cell and not on the `<thead>` because a `table-header-group`
   is neither a reliable `position: sticky` box in older engines nor a reliable
   `box-shadow` box under `border-collapse`.
-- **A table has a stretched row link or a sticky actions column, never both.** The
-  row link is a real `<a>` whose `::after` is `absolute inset-0` over a `relative`
+- **A list's empty state is `ListEmpty`, once.** Six pages had hand-rolled the
+  same `<Card><Empty className="py-10">…` block, which is the bespoke widget the
+  first rule forbids. It replaces the table rather than sitting inside it, so
+  there is no header left over for the reader to ignore. `reason` carries the
+  machine-readable half (`none` / `filtered` / `page`) and an `action` appears
+  only when there is somewhere useful to go. `testId` defaults to `list-empty`;
+  a page overrides it only where a spec already names its own id, which today is
+  `/orders`. The four overview empties are a different shape — an `Empty` inside
+  a Card that already has a title — and stay as they are.
+- **A table has a stretched row link or a sticky actions column, never both**, and
+  today **no table in this app pins a column** — which is how that rule is
+  satisfied on all ten lists at once, and it keeps a whole class of
+  stacking-context bugs out of the app. No list here is wide enough to need
+  pinning; if one ever is, it gives up its row link first. The row link's class
+  string is `ROW_LINK` from `components/common/row-link.ts`, written once: it was
+  four strings that had drifted into three different focus behaviours. It is a
+  real `<a>` whose `::after` is `absolute inset-0` over a `relative`
   `<tr>` (`OrdersTable`, `CustomersTable`, the quotes and catalog lists). A
   `sticky` cell is positioned, creates a stacking context and must carry an opaque
   background, so it paints over that `::after` and swallows every click in it. For
@@ -396,7 +411,7 @@ conventions are what keep it from being rewritten every time the UI moves.
   |---|---|
   | login | `google-form`, `google-signin`, `login-error` |
   | chrome | `user-menu`, `current-user`, `sign-out`, `sign-out-dialog`, `sign-out-{confirm,cancel}`, `sidebar-toggle`, `breadcrumb-current`, `breadcrumb-link`, `theme-toggle`, `theme-{light,dark,system}`, `nav-link` (data-section), `nav-expand` (data-section), `nav-sub-link` (data-section, data-value), `owners-only` |
-  | shared | `status-badge` (data-status), `status-filter` (data-status, data-count), `pager`, `pager-{first,previous,page,next,last}`, `pager-count` (data-page, data-pages), `list-page`, `list-footer`, `list-range` (data-from, data-to, data-total), `filter-link` (data-param, data-value), `sort-head` (data-sort, data-active), `page-size` (data-limit), `{prefix}-date-{trigger,apply,clear,preset}` |
+  | shared | `status-badge` (data-status), `status-filter` (data-status, data-count), `pager`, `pager-{first,previous,page,next,last}`, `pager-count` (data-page, data-pages), `list-page`, `list-footer`, `list-empty` (data-reason), `list-range` (data-from, data-to, data-total), `filter-link` (data-param, data-value), `sort-head` (data-sort, data-active), `page-size` (data-limit), `{prefix}-date-{trigger,apply,clear,preset}` |
   | overview | `stat-tile` (data-status, data-count), `recent-order` (data-number), `recent-orders-all`, `range-link` (data-range), `revenue-total` (data-value), `revenue-chart` (data-empty), `series-table`, `top-product` (data-slug), `quote-funnel` (data-created), `attention-item` (data-kind, data-id, data-email, data-number) |
   | orders | `orders-meta`, `orders-search`, `orders-search-clear`, `orders-columns`, `orders-column` (data-column, data-visible), `order-row` (data-number, data-status, data-total), `order-row-link`, `order-customer-link` (data-customer-id), `orders-export` (data-capped), `orders-export-capped`, `orders-empty` (data-reason), `orders-empty-action` |
   | order detail | `status-select`, `status-option` (data-status), `status-note`, `status-save`, `no-moves`, `order-timeline`, `status-confirm-dialog`, `status-confirm`, `status-confirm-cancel`, `status-tracking-carrier`, `status-tracking-carrier-option` (data-carrier), `status-tracking-number`, `tracking-carrier`, `tracking-carrier-option` (data-carrier), `tracking-number`, `tracking-save`, `tracking-link`, `order-note-input`, `order-note-save`, `timeline-event` (data-kind, data-status), `timeline-actor`, `timeline-tracking-link`, `customer-link`, `design-preview` (data-design, data-side), `quote-origin-link`, `packing-slip-link`, `packing-slip`, `packing-slip-print`, `packing-slip-back`, `order-back`, `order-not-found-back`, `packing-slip-not-found-back` |

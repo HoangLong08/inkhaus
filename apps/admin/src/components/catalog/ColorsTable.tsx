@@ -1,5 +1,6 @@
 "use client";
 
+import ListEmpty from "@/components/common/ListEmpty";
 import { can } from "@inkhaus/shared/admin";
 import type { AdminRoleCode } from "@inkhaus/shared/orders";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -11,7 +12,6 @@ import ColorDialog from "@/components/catalog/ColorDialog";
 import StatusBadge from "@/components/StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Switch } from "@/components/ui/switch";
 import {
   Table,
@@ -79,17 +79,12 @@ export default function ColorsTable({ role }: { role: AdminRoleCode }) {
 
   if (colors.length === 0) {
     return (
-      <Card>
-        <Empty className="py-10">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <Palette />
-            </EmptyMedia>
-            <EmptyTitle>No colours yet</EmptyTitle>
-            <EmptyDescription>Add the first one to start offering products in it.</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </Card>
+      <ListEmpty
+        icon={Palette}
+        title="No colours yet"
+        description="Add the first one to start offering products in it."
+        reason="none"
+      />
     );
   }
 
