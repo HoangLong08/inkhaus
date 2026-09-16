@@ -14,7 +14,7 @@ export function OverviewTilesSkeleton() {
       {Array.from({ length: 7 }, (_, i) => (
         <Card key={i} className="gap-2">
           <CardHeader className="pb-0">
-            <Skeleton className="h-5 w-24 rounded-full" />
+            <Skeleton className="h-5 w-28 rounded-md" />
           </CardHeader>
           <CardContent>
             <Skeleton className="h-8 w-12" />

@@ -38,7 +38,7 @@ export default function Loading() {
             rows={3}
             columns={[
               { label: "Order", bar: "h-4 w-28" },
-              { label: "Status", bar: "h-5 w-24 rounded-full" },
+              { label: "Status", bar: "h-5 w-28 rounded-md" },
               { label: "Units", align: "right", bar: "h-4 w-8" },
               { label: "Total", align: "right", bar: "h-4 w-16" },
               { label: "Placed", align: "right", bar: "h-4 w-20" },

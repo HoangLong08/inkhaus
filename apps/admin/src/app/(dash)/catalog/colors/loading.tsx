@@ -12,7 +12,7 @@ export default function Loading() {
           { label: "Hex", bar: "h-4 w-16" },
           { label: "Products", align: "right", bar: "h-4 w-6" },
           { label: "Order lines", align: "right", bar: "h-4 w-8" },
-          { label: "Offered", bar: "h-5 w-24 rounded-full" },
+          { label: "Offered", bar: "h-5 w-28 rounded-md" },
         ]}
       />
     </div>

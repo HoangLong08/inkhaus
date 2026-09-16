@@ -1,5 +1,6 @@
 import { cn } from "cn";
 
+import TableCard from "@/components/common/TableCard";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -23,7 +24,7 @@ export function StatTilesSkeleton() {
       {Array.from({ length: 5 }, (_, i) => (
         <Card key={i} className="gap-2">
           <CardHeader className="pb-0">
-            <Skeleton className="h-5 w-24 rounded-full" />
+            <Skeleton className="h-5 w-28 rounded-md" />
           </CardHeader>
           <CardContent>
             <Skeleton className="h-8 w-12" />
@@ -44,7 +45,7 @@ export function LatestOrdersSkeleton() {
         {Array.from({ length: 8 }, (_, i) => (
           <li key={i} className="flex items-center gap-4 px-4 py-3">
             <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-5 w-20 rounded-full" />
+            <Skeleton className="h-5 w-24 rounded-md" />
             <Skeleton className="h-4 w-48" />
             <Skeleton className="ml-auto h-4 w-16" />
           </li>
@@ -58,23 +59,34 @@ export type SkeletonColumn = {
   /** the real column's heading, so the header row does not move either */
   label: string;
   align?: "left" | "right";
-  /** the placeholder bar; `h-5 w-24 rounded-full` for a status badge */
+  /** the placeholder bar; `h-5 w-28 rounded-md` for a status badge */
   bar?: string;
 };
 
 /**
  * Any list page's table. Pass the real page's columns - headings, alignment,
  * roughly how wide each value runs - and the skeleton lines up with it.
+ *
+ * `dense` mirrors what the real page renders: a list built on `TableCard` has a
+ * tinted 36px header, 36px rows and ruled cells. Leave it off and the skeleton is
+ * the pre-TableCard layout, which is still what most lists render. Getting it
+ * wrong costs a reflow at the moment the data lands, which is the one thing this
+ * file exists to prevent.
  */
 export function TableSkeleton({
   columns,
   rows = 10,
+  dense = false,
 }: {
   columns: readonly SkeletonColumn[];
   rows?: number;
+  /** the page wraps its table in `TableCard` */
+  dense?: boolean;
 }) {
+  const Shell = dense ? TableCard : PlainTableCard;
+
   return (
-    <Card className="overflow-hidden p-0">
+    <Shell>
       <Table>
         <TableHeader>
           <TableRow>
@@ -108,13 +120,31 @@ export function TableSkeleton({
           ))}
         </TableBody>
       </Table>
-    </Card>
+    </Shell>
   );
+}
+
+/** the row under a dense list's table - see `ListFooter` */
+export function ListFooterSkeleton() {
+  return (
+    <div className="flex w-full flex-col items-center justify-between gap-3 px-1 sm:flex-row sm:gap-4">
+      <Skeleton className="h-4 w-44" />
+      <div className="flex items-center gap-6">
+        <Skeleton className="h-7 w-36" />
+        <Skeleton className="h-8 w-52" />
+      </div>
+    </div>
+  );
+}
+
+/** what every table skeleton sat in before `TableCard` existed */
+function PlainTableCard({ children }: { children: React.ReactNode }) {
+  return <Card className="overflow-hidden p-0">{children}</Card>;
 }
 
 const ORDER_COLUMNS: SkeletonColumn[] = [
   { label: "Order", bar: "h-4 w-28" },
-  { label: "Status", bar: "h-5 w-24 rounded-full" },
+  { label: "Status", bar: "h-5 w-28 rounded-md" },
   { label: "Customer", bar: "h-4 w-40" },
   { label: "Units", align: "right", bar: "h-4 w-8" },
   { label: "Total", align: "right", bar: "h-4 w-16" },
@@ -122,7 +152,8 @@ const ORDER_COLUMNS: SkeletonColumn[] = [
 ];
 
 export function OrdersTableSkeleton({ rows = 10 }: { rows?: number }) {
-  return <TableSkeleton columns={ORDER_COLUMNS} rows={rows} />;
+  // /orders is the list built on TableCard; the others are not yet
+  return <TableSkeleton columns={ORDER_COLUMNS} rows={rows} dense />;
 }
 
 export function OrderDetailSkeleton() {

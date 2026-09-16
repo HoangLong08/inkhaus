@@ -11,7 +11,7 @@ export default function Loading() {
           { label: "Rating", bar: "h-4 w-24" },
           { label: "Product", bar: "h-4 w-28" },
           { label: "Moderated", bar: "h-4 w-24" },
-          { label: "Status", bar: "h-5 w-20 rounded-full" },
+          { label: "Status", bar: "h-5 w-24 rounded-md" },
         ]}
       />
     </div>
