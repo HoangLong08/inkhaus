@@ -9,16 +9,16 @@ import Link from "next/link";
 
 import FilterLinks from "@/components/common/FilterLinks";
 import ListEmpty from "@/components/common/ListEmpty";
+import ListFooter from "@/components/common/ListFooter";
 import ListHeader from "@/components/common/ListHeader";
-import PageSizeLinks from "@/components/common/PageSizeLinks";
+import ListPage from "@/components/common/ListPage";
 import { ROW_LINK } from "@/components/common/row-link";
+import TableCard from "@/components/common/TableCard";
 import UrlSearchBox from "@/components/common/UrlSearchBox";
-import Pager from "@/components/Pager";
 import { followUpState, formatFollowUp, todayUtc } from "@/components/quotes/quote-dates";
 import QuoteStatusControl from "@/components/quotes/QuoteStatusControl";
 import StatusFilterLinks from "@/components/StatusFilterLinks";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -56,29 +56,36 @@ export default async function QuotesPage({
   const linkParams = quotesLinkParams(params);
 
   return (
-    <div className="space-y-6">
+    <ListPage>
       <ListHeader
         title="Bulk quotes"
+        description="Every bulk enquiry the storefront has taken, newest first. Convert one into an order from its own page."
         meta={`${meta.total} total · page ${meta.page} of ${meta.pages}`}
         metaTestId="quotes-meta"
-        actions={<PageSizeLinks base="/quotes" params={linkParams} active={params.limit} />}
       />
 
-      <UrlSearchBox
-        label="Search quotes"
-        placeholder="Email, name or company"
-        testId="quotes-search"
-        clearTestId="quotes-search-clear"
-      />
-
-      <div className="space-y-3">
-        <StatusFilterLinks
-          base="/quotes"
-          statuses={QUOTE_STATUSES}
-          active={params.status}
-          params={linkParams}
-        />
-        <div className="flex flex-wrap gap-x-6 gap-y-3">
+      {/* Rows per page used to sit in the header's actions slot. It is in
+          `ListFooter` now, beside the pager it belongs with - and it must exist
+          in exactly one place on the page, because two elements sharing
+          `data-testid="page-size"` fail Playwright's strict mode outright. */}
+      <div className="flex shrink-0 flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="w-full sm:w-64">
+            <UrlSearchBox
+              label="Search quotes"
+              placeholder="Email, name or company"
+              testId="quotes-search"
+              clearTestId="quotes-search-clear"
+            />
+          </div>
+          <StatusFilterLinks
+            base="/quotes"
+            statuses={QUOTE_STATUSES}
+            active={params.status}
+            params={linkParams}
+          />
+        </div>
+        <div className="flex flex-wrap gap-x-6 gap-y-2">
           <FilterLinks
             base="/quotes"
             param="assignee"
@@ -110,7 +117,7 @@ export default async function QuotesPage({
           reason="filtered"
         />
       ) : (
-        <Card className="overflow-hidden p-0">
+        <TableCard fill>
           <Table>
             <TableHeader>
               <TableRow>
@@ -142,7 +149,9 @@ export default async function QuotesPage({
                         {relative(quote.createdAt)}
                       </time>
                     </TableCell>
-                    <TableCell className="max-w-64">
+                    {/* two lines: it states its own py-, and TableCard's `py-0`
+                        steps aside for a cell that does */}
+                    <TableCell className="max-w-64 py-1.5 leading-tight">
                       <Link
                         href={`/quotes/${quote.id}`}
                         data-testid="quote-row-link"
@@ -156,7 +165,7 @@ export default async function QuotesPage({
                           .join(" · ")}
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell>
                       {quote.product ? (
                         quote.product.name
                       ) : (
@@ -171,14 +180,14 @@ export default async function QuotesPage({
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell>
                       {quote.assignee ? (
                         (quote.assignee.name ?? quote.assignee.email)
                       ) : (
                         <span className="text-muted-foreground">Unassigned</span>
                       )}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap text-sm">
+                    <TableCell className="whitespace-nowrap">
                       {quote.followUpAt ? (
                         <span className="inline-flex items-center gap-1.5">
                           {formatFollowUp(quote.followUpAt)}
@@ -199,8 +208,9 @@ export default async function QuotesPage({
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    {/* above the stretched row link, so it stays clickable */}
-                    <TableCell className="relative z-10">
+                    {/* above the stretched row link, so it stays clickable; two
+                        lines when a quote has been converted, so it says py- */}
+                    <TableCell className="relative z-10 py-1.5">
                       <QuoteStatusControl
                         id={quote.id}
                         status={quote.status}
@@ -218,10 +228,21 @@ export default async function QuotesPage({
               })}
             </TableBody>
           </Table>
-        </Card>
+        </TableCard>
       )}
 
-      <Pager base="/quotes" page={meta.page} pages={meta.pages} params={linkParams} />
-    </div>
+      {data.length > 0 ? (
+        <ListFooter
+          base="/quotes"
+          page={meta.page}
+          pages={meta.pages}
+          limit={params.limit}
+          total={meta.total}
+          shown={data.length}
+          noun="quotes"
+          params={linkParams}
+        />
+      ) : null}
+    </ListPage>
   );
 }
