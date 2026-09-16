@@ -1,13 +1,13 @@
 import { can } from "@inkhaus/shared/admin";
-import { ORDER_STATUSES } from "@inkhaus/shared/orders";
+import { Suspense } from "react";
 
+import ListFooter from "@/components/common/ListFooter";
 import ListHeader from "@/components/common/ListHeader";
 import OrdersToolbar from "@/components/orders/OrdersToolbar";
 import OrdersEmpty from "@/components/orders-list/OrdersEmpty";
 import OrdersExportButton from "@/components/orders-list/OrdersExportButton";
+import OrdersKpiStrip, { OrdersKpiStripSkeleton } from "@/components/orders-list/OrdersKpiStrip";
 import OrdersTable from "@/components/orders-list/OrdersTable";
-import Pager from "@/components/Pager";
-import StatusFilterLinks from "@/components/StatusFilterLinks";
 import { adminApi } from "@/lib/api";
 import { requireAdmin } from "@/lib/dal";
 import { ordersLinkParams, ordersQuerySchema } from "@/lib/schemas/params";
@@ -39,11 +39,22 @@ export default async function OrdersPage({
   const emptyReason = meta.total > 0 ? "page" : filtered ? "filtered" : "none";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <ListHeader
         title="Orders"
+        description="Every order the storefront has taken. The queue counts are all-time; the table follows the filters you set."
         meta={`${meta.total} total · page ${meta.page} of ${meta.pages}`}
         metaTestId="orders-meta"
+      />
+
+      {/* its own boundary: a slow stats call must not hold the table back */}
+      <Suspense fallback={<OrdersKpiStripSkeleton />}>
+        <OrdersKpiStrip active={params.status} linkParams={linkParams} />
+      </Suspense>
+
+      <OrdersToolbar
+        params={params}
+        linkParams={linkParams}
         actions={
           can(user.role, "orders.export") ? (
             <OrdersExportButton params={params} linkParams={linkParams} total={meta.total} />
@@ -51,18 +62,25 @@ export default async function OrdersPage({
         }
       />
 
-      <div className="space-y-3">
-        <OrdersToolbar params={params} linkParams={linkParams} />
-        <StatusFilterLinks
-          base="/orders"
-          statuses={ORDER_STATUSES}
-          active={params.status}
-          params={linkParams}
-        />
-      </div>
-
       {data.length > 0 ? (
-        <OrdersTable orders={data} sort={params.sort} linkParams={linkParams} />
+        <>
+          <OrdersTable
+            orders={data}
+            sort={params.sort}
+            cols={params.cols}
+            linkParams={linkParams}
+          />
+          <ListFooter
+            base="/orders"
+            page={meta.page}
+            pages={meta.pages}
+            limit={params.limit}
+            total={meta.total}
+            shown={data.length}
+            noun="orders"
+            params={linkParams}
+          />
+        </>
       ) : (
         <OrdersEmpty
           reason={emptyReason}
@@ -74,8 +92,6 @@ export default async function OrdersPage({
           }
         />
       )}
-
-      <Pager base="/orders" page={meta.page} pages={meta.pages} params={linkParams} />
     </div>
   );
 }

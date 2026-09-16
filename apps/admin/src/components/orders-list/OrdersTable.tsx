@@ -2,8 +2,8 @@ import type { OrderSort } from "@inkhaus/shared/orders";
 import Link from "next/link";
 
 import SortableHead from "@/components/common/SortableHead";
+import TableCard from "@/components/common/TableCard";
 import StatusBadge from "@/components/StatusBadge";
-import { Card } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import type { AdminOrderListItem } from "@/lib/api";
 import { on, usd } from "@/lib/format";
+import type { OrderColumn } from "@/lib/schemas/params";
 import type { Params } from "@/lib/url";
 
 /**
@@ -26,30 +27,117 @@ import type { Params } from "@/lib/url";
  * onClick never manages. The customer's email is the one other link in the
  * row; `relative z-10` lifts it above the stretched one.
  *
+ * **The order number is not one of the optional columns and must never become
+ * one.** It carries that stretched link; hidden, the row would stop being
+ * clickable at all. It is rendered outside the loop below for the same reason
+ * `ORDER_COLUMNS` leaves it out.
+ *
  * Order, Total and Placed sort by being links too (`SortableHead`).
  */
+
+type Column = {
+  id: OrderColumn;
+  label: string;
+  align?: "right";
+  /** the field this column sorts by, when it sorts at all */
+  sort?: string;
+  cellClassName?: string;
+  cell: (order: AdminOrderListItem) => React.ReactNode;
+};
+
+/**
+ * One descriptor per column, read by both the header row and the body. Two lists
+ * - one of `<th>`s and one of `<td>`s - would drift the first time a column moved.
+ */
+const COLUMNS: readonly Column[] = [
+  {
+    id: "status",
+    label: "Status",
+    cell: (order) => <StatusBadge status={order.status} />,
+  },
+  {
+    id: "customer",
+    label: "Customer",
+    cellClassName: "max-w-64",
+    cell: (order) => (
+      <Link
+        href={`/customers/${order.customer.id}`}
+        // secondary to the row's own link; a page of 100 rows need
+        // not prefetch 100 customer pages as well
+        prefetch={false}
+        data-testid="order-customer-link"
+        data-customer-id={order.customer.id}
+        className="text-muted-foreground hover:text-foreground relative z-10 inline-block max-w-full truncate align-bottom underline-offset-4 hover:underline"
+      >
+        {order.customer.email}
+      </Link>
+    ),
+  },
+  {
+    id: "units",
+    label: "Units",
+    align: "right",
+    cellClassName: "text-muted-foreground text-right tabular-nums",
+    cell: (order) => order.units,
+  },
+  {
+    id: "total",
+    label: "Total",
+    align: "right",
+    sort: "total",
+    cellClassName: "text-right font-semibold tabular-nums",
+    cell: (order) => usd(order.total),
+  },
+  {
+    id: "placed",
+    label: "Placed",
+    align: "right",
+    sort: "placed",
+    cellClassName: "text-muted-foreground text-right text-xs",
+    // a draft has not been placed; say which date this is
+    cell: (order) => (order.placedAt ? on(order.placedAt) : `Created ${on(order.createdAt)}`),
+  },
+];
+
 export default function OrdersTable({
   orders,
   sort,
+  cols,
   linkParams,
 }: {
   orders: AdminOrderListItem[];
   sort: OrderSort;
+  /** the visible columns, parsed from `?cols=` */
+  cols: readonly OrderColumn[];
   linkParams: Params;
 }) {
   const head = { base: "/orders", params: linkParams, sort };
+  const shown = COLUMNS.filter((column) => cols.includes(column.id));
 
   return (
-    <Card className="overflow-hidden p-0">
+    <TableCard>
       <Table>
         <TableHeader>
           <TableRow>
             <SortableHead {...head} field="number" label="Order" />
-            <TableHead>Status</TableHead>
-            <TableHead>Customer</TableHead>
-            <TableHead className="text-right">Units</TableHead>
-            <SortableHead {...head} field="total" label="Total" align="right" />
-            <SortableHead {...head} field="placed" label="Placed" align="right" />
+            {shown.map((column) =>
+              column.sort ? (
+                <SortableHead
+                  key={column.id}
+                  {...head}
+                  field={column.sort}
+                  label={column.label}
+                  align={column.align}
+                />
+              ) : (
+                <TableHead
+                  key={column.id}
+                  className={column.align === "right" ? "text-right" : undefined}
+                >
+                  {column.label}
+                </TableHead>
+              ),
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -71,36 +159,15 @@ export default function OrdersTable({
                   {order.number}
                 </Link>
               </TableCell>
-              <TableCell>
-                <StatusBadge status={order.status} />
-              </TableCell>
-              <TableCell className="max-w-64">
-                <Link
-                  href={`/customers/${order.customer.id}`}
-                  // secondary to the row's own link; a page of 100 rows need
-                  // not prefetch 100 customer pages as well
-                  prefetch={false}
-                  data-testid="order-customer-link"
-                  data-customer-id={order.customer.id}
-                  className="text-muted-foreground hover:text-foreground relative z-10 inline-block max-w-full truncate align-bottom underline-offset-4 hover:underline"
-                >
-                  {order.customer.email}
-                </Link>
-              </TableCell>
-              <TableCell className="text-muted-foreground text-right tabular-nums">
-                {order.units}
-              </TableCell>
-              <TableCell className="text-right font-semibold tabular-nums">
-                {usd(order.total)}
-              </TableCell>
-              <TableCell className="text-muted-foreground text-right text-xs">
-                {/* a draft has not been placed; say which date this is */}
-                {order.placedAt ? on(order.placedAt) : `Created ${on(order.createdAt)}`}
-              </TableCell>
+              {shown.map((column) => (
+                <TableCell key={column.id} className={column.cellClassName}>
+                  {column.cell(order)}
+                </TableCell>
+              ))}
             </TableRow>
           ))}
         </TableBody>
       </Table>
-    </Card>
+    </TableCard>
   );
 }

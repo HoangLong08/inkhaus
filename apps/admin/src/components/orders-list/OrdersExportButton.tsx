@@ -1,6 +1,7 @@
 import { ORDER_EXPORT_MAX } from "@inkhaus/shared/orders";
 import { Download } from "lucide-react";
 
+import { TOOLBAR_BUTTON } from "@/components/common/toolbar-styles";
 import { Button } from "@/components/ui/button";
 import { count } from "@/lib/format";
 import type { OrdersQuery } from "@/lib/schemas/params";
@@ -33,7 +34,13 @@ export default function OrdersExportButton({
   if (total === 0) {
     // an empty file is not worth a download
     return (
-      <Button variant="outline" size="sm" disabled data-testid="orders-export">
+      <Button
+        variant="outline"
+        size="sm"
+        disabled
+        className={TOOLBAR_BUTTON}
+        data-testid="orders-export"
+      >
         <Download />
         Export CSV
       </Button>
@@ -56,7 +63,7 @@ export default function OrdersExportButton({
           First {count(ORDER_EXPORT_MAX)} of {count(total)}
         </span>
       ) : null}
-      <Button asChild variant="outline" size="sm">
+      <Button asChild variant="outline" size="sm" className={TOOLBAR_BUTTON}>
         <a href={href} download data-testid="orders-export" data-capped={capped}>
           <Download />
           Export CSV

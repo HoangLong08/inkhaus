@@ -50,12 +50,33 @@ your way, change the rule here in the same commit — do not work around it.
   for `ui/*`, so a generated file is recognisable at a glance. A plain module
   that is not a component (`nav/nav-config.ts`) is lowercase.
 - **List controls are shared, not rebuilt per page.** `components/common/` has
-  `ListHeader`, `UrlSearchBox`, `FilterLinks`, `SortableHead`, `PageSizeLinks`,
-  `DateRangePicker` and `OwnersOnly`; `Pager` and `StatusBadge` sit one level up.
+  `ListHeader`, `TableCard`, `ListFooter`, `UrlSearchBox`, `FilterLinks`,
+  `SortableHead`, `PageSizeLinks`, `DateRangePicker` and `OwnersOnly`; `Pager` and
+  `StatusBadge` sit one level up.
   Every one of them takes the page's zod-parsed params and builds its links with
   `hrefWith()` from `src/lib/url.ts`: keep every other param, drop `page`. A
   control that assembles its own query string from the one key it knows about is
   how the status chips used to throw away the search.
+- **A list's table lives in `TableCard`, and that is where its density lives.**
+  `ui/table.tsx` is generated and has 19 importers - the packing slip, the tier
+  editor, the overview's tables - so its `th { h-10 px-2 }` and `td { p-2 }` are
+  not the place to restyle one list. `TableCard` pushes a `text-xs` scale,
+  `h-9 px-3` tinted headers, `h-9` rows with `px-3 py-0` cells, a rule on every
+  cell and a zebra stripe down through descendant variants that outrank the
+  primitive's own utilities by specificity, inside the same `@layer utilities`.
+  Two consequences to know: a per-cell padding override at the call site now loses
+  silently, and the stripe is written `:not(:hover):not([data-state=selected])` so
+  that `TableRow`'s own hover and selected colours still win - a plain
+  `nth-child(even)` would outrank both. `ListFooter` sits **below** the card, not
+  inside it.
+- **A table has a stretched row link or a sticky actions column, never both.** The
+  row link is a real `<a>` whose `::after` is `absolute inset-0` over a `relative`
+  `<tr>` (`OrdersTable`, `CustomersTable`, the quotes and catalog lists). A
+  `sticky` cell is positioned, creates a stacking context and must carry an opaque
+  background, so it paints over that `::after` and swallows every click in it. For
+  the same reason the **first** column is never sticky: `inset-0` resolves against
+  the nearest positioned ancestor, so pinning that cell shrinks the row's link down
+  to it. A list that wants both puts "Open" in the actions menu instead.
 
 ## 2. Colour comes from the token map, never from a raw hex.
 
@@ -287,9 +308,9 @@ conventions are what keep it from being rewritten every time the UI moves.
   |---|---|
   | login | `google-form`, `google-signin`, `login-error` |
   | chrome | `user-menu`, `current-user`, `sign-out`, `sign-out-dialog`, `sign-out-{confirm,cancel}`, `sidebar-toggle`, `breadcrumb-current`, `breadcrumb-link`, `theme-toggle`, `theme-{light,dark,system}`, `nav-link` (data-section), `nav-expand` (data-section), `nav-sub-link` (data-section, data-value), `owners-only` |
-  | shared | `status-badge` (data-status), `status-filter` (data-status), `pager`, `pager-{previous,page,next}`, `filter-link` (data-param, data-value), `sort-head` (data-sort, data-active), `page-size` (data-limit), `{prefix}-date-{trigger,apply,clear,preset}` |
+  | shared | `status-badge` (data-status), `status-filter` (data-status, data-count), `pager`, `pager-{first,previous,page,next,last}`, `pager-count` (data-page, data-pages), `list-footer`, `list-range` (data-from, data-to, data-total), `filter-link` (data-param, data-value), `sort-head` (data-sort, data-active), `page-size` (data-limit), `{prefix}-date-{trigger,apply,clear,preset}` |
   | overview | `stat-tile` (data-status, data-count), `recent-order` (data-number), `recent-orders-all`, `range-link` (data-range), `revenue-total` (data-value), `revenue-chart` (data-empty), `series-table`, `top-product` (data-slug), `quote-funnel` (data-created), `attention-item` (data-kind, data-id, data-email, data-number) |
-  | orders | `orders-meta`, `orders-search`, `orders-search-clear`, `order-row` (data-number, data-status, data-total), `order-row-link`, `order-customer-link` (data-customer-id), `orders-export` (data-capped), `orders-export-capped`, `orders-empty` (data-reason), `orders-empty-action` |
+  | orders | `orders-meta`, `orders-search`, `orders-search-clear`, `orders-columns`, `orders-column` (data-column, data-visible), `order-row` (data-number, data-status, data-total), `order-row-link`, `order-customer-link` (data-customer-id), `orders-export` (data-capped), `orders-export-capped`, `orders-empty` (data-reason), `orders-empty-action` |
   | order detail | `status-select`, `status-option` (data-status), `status-note`, `status-save`, `no-moves`, `order-timeline`, `status-confirm-dialog`, `status-confirm`, `status-confirm-cancel`, `status-tracking-carrier`, `status-tracking-carrier-option` (data-carrier), `status-tracking-number`, `tracking-carrier`, `tracking-carrier-option` (data-carrier), `tracking-number`, `tracking-save`, `tracking-link`, `order-note-input`, `order-note-save`, `timeline-event` (data-kind, data-status), `timeline-actor`, `timeline-tracking-link`, `customer-link`, `design-preview` (data-design, data-side), `quote-origin-link`, `packing-slip-link`, `packing-slip`, `packing-slip-print`, `packing-slip-back`, `order-back`, `order-not-found-back`, `packing-slip-not-found-back` |
   | quotes | `quotes-meta`, `quotes-search`, `quotes-search-clear`, `quote-row` (data-id, data-status, data-overdue), `quote-row-link`, `quote-select` (data-status), `quote-option` (data-status), `quote-back`, `quote-not-found-back`, `quote-email`, `quote-assignee-select` (data-assignee), `quote-assignee-option` (data-id, data-self), `quote-follow-up-trigger` (data-day), `quote-follow-up-day` (data-day, data-today), `quote-follow-up-clear`, `quote-note-input`, `quote-note-save`, `quote-timeline`, `quote-event` (data-kind, data-pending), `quote-event-order`, `quote-convert-open`, `quote-convert-dialog`, `convert-product` (data-slug), `convert-product-search`, `convert-product-option` (data-slug), `convert-color` (data-slug), `convert-color-option` (data-slug), `convert-method` (data-method), `convert-method-option` (data-method), `convert-size-qty` (data-size), `convert-estimate` (data-units, data-total), `convert-notes`, `convert-cancel`, `convert-submit`, `quote-order-link` (data-number), `quote-customer-link` |
   | customers | `customers-meta`, `customers-search`, `customers-search-clear`, `customer-row` (data-id, data-email), `customer-row-link`, `customer-back`, `customer-not-found-back`, `customer-profile`, `customer-edit-open`, `customer-edit-dialog`, `customer-{name,phone,company,note}`, `customer-save`, `customer-edit-cancel`, `customer-stat` (data-stat, data-value), `customer-tab` (data-tab), `customer-order-row` (data-number, data-status), `customer-orders-all`, `customer-quote-row` (data-id, data-status), `customer-design` (data-design) |
@@ -314,6 +335,21 @@ conventions are what keep it from being rewritten every time the UI moves.
   `revenue-total`'s and `customer-stat`'s `data-value` are the raw numbers the
   label formats. A customer profile's values carry `data-field` (the Google row
   also `data-linked`).
+- The list footer's ids. `list-range` is the "Showing 1–20 of 134" line, with the
+  three raw numbers on `data-from` / `data-to` / `data-total` so nothing has to
+  parse an en dash. `pager-first` and `pager-last` are omitted - not disabled -
+  when you are already on that page, the way `pager-previous` and `pager-next`
+  always have been: a disabled `<a>` is not a thing. `pager-count` ("Page 3 of 7",
+  `data-page` / `data-pages`) only exists in the pager's `compact` form, and in
+  that form `pager-page` is absent - the number window is what it replaces.
+  `orders-meta` is still the page's **total**, and `e2e/overview.spec.ts` reads the
+  first number out of it to check a stat tile; `list-range` is a second fact, not a
+  rewrite of that one.
+- On `/orders` the status filter **is** the queue strip: its segments carry
+  `status-filter`, `data-status` and `aria-current` exactly as the chip row did,
+  plus `data-count` with the queue's size. Those counts are all-time, like the
+  overview's tiles - they do not narrow with `q` or a date range, and are not meant
+  to agree with the row count below them.
 - **Machine-readable values go on a `data-*` attribute, not in the label** —
   `data-status="PENDING_PAYMENT"` beside the text "Pending payment", so a test
   never has to know about `humanize()`.

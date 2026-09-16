@@ -18,9 +18,18 @@ export type OrdersListParams = Omit<Partial<OrdersQuery>, "limit"> & {
 export type OrdersExportParams = Pick<Partial<OrdersQuery>, "q" | "status" | "from" | "to" | "sort">;
 
 export const ordersApi = {
-  /** `GET /admin/orders` - free-text `q` over number, email and names */
-  list: (params: OrdersListParams = {}) =>
-    request(`/admin/orders${query(params)}`, { schema: adminOrderListSchema }),
+  /**
+   * `GET /admin/orders` - free-text `q` over number, email and names.
+   *
+   * The keys are picked by name, like `exportCsv` below, so a params object that
+   * also carries display state cannot leak it upstream: `cols` says which columns
+   * the browser draws, the API has no opinion about it, and an endpoint that
+   * validates its query would answer an unknown key with a 400.
+   */
+  list: ({ q, status, from, to, sort, page, limit, customerId }: OrdersListParams = {}) =>
+    request(`/admin/orders${query({ q, status, from, to, sort, page, limit, customerId })}`, {
+      schema: adminOrderListSchema,
+    }),
 
   /**
    * `GET /admin/exports/orders.csv`, as the upstream Response with its body
