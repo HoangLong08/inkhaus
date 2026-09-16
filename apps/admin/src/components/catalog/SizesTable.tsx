@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import SizeDialog from "@/components/catalog/SizeDialog";
+import TableCard from "@/components/common/TableCard";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,7 +22,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -85,7 +85,7 @@ export default function SizesTable({
   });
 
   return (
-    <Card className="overflow-hidden p-0">
+    <TableCard fill>
       <Table>
         <TableHeader>
           <TableRow>
@@ -147,7 +147,7 @@ export default function SizesTable({
           })}
         </TableBody>
       </Table>
-    </Card>
+    </TableCard>
   );
 }
 

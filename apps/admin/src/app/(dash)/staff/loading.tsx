@@ -1,10 +1,13 @@
+import ListPage from "@/components/common/ListPage";
 import { ListHeaderSkeleton, TableSkeleton } from "@/components/skeletons";
 
 export default function Loading() {
   return (
-    <div className="space-y-6">
+    <ListPage>
       <ListHeaderSkeleton chips={0} />
       <TableSkeleton
+        dense
+        fill
         rows={5}
         columns={[
           { label: "Member", bar: "h-4 w-40" },
@@ -15,6 +18,6 @@ export default function Loading() {
           { label: "Sessions", align: "right", bar: "h-4 w-6" },
         ]}
       />
-    </div>
+    </ListPage>
   );
 }

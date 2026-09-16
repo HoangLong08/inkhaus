@@ -9,9 +9,9 @@ import { toast } from "sonner";
 
 import ColorDialog from "@/components/catalog/ColorDialog";
 import ListEmpty from "@/components/common/ListEmpty";
+import TableCard from "@/components/common/TableCard";
 import StatusBadge from "@/components/StatusBadge";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import {
   Table,
@@ -89,7 +89,7 @@ export default function ColorsTable({ role }: { role: AdminRoleCode }) {
   }
 
   return (
-    <Card className="overflow-hidden p-0">
+    <TableCard fill>
       <Table>
         <TableHeader>
           <TableRow>
@@ -151,6 +151,6 @@ export default function ColorsTable({ role }: { role: AdminRoleCode }) {
           ))}
         </TableBody>
       </Table>
-    </Card>
+    </TableCard>
   );
 }

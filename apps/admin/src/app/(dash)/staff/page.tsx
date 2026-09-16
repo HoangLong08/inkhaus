@@ -2,6 +2,7 @@ import { can } from "@inkhaus/shared/admin";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 
 import ListHeader from "@/components/common/ListHeader";
+import ListPage from "@/components/common/ListPage";
 import OwnersOnly from "@/components/common/OwnersOnly";
 import InviteStaffDialog from "@/components/staff/InviteStaffDialog";
 import StaffTable from "@/components/staff/StaffTable";
@@ -47,23 +48,24 @@ export default async function StaffPage() {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="space-y-6">
+      <ListPage>
         <ListHeader
           title="Staff"
+          description={
+            <>
+              Nobody can change their own role or turn off their own access, and the last active
+              owner can be neither demoted nor deactivated. Addresses in{" "}
+              <code className="font-mono">ADMIN_BOOTSTRAP_EMAILS</code> are restored as active
+              owners by every <code className="font-mono">npm run db:seed</code> — take an address
+              out of that variable before deactivating it here.
+            </>
+          }
           meta={`${count(active)} active · ${count(staff.data.length - active)} deactivated · ${count(staff.activeOwners)} active ${staff.activeOwners === 1 ? "owner" : "owners"}`}
           actions={canManage ? <InviteStaffDialog /> : null}
         />
 
         <StaffTable actor={{ id: user.id, role: user.role }} canManage={canManage} />
-
-        <p className="text-muted-foreground max-w-prose text-sm">
-          Nobody can change their own role or turn off their own access, and the last active owner
-          can be neither demoted nor deactivated. Addresses in{" "}
-          <code className="font-mono text-xs">ADMIN_BOOTSTRAP_EMAILS</code> are restored as active
-          owners by every <code className="font-mono text-xs">npm run db:seed</code> — take an
-          address out of that variable before deactivating it here.
-        </p>
-      </div>
+      </ListPage>
     </HydrationBoundary>
   );
 }

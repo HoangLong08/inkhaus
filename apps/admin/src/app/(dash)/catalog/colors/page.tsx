@@ -4,6 +4,7 @@ import { HydrationBoundary, dehydrate } from "@tanstack/react-query";
 import ColorDialog from "@/components/catalog/ColorDialog";
 import ColorsTable from "@/components/catalog/ColorsTable";
 import ListHeader from "@/components/common/ListHeader";
+import ListPage from "@/components/common/ListPage";
 import { adminApi } from "@/lib/api";
 import { requireAdmin } from "@/lib/dal";
 import { getQueryClient } from "@/lib/query-client";
@@ -26,18 +27,15 @@ export default async function ColorsPage() {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="space-y-6">
+      <ListPage>
         <ListHeader
           title="Colours"
+          description="A colour is never deleted - order lines and photos point at it. Archive it instead: it stays on the products that already carry it, and cannot be added to another."
           meta={`${colors.length} colours · ${archived} archived`}
           actions={can(user.role, "catalog.edit") ? <ColorDialog mode="create" /> : null}
         />
-        <p className="text-muted-foreground max-w-prose text-sm">
-          A colour is never deleted - order lines and photos point at it. Archive it instead: it
-          stays on the products that already carry it, and cannot be added to another.
-        </p>
         <ColorsTable role={user.role} />
-      </div>
+      </ListPage>
     </HydrationBoundary>
   );
 }

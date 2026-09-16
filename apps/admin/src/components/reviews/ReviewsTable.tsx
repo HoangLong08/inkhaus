@@ -398,9 +398,10 @@ export default function ReviewsTable({
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
-                          size="icon"
-                          // 28px with a 14px glyph, so it fits a 36px row
-                          className="size-7 [&_svg]:size-3.5"
+                          size="icon-sm"
+                          // the app's row-action shape, as ColorDialog and
+                          // SizeDialog already draw it: 28px with a 14px glyph
+                          className="[&_svg]:size-3.5"
                           data-testid="review-actions"
                           aria-label={`Actions for the review by ${review.author}`}
                           disabled={isBusy}

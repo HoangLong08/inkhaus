@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { Card } from "@/components/ui/card";
+import TableCard from "@/components/common/TableCard";
 import {
   Table,
   TableBody,
@@ -41,7 +41,7 @@ export default function StaffTable({
   if (!data) return null;
 
   return (
-    <Card className="overflow-hidden p-0">
+    <TableCard fill>
       <Table>
         <TableHeader>
           <TableRow>
@@ -69,6 +69,6 @@ export default function StaffTable({
           ))}
         </TableBody>
       </Table>
-    </Card>
+    </TableCard>
   );
 }

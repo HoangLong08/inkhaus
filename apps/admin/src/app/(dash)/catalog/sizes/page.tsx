@@ -5,6 +5,7 @@ import PriceSyncWarning from "@/components/catalog/PriceSyncWarning";
 import SizeDialog from "@/components/catalog/SizeDialog";
 import SizesTable from "@/components/catalog/SizesTable";
 import ListHeader from "@/components/common/ListHeader";
+import ListPage from "@/components/common/ListPage";
 import { adminApi } from "@/lib/api";
 import { requireAdmin } from "@/lib/dal";
 import { getQueryClient } from "@/lib/query-client";
@@ -30,9 +31,10 @@ export default async function SizesPage() {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="space-y-6">
+      <ListPage>
         <ListHeader
           title="Sizes"
+          description="A product with no size run of its own is sold in the default run, XS to 3XL. Those codes, and any code a product stocks, cannot be deleted; past orders keep their sizes either way."
           meta={`${sizes.length} sizes`}
           actions={
             canPrice && options.priceEditsEnabled ? (
@@ -40,13 +42,9 @@ export default async function SizesPage() {
             ) : null
           }
         />
-        <p className="text-muted-foreground max-w-prose text-sm">
-          A product with no size run of its own is sold in the default run, XS to 3XL. Those codes,
-          and any code a product stocks, cannot be deleted; past orders keep their sizes either way.
-        </p>
         {!options.priceEditsEnabled ? <PriceSyncWarning /> : null}
         <SizesTable role={user.role} priceEditsEnabled={options.priceEditsEnabled} />
-      </div>
+      </ListPage>
     </HydrationBoundary>
   );
 }
