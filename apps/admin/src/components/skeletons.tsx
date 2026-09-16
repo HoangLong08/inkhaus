@@ -127,10 +127,10 @@ export function TableSkeleton({
 /** the row under a dense list's table - see `ListFooter` */
 export function ListFooterSkeleton() {
   return (
-    <div className="flex w-full flex-col items-center justify-between gap-3 px-1 sm:flex-row sm:gap-4">
+    <div className="flex w-full flex-col items-center justify-between gap-3 px-3 sm:flex-row sm:gap-4">
       <Skeleton className="h-4 w-44" />
       <div className="flex items-center gap-6">
-        <Skeleton className="h-7 w-36" />
+        <Skeleton className="h-8 w-36" />
         <Skeleton className="h-8 w-52" />
       </div>
     </div>
@@ -181,15 +181,18 @@ export function OrderDetailSkeleton() {
 /** heading + meta line + a row of filter chips, shared by every list page's loading.tsx */
 export function ListHeaderSkeleton({ chips = 6 }: { chips?: number }) {
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <Skeleton className="h-8 w-40" />
-        <Skeleton className="h-4 w-48" />
+    // the geometry ListHeader actually renders: a text-xl heading, a text-xs
+    // meta line, h-8 chips, and the gap-2 rhythm ListPage lays its children out
+    // on. A skeleton a size off its own page is a layout jump on every load.
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+        <Skeleton className="h-7 w-40" />
+        <Skeleton className="h-3.5 w-48" />
       </div>
       {chips > 0 ? (
         <div className="flex flex-wrap gap-1.5">
           {Array.from({ length: chips }, (_, i) => (
-            <Skeleton key={i} className="h-7 w-20 rounded-full" />
+            <Skeleton key={i} className="h-8 w-20 rounded-full" />
           ))}
         </div>
       ) : null}

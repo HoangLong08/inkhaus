@@ -69,8 +69,10 @@ export default function Pager({
   // The compact form reads "Page 3 of 7  « ‹ › »": the count first, then the four
   // steps together, rather than the count wedged between prev and next.
   if (compact) {
+    // gap-2 between the count and the four steps; the steps' own gap-1 comes
+    // from PaginationContent. 12px here read as two separate controls.
     return (
-      <Pagination data-testid="pager" className="mx-0 w-auto items-center justify-end gap-3">
+      <Pagination data-testid="pager" className="mx-0 w-auto items-center justify-end gap-2">
         <span
           data-testid="pager-count"
           data-page={page}

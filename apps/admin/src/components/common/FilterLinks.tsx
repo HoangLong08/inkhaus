@@ -67,7 +67,9 @@ export default function FilterLinks({
             asChild
             size="sm"
             variant={isActive ? "default" : "outline"}
-            className="h-7 rounded-full px-3 text-xs font-semibold"
+            // h-8 like every other control; `rounded-full` stays, because a
+            // filter chip should not read as one more toolbar button
+            className="h-8 rounded-full px-3 text-xs font-semibold"
           >
             <Link
               href={hrefWith(base, params, { [param]: value })}

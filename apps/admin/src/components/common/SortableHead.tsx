@@ -61,7 +61,9 @@ export default function SortableHead({
         )}
       >
         {label}
-        <Icon className={cn("size-4", !direction && "text-muted-foreground")} />
+        {/* size-3.5, the toolbar's glyph, not size-4: this sits in a text-xs
+            header cell, and a 16px arrow beside 12px type reads as a mistake. */}
+        <Icon className={cn("size-3.5", !direction && "text-muted-foreground")} />
         <span className="sr-only">, sort {next === "asc" ? "ascending" : "descending"}</span>
       </Link>
     </TableHead>

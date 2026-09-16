@@ -130,7 +130,7 @@ export default function DateRangePicker({
               key={days}
               variant="secondary"
               size="sm"
-              className="h-7 text-xs"
+              className={TOOLBAR_BUTTON}
               data-testid={`${prefix}-date-preset`}
               data-days={days}
               onClick={() => preset(days)}

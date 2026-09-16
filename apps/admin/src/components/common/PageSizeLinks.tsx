@@ -40,7 +40,10 @@ export default function PageSizeLinks({
             asChild
             size="sm"
             variant={isActive ? "secondary" : "ghost"}
-            className="h-7 px-2 text-xs tabular-nums"
+            // h-8, the shared control height: these sit in `ListFooter` beside
+            // `Pager`'s `icon-sm` (32px) edge buttons, and h-7 next to them was
+            // exactly the 4px step toolbar-styles.ts exists to kill.
+            className="h-8 px-2 text-xs tabular-nums"
           >
             <Link
               href={hrefWith(base, params, { [param]: size })}

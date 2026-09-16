@@ -8,6 +8,10 @@
  * own, each with slightly different classes. It sits opposite the heading and
  * above the meta line; `items-baseline` on the row puts its first line on the
  * `<h1>`'s baseline, so a page with one and a page without still line up.
+ *
+ * The description and the meta line are both `text-xs`. They are two muted lines
+ * stacked in the same aside, and a one-step size difference between them read as
+ * an accident rather than a hierarchy.
  */
 export default function ListHeader({
   title,
@@ -28,7 +32,7 @@ export default function ListHeader({
 
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-      <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+      <h1 className="text-xl font-bold tracking-tight">{title}</h1>
       {aside ? (
         <div className="flex flex-col items-start gap-1.5 sm:items-end">
           {description !== undefined ? (
@@ -39,7 +43,7 @@ export default function ListHeader({
           {meta !== undefined || actions ? (
             <div className="flex flex-wrap items-center gap-3">
               {meta !== undefined ? (
-                <p className="text-muted-foreground text-sm" data-testid={metaTestId}>
+                <p className="text-muted-foreground text-xs" data-testid={metaTestId}>
                   {meta}
                 </p>
               ) : null}

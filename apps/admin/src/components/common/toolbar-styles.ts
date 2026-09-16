@@ -9,5 +9,12 @@
  */
 export const TOOLBAR_BUTTON = "h-8 gap-1.5 text-xs [&_svg]:size-3.5";
 
-/** the search box and any other `Input` sitting in that same row */
-export const TOOLBAR_INPUT = "h-8 text-xs";
+/**
+ * The search box and any other `Input` sitting in that same row.
+ *
+ * `md:text-xs` belongs in here rather than at each call site: shadcn's `Input`
+ * ships `text-base … md:text-sm`, so overriding only `text-xs` leaves the box a
+ * size bigger than the buttons beside it from the `md` breakpoint up - which is
+ * every screen this tool is used on.
+ */
+export const TOOLBAR_INPUT = "h-8 text-xs md:text-xs";

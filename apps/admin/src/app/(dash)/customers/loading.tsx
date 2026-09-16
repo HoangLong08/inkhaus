@@ -5,10 +5,12 @@ export default function Loading() {
   return (
     <div className="space-y-6">
       <ListHeaderSkeleton chips={0} />
-      <Skeleton className="h-9 w-full max-w-sm" />
+      {/* h-8, which is what UrlSearchBox and FilterLinks actually render; this
+          drew an h-9 box and reflowed 4px the moment the real one arrived */}
+      <Skeleton className="h-8 w-full max-w-sm" />
       <div className="flex flex-wrap gap-1.5">
         {Array.from({ length: 3 }, (_, i) => (
-          <Skeleton key={i} className="h-7 w-24 rounded-full" />
+          <Skeleton key={i} className="h-8 w-24 rounded-full" />
         ))}
       </div>
       <TableSkeleton

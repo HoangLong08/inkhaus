@@ -1,10 +1,11 @@
 "use client";
 
+import { cn } from "cn";
 import { Loader2, Search, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
-import { TOOLBAR_BUTTON } from "@/components/common/toolbar-styles";
+import { TOOLBAR_BUTTON, TOOLBAR_INPUT } from "@/components/common/toolbar-styles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -134,8 +135,9 @@ export default function UrlSearchBox({
           maxLength={100}
           placeholder={placeholder}
           data-testid={testId}
-          // h-8/text-xs so the box matches the buttons beside it - see toolbar-styles
-          className="h-8 pl-8 text-xs md:text-xs"
+          // pl-8 is this box's own - it is the gutter the search glyph sits in.
+          // Everything else about its shape is the shared toolbar scale.
+          className={cn(TOOLBAR_INPUT, "pl-8")}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={(event) => {
             if (event.key !== "Enter") return;

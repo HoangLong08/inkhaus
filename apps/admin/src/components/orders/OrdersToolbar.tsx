@@ -19,9 +19,11 @@ import type { Params } from "@/lib/url";
  * it belongs with - and it must exist in exactly one place on the page, because
  * two elements sharing `data-testid="page-size"` fail Playwright outright.
  *
- * Every control in this row is the default `h-9`. A `size="sm"` trigger here
- * reads as a 4px step beside the search box, which is what the date picker used
- * to do.
+ * Every control in this row is the one toolbar scale - `TOOLBAR_BUTTON` /
+ * `TOOLBAR_INPUT` from `common/toolbar-styles`, which is 32px tall with a 12px
+ * label and a 14px glyph - laid out on `gap-2`. The row only reads as a row when
+ * all of it agrees; the date picker used to be `h-8` beside an `h-9` search box
+ * and the 4px step was visible across the whole width of the page.
  */
 export default function OrdersToolbar({
   params,

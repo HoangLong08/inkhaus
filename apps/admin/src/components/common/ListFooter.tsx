@@ -55,7 +55,10 @@ export default function ListFooter({
   return (
     <div
       data-testid="list-footer"
-      className="flex w-full flex-col items-center justify-between gap-3 px-1 sm:flex-row sm:gap-4"
+      // px-3, the same gutter as `[&_tbody_td]:px-3` in TableCard, so "Showing
+      // 1-20 of 134" starts on the x of the first column's text rather than
+      // near it.
+      className="flex w-full flex-col items-center justify-between gap-3 px-3 sm:flex-row sm:gap-4"
     >
       <p
         data-testid="list-range"
