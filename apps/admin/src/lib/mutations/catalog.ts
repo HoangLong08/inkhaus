@@ -1,6 +1,7 @@
 import "server-only";
 
 import { can, PRICE_EDITS_DISABLED } from "@inkhaus/shared/admin";
+import { getTranslations } from "next-intl/server";
 
 import { adminApi, type AdminUser } from "@/lib/api";
 import { HttpError } from "@/lib/api-guard";
@@ -34,8 +35,21 @@ async function assertPriceEditsOpen() {
   if (!priceEditsEnabled) throw new HttpError(409, PRICE_EDITS_DISABLED);
 }
 
-function assertMayPrice(user: AdminUser, what: string) {
-  if (!can(user.role, "catalog.price")) throw new HttpError(403, `Only an owner can change ${what}.`);
+/**
+ * A whole sentence per case, not one frame with a noun slotted into it. The
+ * frame read "Only an owner can change ${what}." with `what` as "prices" or
+ * "a size upcharge" - fine in English, unbuildable in Vietnamese, which puts
+ * the verb first and takes no article.
+ *
+ * `getTranslations` rather than a message code: this runs in a route handler,
+ * on the server, where the whole catalogue is in reach. The code-and-resolver
+ * shape in `lib/form-resolver.ts` exists for schemas that cannot reach a
+ * translator at all; here one is a single await away.
+ */
+async function assertMayPrice(user: AdminUser, key: "prices" | "upcharge") {
+  if (can(user.role, "catalog.price")) return;
+  const t = await getTranslations("Catalog");
+  throw new HttpError(403, t(`ownerOnly.${key}` as "ownerOnly.prices"));
 }
 
 /** the route checked `catalog.create`; a new blank carries a price, so the flag applies */
@@ -46,7 +60,7 @@ export async function applyProductCreate(input: ProductInput) {
 
 export async function applyProductUpdate(user: AdminUser, slug: string, input: ProductUpdateInput) {
   if (productTouchesPrice(input)) {
-    assertMayPrice(user, "prices");
+    await assertMayPrice(user, "prices");
     await assertPriceEditsOpen();
   }
   return adminApi.catalog.updateProduct(slug, input);
@@ -70,7 +84,7 @@ export async function applySizeCreate(input: SizeInput) {
 /** label and sort order are content; an upcharge is money */
 export async function applySizeUpdate(user: AdminUser, code: string, input: SizeUpdateInput) {
   if (input.upcharge !== undefined) {
-    assertMayPrice(user, "a size upcharge");
+    await assertMayPrice(user, "upcharge");
     await assertPriceEditsOpen();
   }
   return adminApi.catalog.updateSize(code, input);

@@ -136,6 +136,10 @@
     "empty": {
       "title": "No products match",
       "description": "Try another category or status, or clear the search."
+    },
+    "ownerOnly": {
+      "prices": "Only an owner can change prices.",
+      "upcharge": "Only an owner can change a size upcharge."
     }
   },
 

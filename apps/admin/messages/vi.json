@@ -136,6 +136,10 @@
     "empty": {
       "title": "Không có sản phẩm nào khớp",
       "description": "Hãy thử danh mục hoặc trạng thái khác, hoặc xoá từ khoá tìm kiếm."
+    },
+    "ownerOnly": {
+      "prices": "Chỉ chủ mới đổi được giá.",
+      "upcharge": "Chỉ chủ mới đổi được phụ phí kích cỡ."
     }
   },
 
