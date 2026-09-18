@@ -1,7 +1,11 @@
+import { useTranslations } from "next-intl";
+
 import ListPage from "@/components/common/ListPage";
 import { ListHeaderSkeleton, TableSkeleton } from "@/components/skeletons";
 
 export default function Loading() {
+  const t = useTranslations("Sizes");
+
   return (
     <ListPage>
       <ListHeaderSkeleton chips={0} />
@@ -11,11 +15,11 @@ export default function Loading() {
         ordinal
         rows={8}
         columns={[
-          { label: "Code", bar: "h-4 w-10" },
-          { label: "Label", bar: "h-4 w-20" },
-          { label: "Upcharge", align: "right", bar: "h-4 w-12" },
-          { label: "Sort", align: "right", bar: "h-4 w-6" },
-          { label: "Products", align: "right", bar: "h-4 w-6" },
+          { label: t("columns.code"), bar: "h-4 w-10" },
+          { label: t("columns.label"), bar: "h-4 w-20" },
+          { label: t("columns.upcharge"), align: "right", bar: "h-4 w-12" },
+          { label: t("columns.sort"), align: "right", bar: "h-4 w-6" },
+          { label: t("columns.products"), align: "right", bar: "h-4 w-6" },
         ]}
       />
     </ListPage>

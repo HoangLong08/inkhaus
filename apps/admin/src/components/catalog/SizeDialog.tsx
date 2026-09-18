@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Pencil, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -52,6 +53,7 @@ type Props = {
  * change is never refused for a price nobody touched.
  */
 export default function SizeDialog(props: Props) {
+  const t = useTranslations("Sizes");
   const [open, setOpen] = useState(false);
   const size = props.mode === "edit" ? props.size : undefined;
 
@@ -59,21 +61,21 @@ export default function SizeDialog(props: Props) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {size ? (
-          <Button variant="ghost" size="icon-sm" data-testid="size-edit" aria-label={`Edit ${size.code}`}>
+          <Button variant="ghost" size="icon-sm" data-testid="size-edit" aria-label={t("dialog.edit", { code: size.code })}>
             <Pencil />
           </Button>
         ) : (
           <Button size="sm" data-testid="size-new">
             <Plus />
-            New size
+            {t("dialog.new")}
           </Button>
         )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{size ? `Edit ${size.code}` : "New size"}</DialogTitle>
+          <DialogTitle>{size ? t("dialog.edit", { code: size.code }) : t("dialog.new")}</DialogTitle>
           <DialogDescription>
-            The upcharge is added to every unit in this size, on top of the tier price.
+            {t("dialog.description")}
           </DialogDescription>
         </DialogHeader>
         <SizeForm
@@ -97,6 +99,8 @@ function SizeForm({
   upchargeLocked: boolean;
   onDone: () => void;
 }) {
+  const t = useTranslations("Sizes");
+  const tc = useTranslations("Common");
   const router = useRouter();
   const queryClient = useQueryClient();
   const key = queryKeys.catalog.sizes();
@@ -133,7 +137,7 @@ function SizeForm({
     onError: (error, _values, context) => {
       if (context?.previous) queryClient.setQueryData(key, context.previous);
       if (error instanceof ClientApiError && error.status === 401) return;
-      toast.error(size ? "Could not save the size" : "Could not add the size", {
+      toast.error(size ? t("form.saveError") : t("form.addError"), {
         description: error.message,
       });
     },
@@ -142,7 +146,9 @@ function SizeForm({
       queryClient.setQueryData<CatalogSize[]>(key, (list = []) =>
         list.map((s) => (s.code === next.code ? next : s)),
       );
-      toast.success(size ? `Saved ${next.code}` : `Added ${next.code}`);
+      toast.success(
+        size ? t("form.saved", { code: next.code }) : t("form.added", { code: next.code }),
+      );
       onDone();
     },
 
@@ -170,10 +176,10 @@ function SizeForm({
             name="code"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Code</FormLabel>
+                <FormLabel>{t("form.code")}</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="4XL"
+                    placeholder={t("form.codePlaceholder")}
                     autoComplete="off"
                     className="font-mono uppercase"
                     maxLength={6}
@@ -182,7 +188,7 @@ function SizeForm({
                     onChange={(event) => field.onChange(event.target.value.toUpperCase())}
                   />
                 </FormControl>
-                <FormDescription>What carts, quotes and order lines store. It cannot change later.</FormDescription>
+                <FormDescription>{t("form.codeHint")}</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -194,9 +200,14 @@ function SizeForm({
           name="label"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Label</FormLabel>
+              <FormLabel>{t("form.label")}</FormLabel>
               <FormControl>
-                <Input maxLength={20} placeholder="4XL" data-testid="size-label" {...field} />
+                <Input
+                  maxLength={20}
+                  placeholder={t("form.codePlaceholder")}
+                  data-testid="size-label"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -208,7 +219,7 @@ function SizeForm({
           name="upcharge"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Upcharge per unit (USD)</FormLabel>
+              <FormLabel>{t("form.upcharge")}</FormLabel>
               <FormControl>
                 <NumberInput
                   {...field}
@@ -220,7 +231,7 @@ function SizeForm({
                 />
               </FormControl>
               {upchargeLocked ? (
-                <FormDescription>Owners set upcharges, and only while price edits are on.</FormDescription>
+                <FormDescription>{t("form.upchargeHint")}</FormDescription>
               ) : null}
               <FormMessage />
             </FormItem>
@@ -232,7 +243,7 @@ function SizeForm({
           name="sortOrder"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Sort order</FormLabel>
+              <FormLabel>{t("form.sortOrder")}</FormLabel>
               <FormControl>
                 <NumberInput {...field} step={1} inputMode="numeric" className="tabular-nums" data-testid="size-sort-order" />
               </FormControl>
@@ -245,12 +256,12 @@ function SizeForm({
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="outline" data-testid="size-cancel">
-              Cancel
+              {tc("cancel")}
             </Button>
           </DialogClose>
           <Button type="submit" disabled={mutation.isPending} data-testid="size-save">
             {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
-            {size ? "Save" : "Add size"}
+            {size ? t("form.save") : t("form.add")}
           </Button>
         </DialogFooter>
       </form>

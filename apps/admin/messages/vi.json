@@ -190,6 +190,57 @@
     }
   },
 
+  "Sizes": {
+    "title": "Kích cỡ",
+    "description": "Sản phẩm không có dải size riêng sẽ bán theo dải mặc định, từ XS đến 3XL. Những mã đó, và bất kỳ mã nào đang có sản phẩm dùng, đều không xoá được; đơn hàng cũ vẫn giữ nguyên size của nó.",
+    "meta": "{count, plural, other {{total} kích cỡ}}",
+    "defaultRun": "Dải mặc định",
+
+    "columns": {
+      "code": "Mã",
+      "label": "Nhãn",
+      "upcharge": "Phụ phí",
+      "sort": "Thứ tự",
+      "products": "Sản phẩm",
+      "actions": "Thao tác"
+    },
+    "remove": {
+      "aria": "Xoá {code}",
+      "title": "Xoá kích cỡ {code}?",
+      "description": "Không sản phẩm nào đang dùng nó, và các dòng đơn hàng cũ lưu size dưới dạng chữ nên không có gì khác thay đổi. Sau này có thể thêm lại.",
+      "confirm": "Xoá",
+      "error": "Không xoá được kích cỡ",
+      "success": "Đã xoá {code}"
+    },
+
+    "dialog": {
+      "new": "Thêm kích cỡ",
+      "edit": "Sửa {code}",
+      "description": "Phụ phí được cộng vào từng sản phẩm thuộc kích cỡ này, trên giá bậc."
+    },
+    "form": {
+      "code": "Mã",
+      "codePlaceholder": "4XL",
+      "codeHint": "Đây là thứ giỏ hàng, báo giá và dòng đơn hàng lưu lại. Sau này không đổi được.",
+      "label": "Nhãn",
+      "upcharge": "Phụ phí mỗi sản phẩm (USD)",
+      "upchargeHint": "Chỉ chủ đặt được phụ phí, và chỉ khi cho phép sửa giá.",
+      "sortOrder": "Thứ tự sắp xếp",
+      "sortOrderHint": "Bộ chọn size sẽ liệt kê theo thứ tự này.",
+      "save": "Lưu",
+      "add": "Thêm kích cỡ",
+      "saveError": "Không lưu được kích cỡ",
+      "addError": "Không thêm được kích cỡ",
+      "saved": "Đã lưu {code}",
+      "added": "Đã thêm {code}"
+    }
+  },
+
+  "PriceSync": {
+    "title": "Đang tắt quyền sửa giá",
+    "description": "Cửa hàng vẫn hiển thị giá lấy từ mã nguồn, trong khi thanh toán tính tiền theo cơ sở dữ liệu. Chừng nào cửa hàng chưa đọc giá từ API, một thay đổi giá ở đây sẽ khiến trang sản phẩm hiện một số và thu một số khác - nên giá, phụ phí kích cỡ và thang bậc giá đều ở chế độ chỉ đọc. Nội dung, màu sắc và lưu trữ vẫn lưu được bình thường."
+  },
+
   "Validation": {
     "wholeNumber": "Phải là số nguyên.",
     "twoDecimals": "Tối đa hai chữ số thập phân.",

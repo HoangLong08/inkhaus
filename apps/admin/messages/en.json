@@ -190,6 +190,57 @@
     }
   },
 
+  "Sizes": {
+    "title": "Sizes",
+    "description": "A product with no size run of its own is sold in the default run, XS to 3XL. Those codes, and any code a product stocks, cannot be deleted; past orders keep their sizes either way.",
+    "meta": "{count, plural, one {{total} size} other {{total} sizes}}",
+    "defaultRun": "Default run",
+
+    "columns": {
+      "code": "Code",
+      "label": "Label",
+      "upcharge": "Upcharge",
+      "sort": "Sort",
+      "products": "Products",
+      "actions": "Actions"
+    },
+    "remove": {
+      "aria": "Delete {code}",
+      "title": "Delete size {code}?",
+      "description": "No product stocks it, and past order lines keep their size as text, so nothing else changes. It can be added again later.",
+      "confirm": "Delete",
+      "error": "Could not delete the size",
+      "success": "Deleted {code}"
+    },
+
+    "dialog": {
+      "new": "New size",
+      "edit": "Edit {code}",
+      "description": "The upcharge is added to every unit in this size, on top of the tier price."
+    },
+    "form": {
+      "code": "Code",
+      "codePlaceholder": "4XL",
+      "codeHint": "What carts, quotes and order lines store. It cannot change later.",
+      "label": "Label",
+      "upcharge": "Upcharge per unit (USD)",
+      "upchargeHint": "Owners set upcharges, and only while price edits are on.",
+      "sortOrder": "Sort order",
+      "sortOrderHint": "Size pickers list sizes in this order.",
+      "save": "Save",
+      "add": "Add size",
+      "saveError": "Could not save the size",
+      "addError": "Could not add the size",
+      "saved": "Saved {code}",
+      "added": "Added {code}"
+    }
+  },
+
+  "PriceSync": {
+    "title": "Price edits are switched off",
+    "description": "The storefront still shows prices from code, while checkout charges what is in the database. Until the storefront reads prices from the API, a price changed here would put one number on the product page and charge another - so prices, size upcharges and the tier ladder are read-only. Copy, colours and archiving still save."
+  },
+
   "Validation": {
     "wholeNumber": "Use a whole number.",
     "twoDecimals": "Use at most two decimal places.",

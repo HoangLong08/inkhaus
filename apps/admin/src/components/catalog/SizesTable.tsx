@@ -4,6 +4,7 @@ import { can } from "@inkhaus/shared/admin";
 import type { AdminRoleCode } from "@inkhaus/shared/orders";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -49,6 +50,7 @@ export default function SizesTable({
   role: AdminRoleCode;
   priceEditsEnabled: boolean;
 }) {
+  const t = useTranslations("Sizes");
   const router = useRouter();
   const queryClient = useQueryClient();
   const key = queryKeys.catalog.sizes();
@@ -70,13 +72,13 @@ export default function SizesTable({
     onError: (error, _code, context) => {
       if (context?.previous) queryClient.setQueryData(key, context.previous);
       if (error instanceof ClientApiError && error.status === 401) return;
-      toast.error("Could not delete the size", { description: error.message });
+      toast.error(t("remove.error"), { description: error.message });
     },
 
     onSuccess: (_ok, code) => {
       // again, in case a refetch landed between the optimistic write and now
       queryClient.setQueryData<CatalogSize[]>(key, (list = []) => list.filter((s) => s.code !== code));
-      toast.success(`Deleted ${code}`);
+      toast.success(t("remove.success", { code }));
     },
 
     onSettled: () => {
@@ -91,13 +93,13 @@ export default function SizesTable({
         <TableHeader>
           <TableRow>
             <OrdinalHead />
-            <TableHead>Code</TableHead>
-            <TableHead>Label</TableHead>
-            <TableHead className="text-right">Upcharge</TableHead>
-            <TableHead className="text-right">Sort</TableHead>
-            <TableHead className="text-right">Products</TableHead>
+            <TableHead>{t("columns.code")}</TableHead>
+            <TableHead>{t("columns.label")}</TableHead>
+            <TableHead className="text-right">{t("columns.upcharge")}</TableHead>
+            <TableHead className="text-right">{t("columns.sort")}</TableHead>
+            <TableHead className="text-right">{t("columns.products")}</TableHead>
             <TableHead className="w-24">
-              <span className="sr-only">Actions</span>
+              <span className="sr-only">{t("columns.actions")}</span>
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -121,7 +123,7 @@ export default function SizesTable({
                     <span className="font-mono font-semibold">{size.code}</span>
                     {size.builtIn ? (
                       <Badge variant="outline" className="text-muted-foreground">
-                        Default run
+                        {t("defaultRun")}
                       </Badge>
                     ) : null}
                   </span>
@@ -159,29 +161,31 @@ export default function SizesTable({
 }
 
 function DeleteSize({ code, onConfirm }: { code: string; onConfirm: (code: string) => void }) {
+  const t = useTranslations("Sizes");
+  const tc = useTranslations("Common");
+
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="icon-sm" data-testid="size-delete" aria-label={`Delete ${code}`}>
+        <Button variant="ghost" size="icon-sm" data-testid="size-delete" aria-label={t("remove.aria", { code })}>
           <Trash2 />
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete size {code}?</AlertDialogTitle>
+          <AlertDialogTitle>{t("remove.title", { code })}</AlertDialogTitle>
           <AlertDialogDescription>
-            No product stocks it, and past order lines keep their size as text, so nothing else
-            changes. It can be added again later.
+            {t("remove.description")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel data-testid="size-delete-cancel">Cancel</AlertDialogCancel>
+          <AlertDialogCancel data-testid="size-delete-cancel">{tc("cancel")}</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
             onClick={() => onConfirm(code)}
             data-testid="size-delete-confirm"
           >
-            Delete
+            {t("remove.confirm")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
