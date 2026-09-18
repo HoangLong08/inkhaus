@@ -118,6 +118,30 @@ test.describe("orders list", () => {
     await expect(paid).toHaveAttribute("href", /[?&]limit=50(&|$)/);
   });
 
+  test("the ordinal column counts on from the previous page, not from 1", async ({ page }) => {
+    await page.goto("/orders?limit=20");
+
+    const range = page.getByTestId("list-range");
+    const total = Number(await range.getAttribute("data-total"));
+    // page 2 only exists once the seed has more than one page of orders
+    test.skip(total <= 20, `only ${total} orders seeded; there is no second page`);
+
+    await page.goto("/orders?limit=20&page=2");
+
+    // attribute to attribute, the way overview.spec compares a tile's count with
+    // this same footer's total: the first row's number IS the range's low end,
+    // in any language and whatever the page size.
+    const from = await range.getAttribute("data-from");
+    expect(from).toBe("21");
+    await expect(page.getByTestId("row-ordinal").first()).toHaveAttribute("data-ordinal", from!);
+
+    // and the column counts by one down the page
+    const ordinals = await page
+      .getByTestId("row-ordinal")
+      .evaluateAll((els) => els.map((el) => Number(el.getAttribute("data-ordinal"))));
+    expect(ordinals).toEqual(ordinals.map((_, i) => ordinals[0]! + i));
+  });
+
   test("the whole row opens the order; the customer cell is its own link", async ({ page }) => {
     await page.goto("/orders?q=900002");
     const target = row(page, ORDER_PAID);

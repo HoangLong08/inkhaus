@@ -76,6 +76,34 @@ test.describe("language", () => {
     await expect(range).toHaveAttribute("data-total", rangeTotal!);
   });
 
+  test("the ordinal head translates inside a client table, and its numbers do not", async ({
+    page,
+  }) => {
+    await signIn(page, "owner");
+    // /catalog/colors on purpose, on two counts: ColorsTable is "use client",
+    // so this is the case that proves the ordinal's namespace actually reaches
+    // the browser, and the ordinal is its FIRST head - on /reviews the tick box
+    // holds that slot. In the production build this suite runs, a namespace the
+    // provider never got renders the key itself, a silently wrong cell that
+    // every data-testid locator in this suite would sail straight past.
+    await page.goto("/catalog/colors");
+
+    const head = page.locator('[data-slot="table-head"]').first();
+    const before = (await head.innerText()).trim();
+    expect(before, "expected a label on the ordinal head").not.toBe("");
+    expect(before, "the head rendered its own key - the namespace never arrived").not.toMatch(
+      /^Common\./,
+    );
+
+    const ordinal = await page.getByTestId("row-ordinal").first().getAttribute("data-ordinal");
+    expect(ordinal, "expected at least one colour in the list").toBe("1");
+
+    await switchTo(page, "vi");
+
+    await expect.poll(async () => (await head.innerText()).trim()).not.toBe(before);
+    await expect(page.getByTestId("row-ordinal").first()).toHaveAttribute("data-ordinal", ordinal!);
+  });
+
   test("the choice survives a reload, and switching back restores English", async ({ page }) => {
     await signIn(page, "owner");
 
