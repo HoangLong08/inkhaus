@@ -1,6 +1,5 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { can } from "@inkhaus/shared/admin";
 import type { AdminRoleCode } from "@inkhaus/shared/orders";
 import {
@@ -45,8 +44,10 @@ import { useCodeLabel } from "@/i18n/labels";
 import type { CatalogColor, CatalogProduct, CatalogSize } from "@/lib/api";
 import { ClientApiError, clientApi } from "@/lib/client-api";
 import { usd } from "@/lib/format";
+import { useTranslatedResolver } from "@/lib/form-resolver";
 import { queryKeys } from "@/lib/query-keys";
 import {
+  CATALOG_VALIDATION_PARAMS,
   PRODUCT_PRICE_FIELDS,
   productInputSchema,
   type ProductInput,
@@ -101,7 +102,7 @@ function CreateProduct({ role, priceEditsEnabled, sizes, colors }: Shared) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const form = useForm<ProductInput>({
-    resolver: zodResolver(productInputSchema),
+    resolver: useTranslatedResolver<ProductInput>(productInputSchema, CATALOG_VALIDATION_PARAMS),
     defaultValues: NEW_PRODUCT,
   });
 
@@ -165,7 +166,7 @@ function ProductEditor({ product, role, priceEditsEnabled, sizes, colors }: Shar
   const saved = toFormValues(product);
 
   const form = useForm<ProductInput>({
-    resolver: zodResolver(productInputSchema),
+    resolver: useTranslatedResolver<ProductInput>(productInputSchema, CATALOG_VALIDATION_PARAMS),
     defaultValues: saved,
   });
 

@@ -1,6 +1,5 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { TIER_LIMITS, validateTiers } from "@inkhaus/shared/pricing";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Trash2, TriangleAlert } from "lucide-react";
@@ -31,8 +30,10 @@ import {
 } from "@/components/ui/table";
 import type { CatalogTiers } from "@/lib/api";
 import { ClientApiError, clientApi } from "@/lib/client-api";
+import { useTranslatedResolver } from "@/lib/form-resolver";
 import { queryKeys } from "@/lib/query-keys";
 import {
+  CATALOG_VALIDATION_PARAMS,
   tiersFormSchema,
   tiersFromForm,
   tiersToForm,
@@ -79,7 +80,7 @@ function TierForm({
   const key = queryKeys.catalog.tiers();
 
   const form = useForm<TiersFormValues>({
-    resolver: zodResolver(tiersFormSchema),
+    resolver: useTranslatedResolver<TiersFormValues>(tiersFormSchema, CATALOG_VALIDATION_PARAMS),
     defaultValues: tiersToForm(initial),
   });
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "tiers" });

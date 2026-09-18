@@ -1,6 +1,5 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Pencil, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -33,8 +32,14 @@ import {
 import { Input } from "@/components/ui/input";
 import type { CatalogColor } from "@/lib/api";
 import { ClientApiError, clientApi } from "@/lib/client-api";
+import { useTranslatedResolver } from "@/lib/form-resolver";
 import { queryKeys } from "@/lib/query-keys";
-import { colorInputSchema, type ColorInput, type ColorUpdateInput } from "@/lib/schemas/forms";
+import {
+  CATALOG_VALIDATION_PARAMS,
+  colorInputSchema,
+  type ColorInput,
+  type ColorUpdateInput,
+} from "@/lib/schemas/forms";
 
 type Props = { mode: "create" } | { mode: "edit"; color: CatalogColor };
 
@@ -85,7 +90,10 @@ function ColorForm({ color, onDone }: { color?: CatalogColor; onDone: () => void
     ? { slug: color.slug, name: color.name, hex: color.hex, dark: color.dark, sortOrder: color.sortOrder }
     : BLANK;
 
-  const form = useForm<ColorInput>({ resolver: zodResolver(colorInputSchema), defaultValues: saved });
+  const form = useForm<ColorInput>({
+    resolver: useTranslatedResolver<ColorInput>(colorInputSchema, CATALOG_VALIDATION_PARAMS),
+    defaultValues: saved,
+  });
   const hex = useWatch({ control: form.control, name: "hex" });
 
   const mutation = useMutation({

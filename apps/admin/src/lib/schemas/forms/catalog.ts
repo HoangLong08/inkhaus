@@ -15,64 +15,110 @@ import { COLOR_SLUG_PATTERN, PRODUCT_SLUG_PATTERN, SIZE_CODE_PATTERN } from "../
 
 const { product: P, color: COLOR, size: SIZE, sortOrder: SORT } = CATALOG_LIMITS;
 
+/**
+ * Every `message` below is a KEY into the `Validation` namespace, never a
+ * sentence. The reason is the same one s6 gives for a sign-in failure
+ * travelling as `?error=NOT_ALLOWED`: a form cannot translate a string it was
+ * handed already written, and this module is evaluated at import time in a
+ * client component AND in a route handler, so neither `useTranslations` nor
+ * `getTranslations` can be called here at all.
+ *
+ * `useTranslatedResolver` in `@/lib/form-resolver` is what turns them back into
+ * words, and `CATALOG_VALIDATION_PARAMS` below carries the numbers so a limit
+ * is still written once, in CATALOG_LIMITS, rather than re-typed into two
+ * message catalogues.
+ *
+ * What went away with the sentences: a `capitalize()` helper that was an
+ * English sentence-case rule, and ten bare noun fragments ("a price", "the
+ * width", "an upcharge") spliced into four frames. Those survive a translation
+ * only by accident - Vietnamese puts the verb first and takes no article - so
+ * each message is now a whole sentence instead of a frame plus a noun.
+ */
+
 /** at most two decimal places - checked on the integer, which floats cannot fool */
 const cents = (value: number) => Math.abs(Math.round(value * 100) - value * 100) < 1e-6;
 
-const money = (what: string, min: number, max: number) =>
+const money = (field: string, min: number, max: number) =>
   z
-    .number({ error: `Enter ${what}.` })
-    .min(min, `${capitalize(what)} must be at least ${min}.`)
-    .max(max, `${capitalize(what)} must be at most ${max}.`)
-    .refine(cents, "Use at most two decimal places.");
+    .number({ error: `${field}Required` })
+    .min(min, `${field}Min`)
+    .max(max, `${field}Max`)
+    .refine(cents, "twoDecimals");
 
-const whole = (what: string, min: number, max: number) =>
+const whole = (field: string, min: number, max: number) =>
   z
-    .number({ error: `Enter ${what}.` })
-    .int(`${capitalize(what)} must be a whole number.`)
-    .min(min, `${capitalize(what)} must be at least ${min}.`)
-    .max(max, `${capitalize(what)} must be at most ${max}.`);
-
-function capitalize(text: string) {
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
+    .number({ error: `${field}Required` })
+    .int("wholeNumber")
+    .min(min, `${field}Min`)
+    .max(max, `${field}Max`);
 
 const HEX = /^#[0-9A-Fa-f]{6}$/;
 
+/**
+ * The numbers the `Validation` messages interpolate, keyed by the same code the
+ * schema emits. They live here rather than in the catalogues because s3 is
+ * explicit that a limit is a shared constant and never a number typed twice -
+ * and a catalogue is two files, so writing 400 there would be typing it three
+ * times. Strings, not numbers: s9 forbids `{x, number}` in a message, so every
+ * value reaches ICU already formatted.
+ *
+ * A code with no entry here simply interpolates nothing, which is what every
+ * message without a placeholder wants.
+ */
+export const CATALOG_VALIDATION_PARAMS: Record<string, Record<string, string>> = {
+  nameMax: { max: String(P.name) },
+  blurbMax: { max: String(P.blurb) },
+  fabricMax: { max: String(P.fabric) },
+  tagMax: { max: String(P.tag) },
+  colorsMax: { max: String(P.colors.max) },
+  priceMin: { min: String(P.price.min) },
+  priceMax: { max: String(P.price.max) },
+  bulkPriceMin: { min: String(P.price.min) },
+  bulkPriceMax: { max: String(P.price.max) },
+  printAreaMin: { min: String(P.printArea.min) },
+  printAreaMax: { max: String(P.printArea.max) },
+  printInchesMin: { min: String(P.inches.min) },
+  printInchesMax: { max: String(P.inches.max) },
+  sortOrderMin: { min: String(SORT.min) },
+  sortOrderMax: { max: String(SORT.max) },
+  colorNameMax: { max: String(COLOR.name) },
+  labelMax: { max: String(SIZE.label) },
+  upchargeMin: { min: String(SIZE.upcharge.min) },
+  upchargeMax: { max: String(SIZE.upcharge.max) },
+};
+
 // ---------------------------------------------------------------- products
 
-const printAreaPart = (axis: string) => whole(axis, P.printArea.min, P.printArea.max);
-const inches = (what: string) => money(what, P.inches.min, P.inches.max);
-const sortOrder = () => whole("a sort order", SORT.min, SORT.max);
+/** the four print-area axes share one wording: the field's own label says which */
+const printAreaPart = () => whole("printArea", P.printArea.min, P.printArea.max);
+const inches = () => money("printInches", P.inches.min, P.inches.max);
+const sortOrder = () => whole("sortOrder", SORT.min, SORT.max);
 
 const productFieldsShape = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, "Give it a name.")
-    .max(P.name, `Keep the name to ${P.name} characters.`),
-  type: z.enum(GARMENT_TYPES, { error: "Pick a blank shape." }),
-  category: z.enum(CATEGORIES, { error: "Pick a category." }),
-  blurb: z.string().trim().max(P.blurb, `Keep the blurb to ${P.blurb} characters.`),
-  fabric: z.string().trim().max(P.fabric, `Keep the fabric line to ${P.fabric} characters.`),
+  name: z.string().trim().min(1, "nameRequired").max(P.name, "nameMax"),
+  type: z.enum(GARMENT_TYPES, { error: "typeRequired" }),
+  category: z.enum(CATEGORIES, { error: "categoryRequired" }),
+  blurb: z.string().trim().max(P.blurb, "blurbMax"),
+  fabric: z.string().trim().max(P.fabric, "fabricMax"),
   /** empty clears it */
-  tag: z.string().trim().max(P.tag, `Keep the tag to ${P.tag} characters.`),
+  tag: z.string().trim().max(P.tag, "tagMax"),
   /** size codes; none means the default apparel run */
   sizes: z.array(z.string().regex(SIZE_CODE_PATTERN)).max(20),
-  price: money("a price", P.price.min, P.price.max),
-  bulkPrice: money("a bulk price", P.price.min, P.price.max),
-  methods: z.array(z.enum(PRINT_METHODS)).min(1, "Pick at least one print method."),
+  price: money("price", P.price.min, P.price.max),
+  bulkPrice: money("bulkPrice", P.price.min, P.price.max),
+  methods: z.array(z.enum(PRINT_METHODS)).min(1, "methodsMin"),
   printArea: z.object({
-    x: printAreaPart("x"),
-    y: printAreaPart("y"),
-    w: printAreaPart("the width"),
-    h: printAreaPart("the height"),
+    x: printAreaPart(),
+    y: printAreaPart(),
+    w: printAreaPart(),
+    h: printAreaPart(),
   }),
-  printInches: z.object({ w: inches("a width"), h: inches("a height") }),
+  printInches: z.object({ w: inches(), h: inches() }),
   /** in storefront order - the first is the default colourway */
   colorSlugs: z
     .array(z.string())
-    .min(P.colors.min, "Pick at least one colour.")
-    .max(P.colors.max, `A product can carry at most ${P.colors.max} colours.`),
+    .min(P.colors.min, "colorsMin")
+    .max(P.colors.max, "colorsMax"),
   active: z.boolean(),
   sortOrder: sortOrder(),
 });
@@ -92,7 +138,7 @@ function bulkNotAbovePrice(
     ctx.addIssue({
       code: "custom",
       path: ["bulkPrice"],
-      message: "The bulk price cannot be more than the single-unit price.",
+      message: "bulkAbovePrice",
     });
   }
 }
@@ -106,9 +152,9 @@ export const productInputSchema = productFieldsShape
     slug: z
       .string()
       .trim()
-      .regex(PRODUCT_SLUG_PATTERN, "Use 2-60 lowercase letters, digits or dashes.")
+      .regex(PRODUCT_SLUG_PATTERN, "slugPattern")
       // /catalog/products/new is this app's create page, so "new" could never be opened
-      .refine((slug) => slug !== "new", 'The slug cannot be "new".'),
+      .refine((slug) => slug !== "new", "slugReserved"),
   })
   .superRefine(bulkNotAbovePrice);
 
@@ -132,13 +178,11 @@ export const colorInputSchema = z.object({
   slug: z
     .string()
     .trim()
-    .regex(COLOR_SLUG_PATTERN, "Use 2-40 lowercase letters, digits or dashes."),
-  name: z
-    .string()
-    .trim()
-    .min(1, "Give it a name.")
-    .max(COLOR.name, `Keep the name to ${COLOR.name} characters.`),
-  hex: z.string().trim().regex(HEX, "Use a colour like #1A7F7A."),
+    .regex(COLOR_SLUG_PATTERN, "colorSlugPattern"),
+  // its own code, not the product's: the two limits differ (40 vs 80) and the
+  // number rides on the code, not on the call site
+  name: z.string().trim().min(1, "nameRequired").max(COLOR.name, "colorNameMax"),
+  hex: z.string().trim().regex(HEX, "hexPattern"),
   dark: z.boolean(),
   sortOrder: sortOrder(),
 });
@@ -154,13 +198,9 @@ export type ColorUpdateInput = z.infer<typeof colorUpdateInputSchema>;
 // ------------------------------------------------------------------- sizes
 
 export const sizeInputSchema = z.object({
-  code: z.string().trim().regex(SIZE_CODE_PATTERN, "Use 1-6 capital letters or digits."),
-  label: z
-    .string()
-    .trim()
-    .min(1, "Give it a label.")
-    .max(SIZE.label, `Keep the label to ${SIZE.label} characters.`),
-  upcharge: money("an upcharge", SIZE.upcharge.min, SIZE.upcharge.max),
+  code: z.string().trim().regex(SIZE_CODE_PATTERN, "sizeCodePattern"),
+  label: z.string().trim().min(1, "labelRequired").max(SIZE.label, "labelMax"),
+  upcharge: money("upcharge", SIZE.upcharge.min, SIZE.upcharge.max),
   sortOrder: sortOrder(),
 });
 
@@ -206,8 +246,8 @@ export const tiersFormSchema = z
   .object({
     tiers: z.array(
       z.object({
-        minQty: z.number({ error: "Enter a quantity." }).int("Use a whole number."),
-        percent: z.number({ error: "Enter a discount." }),
+        minQty: z.number({ error: "tierQtyRequired" }).int("wholeNumber"),
+        percent: z.number({ error: "tierDiscountRequired" }),
       }),
     ),
   })

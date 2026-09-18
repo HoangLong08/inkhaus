@@ -45,6 +45,15 @@ export const CHROME_NAMESPACES = [
   "Breadcrumb",
   "Chrome",
   "Errors",
+  // Validation is here for the same reason Errors is: it is not one feature's
+  // copy, it is what ANY client form on ANY page renders when a field is
+  // refused. `useTranslatedResolver` turns a schema's message code back into a
+  // sentence, and a schema is module scope - so the resolver cannot know which
+  // page it is on, and a page that forgot to carry this namespace shows the
+  // reader "bulkAbovePrice". In a production build that is silent: onError logs,
+  // getMessageFallback prints the key, and every spec matching on data-testid
+  // sails past it. Roughly 2 KB to make a whole class of bug impossible.
+  "Validation",
 ] as const satisfies readonly Namespace[];
 
 /**

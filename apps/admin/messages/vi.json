@@ -98,6 +98,57 @@
     "tech": "Công nghệ"
   },
 
+  "Validation": {
+    "wholeNumber": "Phải là số nguyên.",
+    "twoDecimals": "Tối đa hai chữ số thập phân.",
+
+    "nameRequired": "Hãy đặt tên.",
+    "nameMax": "Tên tối đa {max} ký tự.",
+    "typeRequired": "Hãy chọn dáng phôi.",
+    "categoryRequired": "Hãy chọn danh mục.",
+    "blurbMax": "Mô tả ngắn tối đa {max} ký tự.",
+    "fabricMax": "Dòng chất liệu tối đa {max} ký tự.",
+    "tagMax": "Nhãn tối đa {max} ký tự.",
+    "methodsMin": "Hãy chọn ít nhất một kiểu in.",
+    "colorsMin": "Hãy chọn ít nhất một màu.",
+    "colorsMax": "Một sản phẩm mang tối đa {max} màu.",
+    "slugPattern": "Dùng 2-60 chữ thường, chữ số hoặc dấu gạch ngang.",
+    "slugReserved": "Slug không được là \"new\".",
+
+    "priceRequired": "Hãy nhập giá.",
+    "priceMin": "Giá phải từ {min} trở lên.",
+    "priceMax": "Giá không được quá {max}.",
+    "bulkPriceRequired": "Hãy nhập giá sỉ.",
+    "bulkPriceMin": "Giá sỉ phải từ {min} trở lên.",
+    "bulkPriceMax": "Giá sỉ không được quá {max}.",
+    "bulkAbovePrice": "Giá sỉ không được cao hơn giá một sản phẩm.",
+
+    "printAreaRequired": "Hãy nhập một giá trị.",
+    "printAreaMin": "Giá trị phải từ {min} trở lên.",
+    "printAreaMax": "Giá trị không được quá {max}.",
+    "printInchesRequired": "Hãy nhập kích thước.",
+    "printInchesMin": "Kích thước phải từ {min} inch trở lên.",
+    "printInchesMax": "Kích thước không được quá {max} inch.",
+
+    "sortOrderRequired": "Hãy nhập thứ tự sắp xếp.",
+    "sortOrderMin": "Thứ tự sắp xếp phải từ {min} trở lên.",
+    "sortOrderMax": "Thứ tự sắp xếp không được quá {max}.",
+
+    "colorSlugPattern": "Dùng 2-40 chữ thường, chữ số hoặc dấu gạch ngang.",
+    "colorNameMax": "Tên tối đa {max} ký tự.",
+    "hexPattern": "Dùng mã màu dạng #1A7F7A.",
+
+    "sizeCodePattern": "Dùng 1-6 chữ in hoa hoặc chữ số.",
+    "labelRequired": "Hãy đặt nhãn.",
+    "labelMax": "Nhãn tối đa {max} ký tự.",
+    "upchargeRequired": "Hãy nhập phụ phí.",
+    "upchargeMin": "Phụ phí phải từ {min} trở lên.",
+    "upchargeMax": "Phụ phí không được quá {max}.",
+
+    "tierQtyRequired": "Hãy nhập số lượng.",
+    "tierDiscountRequired": "Hãy nhập mức giảm."
+  },
+
   "Nav": {
     "group": "Quản trị",
     "expand": "Hiện lối tắt của {section}",

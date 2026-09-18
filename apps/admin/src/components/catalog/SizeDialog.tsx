@@ -1,6 +1,5 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Pencil, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -32,8 +31,14 @@ import {
 import { Input } from "@/components/ui/input";
 import type { CatalogSize } from "@/lib/api";
 import { ClientApiError, clientApi } from "@/lib/client-api";
+import { useTranslatedResolver } from "@/lib/form-resolver";
 import { queryKeys } from "@/lib/query-keys";
-import { sizeInputSchema, type SizeInput, type SizeUpdateInput } from "@/lib/schemas/forms";
+import {
+  CATALOG_VALIDATION_PARAMS,
+  sizeInputSchema,
+  type SizeInput,
+  type SizeUpdateInput,
+} from "@/lib/schemas/forms";
 
 type Props = {
   /** may set an upcharge at all - `catalog.price` */
@@ -99,7 +104,10 @@ function SizeForm({
     ? { code: size.code, label: size.label, upcharge: size.upcharge, sortOrder: size.sortOrder }
     : BLANK;
 
-  const form = useForm<SizeInput>({ resolver: zodResolver(sizeInputSchema), defaultValues: saved });
+  const form = useForm<SizeInput>({
+    resolver: useTranslatedResolver<SizeInput>(sizeInputSchema, CATALOG_VALIDATION_PARAMS),
+    defaultValues: saved,
+  });
 
   const mutation = useMutation({
     mutationFn: (values: SizeInput) =>

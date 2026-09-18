@@ -98,6 +98,57 @@
     "tech": "Tech"
   },
 
+  "Validation": {
+    "wholeNumber": "Use a whole number.",
+    "twoDecimals": "Use at most two decimal places.",
+
+    "nameRequired": "Give it a name.",
+    "nameMax": "Keep the name to {max} characters.",
+    "typeRequired": "Pick a blank shape.",
+    "categoryRequired": "Pick a category.",
+    "blurbMax": "Keep the blurb to {max} characters.",
+    "fabricMax": "Keep the fabric line to {max} characters.",
+    "tagMax": "Keep the tag to {max} characters.",
+    "methodsMin": "Pick at least one print method.",
+    "colorsMin": "Pick at least one colour.",
+    "colorsMax": "A product can carry at most {max} colours.",
+    "slugPattern": "Use 2-60 lowercase letters, digits or dashes.",
+    "slugReserved": "The slug cannot be \"new\".",
+
+    "priceRequired": "Enter a price.",
+    "priceMin": "The price must be at least {min}.",
+    "priceMax": "The price must be at most {max}.",
+    "bulkPriceRequired": "Enter a bulk price.",
+    "bulkPriceMin": "The bulk price must be at least {min}.",
+    "bulkPriceMax": "The bulk price must be at most {max}.",
+    "bulkAbovePrice": "The bulk price cannot be more than the single-unit price.",
+
+    "printAreaRequired": "Enter a value.",
+    "printAreaMin": "It must be at least {min}.",
+    "printAreaMax": "It must be at most {max}.",
+    "printInchesRequired": "Enter a measurement.",
+    "printInchesMin": "It must be at least {min} inches.",
+    "printInchesMax": "It must be at most {max} inches.",
+
+    "sortOrderRequired": "Enter a sort order.",
+    "sortOrderMin": "The sort order must be at least {min}.",
+    "sortOrderMax": "The sort order must be at most {max}.",
+
+    "colorSlugPattern": "Use 2-40 lowercase letters, digits or dashes.",
+    "colorNameMax": "Keep the name to {max} characters.",
+    "hexPattern": "Use a colour like #1A7F7A.",
+
+    "sizeCodePattern": "Use 1-6 capital letters or digits.",
+    "labelRequired": "Give it a label.",
+    "labelMax": "Keep the label to {max} characters.",
+    "upchargeRequired": "Enter an upcharge.",
+    "upchargeMin": "The upcharge must be at least {min}.",
+    "upchargeMax": "The upcharge must be at most {max}.",
+
+    "tierQtyRequired": "Enter a quantity.",
+    "tierDiscountRequired": "Enter a discount."
+  },
+
   "Nav": {
     "group": "Back office",
     "expand": "Show {section} shortcuts",
