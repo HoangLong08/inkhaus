@@ -139,6 +139,57 @@
     }
   },
 
+  "Colors": {
+    "title": "Màu sắc",
+    "description": "Màu không bao giờ bị xoá - các dòng đơn hàng và ảnh đều trỏ tới nó. Hãy lưu trữ thay vì xoá: màu vẫn nằm trên những sản phẩm đang có nó, và không thể thêm vào sản phẩm khác.",
+    "meta": "{count, plural, other {{total} màu}} · {archived} đã lưu trữ",
+    "dark": "Màu tối",
+    "offerAria": "Cho phép dùng {name} trên sản phẩm mới",
+
+    "columns": {
+      "colour": "Màu",
+      "slug": "Slug",
+      "hex": "Mã hex",
+      "products": "Sản phẩm",
+      "orderLines": "Dòng đơn hàng",
+      "offered": "Đang cung cấp",
+      "edit": "Sửa"
+    },
+    "empty": {
+      "title": "Chưa có màu nào",
+      "description": "Thêm màu đầu tiên để bắt đầu bán sản phẩm theo màu đó."
+    },
+    "toggle": {
+      "error": "Không đổi được màu",
+      "offered": "{name} có thể thêm vào sản phẩm trở lại",
+      "archived": "Đã lưu trữ {name}"
+    },
+
+    "dialog": {
+      "new": "Thêm màu",
+      "edit": "Sửa {name}",
+      "editDescription": "Đổi tên hoặc đổi mã màu sẽ hiện ở mọi nơi màu này được dùng. Đơn hàng cũ giữ nguyên màu lúc đặt.",
+      "newDescription": "Có thể thêm vào sản phẩm ngay. Màu chỉ được lưu trữ, không bao giờ bị xoá."
+    },
+    "form": {
+      "name": "Tên",
+      "slug": "Slug",
+      "slugPlaceholder": "forest-green",
+      "slugHint": "Dòng đơn hàng và ảnh sản phẩm trỏ tới nó; sau này không đổi được.",
+      "hex": "Mã hex",
+      "hexPlaceholder": "#1A7F7A",
+      "dark": "Phôi màu tối",
+      "darkHint": "Hình in lên cần mực sáng; xưởng thiết kế sẽ cảnh báo khi in tối trên tối.",
+      "sortOrder": "Thứ tự sắp xếp",
+      "save": "Lưu",
+      "add": "Thêm màu",
+      "saveError": "Không lưu được màu",
+      "addError": "Không thêm được màu",
+      "saved": "Đã lưu {name}",
+      "added": "Đã thêm {name}"
+    }
+  },
+
   "Validation": {
     "wholeNumber": "Phải là số nguyên.",
     "twoDecimals": "Tối đa hai chữ số thập phân.",

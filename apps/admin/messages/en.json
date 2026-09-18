@@ -139,6 +139,57 @@
     }
   },
 
+  "Colors": {
+    "title": "Colours",
+    "description": "A colour is never deleted - order lines and photos point at it. Archive it instead: it stays on the products that already carry it, and cannot be added to another.",
+    "meta": "{count, plural, one {{total} colour} other {{total} colours}} · {archived} archived",
+    "dark": "Dark",
+    "offerAria": "Offer {name} on new products",
+
+    "columns": {
+      "colour": "Colour",
+      "slug": "Slug",
+      "hex": "Hex",
+      "products": "Products",
+      "orderLines": "Order lines",
+      "offered": "Offered",
+      "edit": "Edit"
+    },
+    "empty": {
+      "title": "No colours yet",
+      "description": "Add the first one to start offering products in it."
+    },
+    "toggle": {
+      "error": "Could not change the colour",
+      "offered": "{name} can be added to products again",
+      "archived": "{name} archived"
+    },
+
+    "dialog": {
+      "new": "New colour",
+      "edit": "Edit {name}",
+      "editDescription": "Renaming or recolouring shows everywhere this colour is offered. Past orders keep the colour they were made in.",
+      "newDescription": "It can be added to products at once. Colours are archived, never deleted."
+    },
+    "form": {
+      "name": "Name",
+      "slug": "Slug",
+      "slugPlaceholder": "forest-green",
+      "slugHint": "Order lines and product photos point at it; it cannot change later.",
+      "hex": "Hex",
+      "hexPlaceholder": "#1A7F7A",
+      "dark": "Dark garment",
+      "darkHint": "Artwork printed on it needs light ink; the studio warns about dark-on-dark.",
+      "sortOrder": "Sort order",
+      "save": "Save",
+      "add": "Add colour",
+      "saveError": "Could not save the colour",
+      "addError": "Could not add the colour",
+      "saved": "Saved {name}",
+      "added": "Added {name}"
+    }
+  },
+
   "Validation": {
     "wholeNumber": "Use a whole number.",
     "twoDecimals": "Use at most two decimal places.",

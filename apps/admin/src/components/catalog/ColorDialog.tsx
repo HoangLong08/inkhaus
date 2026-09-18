@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Pencil, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -48,6 +49,7 @@ type Props = { mode: "create" } | { mode: "edit"; color: CatalogColor };
  * unmounts on close, so every opening starts from the colour as it is now.
  */
 export default function ColorDialog(props: Props) {
+  const t = useTranslations("Colors");
   const [open, setOpen] = useState(false);
   const color = props.mode === "edit" ? props.color : undefined;
 
@@ -55,23 +57,23 @@ export default function ColorDialog(props: Props) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {color ? (
-          <Button variant="ghost" size="icon-sm" data-testid="color-edit" aria-label={`Edit ${color.name}`}>
+          <Button variant="ghost" size="icon-sm" data-testid="color-edit" aria-label={t("dialog.edit", { name: color.name })}>
             <Pencil />
           </Button>
         ) : (
           <Button size="sm" data-testid="color-new">
             <Plus />
-            New colour
+            {t("dialog.new")}
           </Button>
         )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{color ? `Edit ${color.name}` : "New colour"}</DialogTitle>
+          <DialogTitle>{color ? t("dialog.edit", { name: color.name }) : t("dialog.new")}</DialogTitle>
           <DialogDescription>
             {color
-              ? "Renaming or recolouring shows everywhere this colour is offered. Past orders keep the colour they were made in."
-              : "It can be added to products at once. Colours are archived, never deleted."}
+              ? t("dialog.editDescription")
+              : t("dialog.newDescription")}
           </DialogDescription>
         </DialogHeader>
         <ColorForm color={color} onDone={() => setOpen(false)} />
@@ -83,6 +85,8 @@ export default function ColorDialog(props: Props) {
 const BLANK: ColorInput = { slug: "", name: "", hex: "", dark: false, sortOrder: 0 };
 
 function ColorForm({ color, onDone }: { color?: CatalogColor; onDone: () => void }) {
+  const t = useTranslations("Colors");
+  const tc = useTranslations("Common");
   const router = useRouter();
   const queryClient = useQueryClient();
   const key = queryKeys.catalog.colors();
@@ -117,7 +121,7 @@ function ColorForm({ color, onDone }: { color?: CatalogColor; onDone: () => void
     onError: (error, _values, context) => {
       if (context?.previous) queryClient.setQueryData(key, context.previous);
       if (error instanceof ClientApiError && error.status === 401) return;
-      toast.error(color ? "Could not save the colour" : "Could not add the colour", {
+      toast.error(color ? t("form.saveError") : t("form.addError"), {
         description: error.message,
       });
     },
@@ -126,7 +130,9 @@ function ColorForm({ color, onDone }: { color?: CatalogColor; onDone: () => void
       queryClient.setQueryData<CatalogColor[]>(key, (list = []) =>
         list.map((c) => (c.slug === next.slug ? next : c)),
       );
-      toast.success(color ? `Saved ${next.name}` : `Added ${next.name}`);
+      toast.success(
+        color ? t("form.saved", { name: next.name }) : t("form.added", { name: next.name }),
+      );
       onDone();
     },
 
@@ -153,7 +159,7 @@ function ColorForm({ color, onDone }: { color?: CatalogColor; onDone: () => void
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Name</FormLabel>
+              <FormLabel>{t("form.name")}</FormLabel>
               <FormControl>
                 <Input maxLength={40} data-testid="color-name" {...field} />
               </FormControl>
@@ -168,11 +174,11 @@ function ColorForm({ color, onDone }: { color?: CatalogColor; onDone: () => void
             name="slug"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Slug</FormLabel>
+                <FormLabel>{t("form.slug")}</FormLabel>
                 <FormControl>
-                  <Input placeholder="forest-green" autoComplete="off" data-testid="color-slug" {...field} />
+                  <Input placeholder={t("form.slugPlaceholder")} autoComplete="off" data-testid="color-slug" {...field} />
                 </FormControl>
-                <FormDescription>Order lines and product photos point at it; it cannot change later.</FormDescription>
+                <FormDescription>{t("form.slugHint")}</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -184,7 +190,7 @@ function ColorForm({ color, onDone }: { color?: CatalogColor; onDone: () => void
           name="hex"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Hex</FormLabel>
+              <FormLabel>{t("form.hex")}</FormLabel>
               <div className="flex items-center gap-2">
                 {/* the one legitimate inline colour: it is product data */}
                 <span
@@ -193,7 +199,7 @@ function ColorForm({ color, onDone }: { color?: CatalogColor; onDone: () => void
                   style={{ background: /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex : undefined }}
                 />
                 <FormControl>
-                  <Input placeholder="#1A7F7A" className="font-mono" data-testid="color-hex" {...field} />
+                  <Input placeholder={t("form.hexPlaceholder")} className="font-mono" data-testid="color-hex" {...field} />
                 </FormControl>
               </div>
               <FormMessage />
@@ -210,8 +216,8 @@ function ColorForm({ color, onDone }: { color?: CatalogColor; onDone: () => void
                 <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(v === true)} data-testid="color-dark" />
               </FormControl>
               <div className="space-y-1">
-                <FormLabel className="font-normal">Dark garment</FormLabel>
-                <FormDescription>Artwork printed on it needs light ink; the studio warns about dark-on-dark.</FormDescription>
+                <FormLabel className="font-normal">{t("form.dark")}</FormLabel>
+                <FormDescription>{t("form.darkHint")}</FormDescription>
               </div>
             </FormItem>
           )}
@@ -222,7 +228,7 @@ function ColorForm({ color, onDone }: { color?: CatalogColor; onDone: () => void
           name="sortOrder"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Sort order</FormLabel>
+              <FormLabel>{t("form.sortOrder")}</FormLabel>
               <FormControl>
                 <NumberInput {...field} step={1} inputMode="numeric" className="tabular-nums" data-testid="color-sort-order" />
               </FormControl>
@@ -234,12 +240,12 @@ function ColorForm({ color, onDone }: { color?: CatalogColor; onDone: () => void
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="outline" data-testid="color-cancel">
-              Cancel
+              {tc("cancel")}
             </Button>
           </DialogClose>
           <Button type="submit" disabled={mutation.isPending} data-testid="color-save">
             {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
-            {color ? "Save" : "Add colour"}
+            {color ? t("form.save") : t("form.add")}
           </Button>
         </DialogFooter>
       </form>

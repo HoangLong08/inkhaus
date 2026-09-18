@@ -4,6 +4,7 @@ import { can } from "@inkhaus/shared/admin";
 import type { AdminRoleCode } from "@inkhaus/shared/orders";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Palette } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -33,6 +34,7 @@ import { queryKeys } from "@/lib/query-keys";
  * frozen switch reads as a hung app.
  */
 export default function ColorsTable({ role }: { role: AdminRoleCode }) {
+  const t = useTranslations("Colors");
   const router = useRouter();
   const queryClient = useQueryClient();
   const key = queryKeys.catalog.colors();
@@ -59,7 +61,7 @@ export default function ColorsTable({ role }: { role: AdminRoleCode }) {
     onError: (error, _vars, context) => {
       if (context?.previous) queryClient.setQueryData(key, context.previous);
       if (error instanceof ClientApiError && error.status === 401) return;
-      toast.error("Could not change the colour", { description: error.message });
+      toast.error(t("toggle.error"), { description: error.message });
     },
 
     onSuccess: (next) => {
@@ -67,7 +69,9 @@ export default function ColorsTable({ role }: { role: AdminRoleCode }) {
         list.map((c) => (c.slug === next.slug ? next : c)),
       );
       toast.success(
-        next.active ? `${next.name} can be added to products again` : `${next.name} archived`,
+        next.active
+          ? t("toggle.offered", { name: next.name })
+          : t("toggle.archived", { name: next.name }),
       );
     },
 
@@ -82,8 +86,8 @@ export default function ColorsTable({ role }: { role: AdminRoleCode }) {
     return (
       <ListEmpty
         icon={Palette}
-        title="No colours yet"
-        description="Add the first one to start offering products in it."
+        title={t("empty.title")}
+        description={t("empty.description")}
         reason="none"
       />
     );
@@ -95,14 +99,14 @@ export default function ColorsTable({ role }: { role: AdminRoleCode }) {
         <TableHeader>
           <TableRow>
             <OrdinalHead />
-            <TableHead>Colour</TableHead>
-            <TableHead>Slug</TableHead>
-            <TableHead>Hex</TableHead>
-            <TableHead className="text-right">Products</TableHead>
-            <TableHead className="text-right">Order lines</TableHead>
-            <TableHead>Offered</TableHead>
+            <TableHead>{t("columns.colour")}</TableHead>
+            <TableHead>{t("columns.slug")}</TableHead>
+            <TableHead>{t("columns.hex")}</TableHead>
+            <TableHead className="text-right">{t("columns.products")}</TableHead>
+            <TableHead className="text-right">{t("columns.orderLines")}</TableHead>
+            <TableHead>{t("columns.offered")}</TableHead>
             <TableHead className="w-12">
-              <span className="sr-only">Edit</span>
+              <span className="sr-only">{t("columns.edit")}</span>
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -129,7 +133,7 @@ export default function ColorsTable({ role }: { role: AdminRoleCode }) {
                   <span className="font-medium">{color.name}</span>
                   {color.dark ? (
                     <Badge variant="outline" className="text-muted-foreground">
-                      Dark
+                      {t("dark")}
                     </Badge>
                   ) : null}
                 </span>
@@ -146,7 +150,7 @@ export default function ColorsTable({ role }: { role: AdminRoleCode }) {
                     checked={color.active}
                     disabled={!canEdit || (toggle.isPending && toggle.variables?.slug === color.slug)}
                     onCheckedChange={(active) => toggle.mutate({ slug: color.slug, active })}
-                    aria-label={`Offer ${color.name} on new products`}
+                    aria-label={t("offerAria", { name: color.name })}
                     data-testid="color-active"
                   />
                   <StatusBadge status={color.active ? "ACTIVE" : "INACTIVE"} />

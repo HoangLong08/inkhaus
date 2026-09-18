@@ -104,6 +104,45 @@ test.describe("language", () => {
     await expect(page.getByTestId("row-ordinal").first()).toHaveAttribute("data-ordinal", ordinal!);
   });
 
+  test("a page's own namespace reaches its client leaves, and the chrome survives", async ({
+    page,
+  }) => {
+    // The test above proves CHROME_NAMESPACES arrives. This proves the other
+    // half: /catalog/colors nests a SECOND provider for its own namespace, and
+    // nested providers replace rather than merge - so a page that passed only
+    // its own set would strip the sidebar, and one that forgot to nest at all
+    // would render "Colors.columns.colour" in a cell. Both are silent in a
+    // production build, which is what this suite runs.
+    await signIn(page, "owner");
+    await page.goto("/catalog/colors");
+
+    // the SECOND head: the first is the ordinal, which lives in Common and
+    // would pass on the chrome provider alone
+    const head = page.locator('[data-slot="table-head"]').nth(1);
+    const before = (await head.innerText()).trim();
+    expect(before, "the head rendered its own key - the namespace never arrived").not.toMatch(
+      /^Colors\./,
+    );
+
+    // a surface only a client component draws, so the provider is the only way
+    // its words could have got here
+    await page.getByTestId("color-new").click();
+    const dialog = page.getByRole("dialog").locator("h2");
+    const titleBefore = (await dialog.innerText()).trim();
+    expect(titleBefore).not.toMatch(/^Colors\./);
+    await page.keyboard.press("Escape");
+
+    await switchTo(page, "vi");
+
+    await expect.poll(async () => (await head.innerText()).trim()).not.toBe(before);
+    await expect(head).not.toHaveText(/^Colors\./);
+
+    // and the chrome is still translated beside it, not rendering its own keys
+    await expect(
+      page.locator('[data-testid="nav-link"][data-section="orders"]'),
+    ).not.toHaveText(/^Nav\./);
+  });
+
   test("the choice survives a reload, and switching back restores English", async ({ page }) => {
     await signIn(page, "owner");
 
