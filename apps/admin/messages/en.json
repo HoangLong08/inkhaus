@@ -236,6 +236,115 @@
     }
   },
 
+  "Product": {
+    "back": "Products",
+    "meta": "{count, plural, one {on {orders} order} other {on {orders} orders}} · edited {edited}",
+
+    "new": {
+      "title": "New product",
+      "description": "It starts archived, so the storefront does not list it until it is switched on.",
+      "ownersOnly": "A new blank carries a price, so adding one is limited to owners. Ask an owner to add it."
+    },
+    "notFound": {
+      "title": "Product not found",
+      "emptyTitle": "No product has that slug",
+      "description": "Products are archived rather than deleted, so it was never created under this name.",
+      "action": "Back to products"
+    },
+
+    "section": {
+      "details": "Details",
+      "methods": "Print methods",
+      "sizes": "Sizes",
+      "colours": "Colours",
+      "printArea": "Print area",
+      "printAreaHint": "Where artwork may go, in the blank outline's own units, and how big that is on the garment.",
+      "pricing": "Pricing",
+      "visibility": "Visibility"
+    },
+
+    "form": {
+      "slug": "Slug",
+      "slugPlaceholder": "heavyweight-tee",
+      "slugHint": "The storefront URL and what saved carts point at. It cannot be changed later.",
+      "name": "Name",
+      "type": "Blank shape",
+      "typeHint": "Which outline the design studio draws.",
+      "category": "Category",
+      "categoryHint": "The storefront aisle it is shelved in.",
+      "tag": "Tag",
+      "optional": "(optional)",
+      "tagPlaceholder": "Bestseller",
+      "tagHint": "A short badge on the product card. Leave empty for none.",
+      "blurb": "Blurb",
+      "blurbCount": "{used}/{max}",
+      "fabric": "Fabric",
+      "offeredIn": "Offered in",
+      "sizeRun": "Size run",
+      "sizeRunHint": "Leave every box empty for the default apparel run (XS to 3XL). Non-apparel carries OS only.",
+      "colourways": "Colourways",
+      "colourwaysHint": "The first one checked is the storefront's default. Archived colours cannot be added, but may stay where they already are.",
+      "archived": "Archived",
+      "left": "Left",
+      "top": "Top",
+      "width": "Width",
+      "height": "Height",
+      "widthIn": "Width (in)",
+      "heightIn": "Height (in)",
+      "price": "Price, one unit",
+      "bulkPrice": "Bulk price (floor)",
+      "pricingHint": "The single-unit price, and the 50+ floor no volume discount goes below.",
+      "pricingOwners": "Owners set prices.",
+      "onSale": "On sale",
+      "onSaleHint": "Archiving stops checkout for this blank at once - but the storefront keeps listing it until it reads the catalog from the API.",
+      "sortOrder": "Sort order",
+      "sortOrderHint": "Lower comes first on the storefront and in this list.",
+      "create": "Create product",
+      "save": "Save changes",
+      "createError": "Could not create the product",
+      "created": "Created {name}",
+      "saveError": "Could not save the product",
+      "saved": "Saved {name}",
+      "unchanged": "Nothing to save - no field has changed."
+    },
+
+    "photos": {
+      "title": "Photos",
+      "description": "Managed in the storefront's repository; listed here for reference.",
+      "empty": "No photos - the storefront draws the blank's outline instead.",
+      "dimensions": "{width}×{height}",
+      "everyColour": "every colour"
+    },
+
+    "history": {
+      "title": "History",
+      "description": "The last ten changes, and who made them.",
+      "empty": "No changes recorded since the back office started keeping a log.",
+      "removedActor": "A removed account",
+      "defaultRun": "default run",
+      "none": "none",
+      "yes": "yes",
+      "no": "no"
+    },
+    "field": {
+      "name": "Name",
+      "type": "Blank shape",
+      "category": "Category",
+      "blurb": "Blurb",
+      "fabric": "Fabric",
+      "tag": "Tag",
+      "sizes": "Sizes",
+      "price": "Price",
+      "bulkPrice": "Bulk price",
+      "methods": "Print methods",
+      "printArea": "Print area",
+      "printInches": "Print size (in)",
+      "colorSlugs": "Colours",
+      "active": "On sale",
+      "sortOrder": "Sort order"
+    }
+  },
+
   "Tiers": {
     "title": "Price tiers",
     "meta": "{count, plural, one {{total} tier} other {{total} tiers}}",

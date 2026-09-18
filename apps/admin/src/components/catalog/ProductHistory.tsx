@@ -1,33 +1,24 @@
+import { useTranslations } from "next-intl";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { CatalogAuditEntry } from "@/lib/api";
 import { at, usd } from "@/lib/format";
 
-/** the API's field names, as a person reads them */
-const FIELD_LABEL: Record<string, string> = {
-  name: "Name",
-  type: "Blank shape",
-  category: "Category",
-  blurb: "Blurb",
-  fabric: "Fabric",
-  tag: "Tag",
-  sizes: "Sizes",
-  price: "Price",
-  bulkPrice: "Bulk price",
-  methods: "Print methods",
-  printArea: "Print area",
-  printInches: "Print size (in)",
-  colorSlugs: "Colours",
-  active: "On sale",
-  sortOrder: "Sort order",
-};
-
 const MONEY = new Set(["price", "bulkPrice"]);
 
-function show(key: string, value: unknown): string {
+/** what a translator has to be able to answer for `show` below */
+type Words = {
+  defaultRun: string;
+  none: string;
+  yes: string;
+  no: string;
+};
+
+function show(key: string, value: unknown, words: Words): string {
   if (MONEY.has(key) && typeof value === "number") return usd(value);
-  if (key === "sizes" && Array.isArray(value) && value.length === 0) return "default run";
-  if (value === null || value === undefined || value === "") return "none";
-  if (typeof value === "boolean") return value ? "yes" : "no";
+  if (key === "sizes" && Array.isArray(value) && value.length === 0) return words.defaultRun;
+  if (value === null || value === undefined || value === "") return words.none;
+  if (typeof value === "boolean") return value ? words.yes : words.no;
   if (Array.isArray(value)) return value.join(", ");
   if (typeof value === "object") {
     return Object.entries(value)
@@ -42,18 +33,31 @@ function show(key: string, value: unknown): string {
  * Server rendered - a save calls `router.refresh()`, which brings the new entry.
  */
 export default function ProductHistory({ entries }: { entries: CatalogAuditEntry[] }) {
+  const t = useTranslations("Product");
+  // the API's field names, as a person reads them. `t.has` because the field
+  // list is the API's, not ours - it is a separate deployment (s3.4) and a key
+  // this build has never heard of has to render as something.
+  const field = (key: string) =>
+    t.has(`field.${key}` as "field.name") ? t(`field.${key}` as "field.name") : key;
+  const words = {
+    defaultRun: t("history.defaultRun"),
+    none: t("history.none"),
+    yes: t("history.yes"),
+    no: t("history.no"),
+  };
+
   return (
     <Card data-testid="product-history">
       <CardHeader>
         <CardTitle className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
-          History
+          {t("history.title")}
         </CardTitle>
-        <CardDescription>The last ten changes, and who made them.</CardDescription>
+        <CardDescription>{t("history.description")}</CardDescription>
       </CardHeader>
       <CardContent>
         {entries.length === 0 ? (
           <p className="text-muted-foreground text-sm">
-            No changes recorded since the back office started keeping a log.
+            {t("history.empty")}
           </p>
         ) : (
           <ol className="space-y-4">
@@ -66,7 +70,7 @@ export default function ProductHistory({ entries }: { entries: CatalogAuditEntry
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                   <span className="font-medium">
-                    {entry.actor ? (entry.actor.name ?? entry.actor.email) : "A removed account"}
+                    {entry.actor ? (entry.actor.name ?? entry.actor.email) : t("history.removedActor")}
                   </span>
                   <time dateTime={entry.at} className="text-muted-foreground text-xs">
                     {at(entry.at)}
@@ -76,15 +80,15 @@ export default function ProductHistory({ entries }: { entries: CatalogAuditEntry
                   <dl className="text-muted-foreground space-y-0.5">
                     {Object.keys(entry.after).map((key) => (
                       <div key={key} className="flex flex-wrap gap-x-1.5">
-                        <dt className="text-foreground">{FIELD_LABEL[key] ?? key}</dt>
+                        <dt className="text-foreground">{field(key)}</dt>
                         <dd className="break-all">
                           {entry.before && key in entry.before ? (
                             <>
-                              <span className="line-through">{show(key, entry.before[key])}</span>{" "}
+                              <span className="line-through">{show(key, entry.before[key], words)}</span>{" "}
                               →{" "}
                             </>
                           ) : null}
-                          {show(key, entry.after?.[key])}
+                          {show(key, entry.after?.[key], words)}
                         </dd>
                       </div>
                     ))}

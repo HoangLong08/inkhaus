@@ -236,6 +236,115 @@
     }
   },
 
+  "Product": {
+    "back": "Sản phẩm",
+    "meta": "{count, plural, other {trên {orders} đơn hàng}} · sửa lúc {edited}",
+
+    "new": {
+      "title": "Thêm sản phẩm",
+      "description": "Sản phẩm mới bắt đầu ở trạng thái lưu trữ, nên cửa hàng chưa hiển thị cho tới khi bật lên.",
+      "ownersOnly": "Sản phẩm mới luôn kèm một mức giá, nên chỉ chủ mới thêm được. Hãy nhờ chủ thêm giúp."
+    },
+    "notFound": {
+      "title": "Không tìm thấy sản phẩm",
+      "emptyTitle": "Không có sản phẩm nào mang slug đó",
+      "description": "Sản phẩm chỉ được lưu trữ chứ không bị xoá, nên nó chưa từng được tạo với tên này.",
+      "action": "Quay lại danh sách sản phẩm"
+    },
+
+    "section": {
+      "details": "Thông tin",
+      "methods": "Kiểu in",
+      "sizes": "Kích cỡ",
+      "colours": "Màu sắc",
+      "printArea": "Vùng in",
+      "printAreaHint": "Nơi hình in được phép đặt, tính theo đơn vị của bản vẽ phôi, và kích thước thật của vùng đó trên sản phẩm.",
+      "pricing": "Giá",
+      "visibility": "Hiển thị"
+    },
+
+    "form": {
+      "slug": "Slug",
+      "slugPlaceholder": "heavyweight-tee",
+      "slugHint": "Đây là đường dẫn trên cửa hàng và là thứ giỏ hàng đã lưu trỏ tới. Sau này không đổi được.",
+      "name": "Tên",
+      "type": "Dáng phôi",
+      "typeHint": "Xưởng thiết kế sẽ vẽ theo dáng này.",
+      "category": "Danh mục",
+      "categoryHint": "Gian hàng mà sản phẩm được xếp vào trên cửa hàng.",
+      "tag": "Nhãn",
+      "optional": "(không bắt buộc)",
+      "tagPlaceholder": "Bán chạy",
+      "tagHint": "Một nhãn ngắn trên thẻ sản phẩm. Để trống nếu không cần.",
+      "blurb": "Mô tả ngắn",
+      "blurbCount": "{used}/{max}",
+      "fabric": "Chất liệu",
+      "offeredIn": "Có các kiểu in",
+      "sizeRun": "Dải kích cỡ",
+      "sizeRunHint": "Để trống tất cả ô nếu dùng dải mặc định cho quần áo (XS đến 3XL). Hàng không phải quần áo chỉ có OS.",
+      "colourways": "Phối màu",
+      "colourwaysHint": "Màu được chọn đầu tiên là màu mặc định trên cửa hàng. Màu đã lưu trữ không thêm mới được, nhưng vẫn giữ ở nơi đang có.",
+      "archived": "Đã lưu trữ",
+      "left": "Trái",
+      "top": "Trên",
+      "width": "Rộng",
+      "height": "Cao",
+      "widthIn": "Rộng (inch)",
+      "heightIn": "Cao (inch)",
+      "price": "Giá một sản phẩm",
+      "bulkPrice": "Giá sỉ (sàn)",
+      "pricingHint": "Giá cho một sản phẩm, và mức sàn từ 50 sản phẩm mà không chiết khấu nào xuống thấp hơn.",
+      "pricingOwners": "Chỉ chủ đặt được giá.",
+      "onSale": "Đang bán",
+      "onSaleHint": "Lưu trữ sẽ chặn thanh toán sản phẩm này ngay lập tức - nhưng cửa hàng vẫn còn hiển thị cho tới khi nó đọc catalog từ API.",
+      "sortOrder": "Thứ tự sắp xếp",
+      "sortOrderHint": "Số nhỏ hơn đứng trước, cả trên cửa hàng lẫn trong danh sách này.",
+      "create": "Tạo sản phẩm",
+      "save": "Lưu thay đổi",
+      "createError": "Không tạo được sản phẩm",
+      "created": "Đã tạo {name}",
+      "saveError": "Không lưu được sản phẩm",
+      "saved": "Đã lưu {name}",
+      "unchanged": "Không có gì để lưu - chưa trường nào thay đổi."
+    },
+
+    "photos": {
+      "title": "Hình ảnh",
+      "description": "Được quản lý trong kho mã nguồn của cửa hàng; liệt kê ở đây để tham khảo.",
+      "empty": "Chưa có ảnh - cửa hàng sẽ vẽ hình phôi thay thế.",
+      "dimensions": "{width}×{height}",
+      "everyColour": "mọi màu"
+    },
+
+    "history": {
+      "title": "Lịch sử",
+      "description": "Mười thay đổi gần nhất, và ai đã thực hiện.",
+      "empty": "Chưa ghi nhận thay đổi nào kể từ khi trang quản trị bắt đầu lưu nhật ký.",
+      "removedActor": "Một tài khoản đã bị xoá",
+      "defaultRun": "dải mặc định",
+      "none": "không có",
+      "yes": "có",
+      "no": "không"
+    },
+    "field": {
+      "name": "Tên",
+      "type": "Dáng phôi",
+      "category": "Danh mục",
+      "blurb": "Mô tả ngắn",
+      "fabric": "Chất liệu",
+      "tag": "Nhãn",
+      "sizes": "Kích cỡ",
+      "price": "Giá",
+      "bulkPrice": "Giá sỉ",
+      "methods": "Kiểu in",
+      "printArea": "Vùng in",
+      "printInches": "Kích thước in (inch)",
+      "colorSlugs": "Màu sắc",
+      "active": "Đang bán",
+      "sortOrder": "Thứ tự sắp xếp"
+    }
+  },
+
   "Tiers": {
     "title": "Bậc giá",
     "meta": "{count, plural, other {{total} bậc}}",

@@ -1,16 +1,11 @@
 "use client";
 
-import { can } from "@inkhaus/shared/admin";
+import { CATALOG_LIMITS, can } from "@inkhaus/shared/admin";
 import type { AdminRoleCode } from "@inkhaus/shared/orders";
-import {
-  CATEGORIES,
-  CATEGORY_LABEL,
-  GARMENT_TYPE_LABEL,
-  GARMENT_TYPES,
-  PRINT_METHODS,
-} from "@inkhaus/shared/taxonomy";
+import { CATEGORIES, GARMENT_TYPES, PRINT_METHODS } from "@inkhaus/shared/taxonomy";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useForm, type UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
@@ -43,7 +38,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCodeLabel } from "@/i18n/labels";
 import type { CatalogColor, CatalogProduct, CatalogSize } from "@/lib/api";
 import { ClientApiError, clientApi } from "@/lib/client-api";
-import { usd } from "@/lib/format";
+import { count, usd } from "@/lib/format";
 import { useTranslatedResolver } from "@/lib/form-resolver";
 import { queryKeys } from "@/lib/query-keys";
 import {
@@ -99,6 +94,7 @@ const NEW_PRODUCT: ProductInput = {
 };
 
 function CreateProduct({ role, priceEditsEnabled, sizes, colors }: Shared) {
+  const t = useTranslations("Product");
   const router = useRouter();
   const queryClient = useQueryClient();
   const form = useForm<ProductInput>({
@@ -112,11 +108,11 @@ function CreateProduct({ role, priceEditsEnabled, sizes, colors }: Shared) {
     // server has accepted the slug.
     onError: (error) => {
       if (error instanceof ClientApiError && error.status === 401) return;
-      toast.error("Could not create the product", { description: error.message });
+      toast.error(t("form.createError"), { description: error.message });
     },
     onSuccess: (product) => {
       queryClient.setQueryData(queryKeys.catalog.product(product.slug), product);
-      toast.success(`Created ${product.name}`);
+      toast.success(t("form.created", { name: product.name }));
       router.push(`/catalog/products/${product.slug}`);
     },
     onSettled: () => {
@@ -158,6 +154,7 @@ function EditProduct({ slug, ...shared }: Shared & { slug: string }) {
 }
 
 function ProductEditor({ product, role, priceEditsEnabled, sizes, colors }: Shared & { product: CatalogProduct }) {
+  const t = useTranslations("Product");
   const router = useRouter();
   const queryClient = useQueryClient();
   const key = queryKeys.catalog.product(product.slug);
@@ -186,12 +183,12 @@ function ProductEditor({ product, role, priceEditsEnabled, sizes, colors }: Shar
       if (context?.previous) queryClient.setQueryData(key, context.previous);
       // 401 already redirected inside clientApi
       if (error instanceof ClientApiError && error.status === 401) return;
-      toast.error("Could not save the product", { description: error.message });
+      toast.error(t("form.saveError"), { description: error.message });
     },
 
     onSuccess: (next) => {
       queryClient.setQueryData(key, next);
-      toast.success(`Saved ${next.name}`);
+      toast.success(t("form.saved", { name: next.name }));
     },
 
     onSettled: () => {
@@ -204,7 +201,7 @@ function ProductEditor({ product, role, priceEditsEnabled, sizes, colors }: Shar
   function submit(values: ProductInput) {
     const patch = productChanges(values, saved, priceLocked);
     if (!patch) {
-      toast.info("Nothing to save - no field has changed.");
+      toast.info(t("form.unchanged"));
       return;
     }
     mutation.mutate(patch);
@@ -253,7 +250,10 @@ function ProductFields({
 }: FieldsProps) {
   const priceLocked = !canPrice || !priceEditsEnabled;
   const sizeCodes = sizes.map((s) => s.code);
+  const t = useTranslations("Product");
   const methodLabel = useCodeLabel("PrintMethod");
+  const typeLabel = useCodeLabel("GarmentType");
+  const categoryLabel = useCodeLabel("Category");
 
   return (
     <Form {...form}>
@@ -265,24 +265,24 @@ function ProductFields({
         className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
       >
         <div className="space-y-6">
-          <Section title="Details">
+          <Section title={t("section.details")}>
             {mode === "create" ? (
               <FormField
                 control={form.control}
                 name="slug"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Slug</FormLabel>
+                    <FormLabel>{t("form.slug")}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="heavyweight-tee"
+                        placeholder={t("form.slugPlaceholder")}
                         autoComplete="off"
                         data-testid="product-slug"
                         {...field}
                       />
                     </FormControl>
                     <FormDescription>
-                      The storefront URL and what saved carts point at. It cannot be changed later.
+                      {t("form.slugHint")}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -295,7 +295,7 @@ function ProductFields({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>{t("form.name")}</FormLabel>
                   <FormControl>
                     <Input maxLength={80} data-testid="product-name" {...field} />
                   </FormControl>
@@ -310,7 +310,7 @@ function ProductFields({
                 name="type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Blank shape</FormLabel>
+                    <FormLabel>{t("form.type")}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="w-full" data-testid="product-type">
@@ -325,12 +325,12 @@ function ProductFields({
                             data-testid="product-type-option"
                             data-type={type}
                           >
-                            {GARMENT_TYPE_LABEL[type]}
+                            {typeLabel(type)}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormDescription>Which outline the design studio draws.</FormDescription>
+                    <FormDescription>{t("form.typeHint")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -341,7 +341,7 @@ function ProductFields({
                 name="category"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Category</FormLabel>
+                    <FormLabel>{t("form.category")}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="w-full" data-testid="product-category">
@@ -356,12 +356,12 @@ function ProductFields({
                             data-testid="product-category-option"
                             data-category={category}
                           >
-                            {CATEGORY_LABEL[category]}
+                            {categoryLabel(category)}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormDescription>The storefront aisle it is shelved in.</FormDescription>
+                    <FormDescription>{t("form.categoryHint")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -374,12 +374,13 @@ function ProductFields({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    Tag <span className="text-muted-foreground font-normal">(optional)</span>
+                    {t("form.tag")}{" "}
+                    <span className="text-muted-foreground font-normal">{t("form.optional")}</span>
                   </FormLabel>
                   <FormControl>
-                    <Input maxLength={24} placeholder="Bestseller" data-testid="product-tag" {...field} />
+                    <Input maxLength={24} placeholder={t("form.tagPlaceholder")} data-testid="product-tag" {...field} />
                   </FormControl>
-                  <FormDescription>A short badge on the product card. Leave empty for none.</FormDescription>
+                  <FormDescription>{t("form.tagHint")}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -390,11 +391,16 @@ function ProductFields({
               name="blurb"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Blurb</FormLabel>
+                  <FormLabel>{t("form.blurb")}</FormLabel>
                   <FormControl>
                     <Textarea rows={3} maxLength={400} data-testid="product-blurb" {...field} />
                   </FormControl>
-                  <FormDescription className="tabular-nums">{field.value.length}/400</FormDescription>
+                  <FormDescription className="tabular-nums">
+                    {t("form.blurbCount", {
+                      used: count(field.value.length),
+                      max: count(CATALOG_LIMITS.product.blurb),
+                    })}
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -405,7 +411,7 @@ function ProductFields({
               name="fabric"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Fabric</FormLabel>
+                  <FormLabel>{t("form.fabric")}</FormLabel>
                   <FormControl>
                     <Input maxLength={200} data-testid="product-fabric" {...field} />
                   </FormControl>
@@ -415,11 +421,11 @@ function ProductFields({
             />
           </Section>
 
-          <Section title="Print methods">
+          <Section title={t("section.methods")}>
             <CheckboxGroup
               form={form}
               name="methods"
-              label="Offered in"
+              label={t("form.offeredIn")}
               testId="product-method"
               dataName="data-method"
               // the shared PRINT_METHOD_LABEL table is a wire value, not display
@@ -429,12 +435,12 @@ function ProductFields({
             />
           </Section>
 
-          <Section title="Sizes">
+          <Section title={t("section.sizes")}>
             <CheckboxGroup
               form={form}
               name="sizes"
-              label="Size run"
-              description="Leave every box empty for the default apparel run (XS to 3XL). Non-apparel carries OS only."
+              label={t("form.sizeRun")}
+              description={t("form.sizeRunHint")}
               testId="product-size"
               dataName="data-size"
               options={sizes.map((s) => ({
@@ -455,12 +461,12 @@ function ProductFields({
             />
           </Section>
 
-          <Section title="Colours">
+          <Section title={t("section.colours")}>
             <CheckboxGroup
               form={form}
               name="colorSlugs"
-              label="Colourways"
-              description="The first one checked is the storefront's default. Archived colours cannot be added, but may stay where they already are."
+              label={t("form.colourways")}
+              description={t("form.colourwaysHint")}
               testId="product-color"
               dataName="data-color"
               options={colors
@@ -478,7 +484,7 @@ function ProductFields({
                       {c.name}
                       {!c.active ? (
                         <Badge variant="outline" className="text-muted-foreground">
-                          Archived
+                          {t("form.archived")}
                         </Badge>
                       ) : null}
                     </span>
@@ -491,27 +497,27 @@ function ProductFields({
           </Section>
 
           <Section
-            title="Print area"
-            description="Where artwork may go, in the blank outline's own units, and how big that is on the garment."
+            title={t("section.printArea")}
+            description={t("section.printAreaHint")}
           >
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <NumberField form={form} name="printArea.x" label="Left" testId="product-print-x" />
-              <NumberField form={form} name="printArea.y" label="Top" testId="product-print-y" />
-              <NumberField form={form} name="printArea.w" label="Width" testId="product-print-w" />
-              <NumberField form={form} name="printArea.h" label="Height" testId="product-print-h" />
+              <NumberField form={form} name="printArea.x" label={t("form.left")} testId="product-print-x" />
+              <NumberField form={form} name="printArea.y" label={t("form.top")} testId="product-print-y" />
+              <NumberField form={form} name="printArea.w" label={t("form.width")} testId="product-print-w" />
+              <NumberField form={form} name="printArea.h" label={t("form.height")} testId="product-print-h" />
             </div>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <NumberField
                 form={form}
                 name="printInches.w"
-                label="Width (in)"
+                label={t("form.widthIn")}
                 step={0.01}
                 testId="product-inches-w"
               />
               <NumberField
                 form={form}
                 name="printInches.h"
-                label="Height (in)"
+                label={t("form.heightIn")}
                 step={0.01}
                 testId="product-inches-h"
               />
@@ -521,18 +527,14 @@ function ProductFields({
 
         <div className="space-y-6">
           <Section
-            title="Pricing"
-            description={
-              !canPrice
-                ? "Owners set prices."
-                : "The single-unit price, and the 50+ floor no volume discount goes below."
-            }
+            title={t("section.pricing")}
+            description={!canPrice ? t("form.pricingOwners") : t("form.pricingHint")}
           >
             {!priceEditsEnabled ? <PriceSyncWarning /> : null}
             <NumberField
               form={form}
               name="price"
-              label="Price, one unit"
+              label={t("form.price")}
               step={0.01}
               disabled={priceLocked}
               testId="product-price"
@@ -540,21 +542,21 @@ function ProductFields({
             <NumberField
               form={form}
               name="bulkPrice"
-              label="Bulk price (floor)"
+              label={t("form.bulkPrice")}
               step={0.01}
               disabled={priceLocked}
               testId="product-bulk-price"
             />
           </Section>
 
-          <Section title="Visibility">
+          <Section title={t("section.visibility")}>
             <FormField
               control={form.control}
               name="active"
               render={({ field }) => (
                 <FormItem>
                   <div className="flex items-center justify-between gap-4">
-                    <FormLabel>On sale</FormLabel>
+                    <FormLabel>{t("form.onSale")}</FormLabel>
                     <FormControl>
                       <Switch
                         checked={field.value}
@@ -564,8 +566,7 @@ function ProductFields({
                     </FormControl>
                   </div>
                   <FormDescription>
-                    Archiving stops checkout for this blank at once - but the storefront keeps
-                    listing it until it reads the catalog from the API.
+                    {t("form.onSaleHint")}
                   </FormDescription>
                 </FormItem>
               )}
@@ -573,15 +574,15 @@ function ProductFields({
             <NumberField
               form={form}
               name="sortOrder"
-              label="Sort order"
-              description="Lower comes first on the storefront and in this list."
+              label={t("form.sortOrder")}
+              description={t("form.sortOrderHint")}
               testId="product-sort-order"
             />
           </Section>
 
           <Button type="submit" className="w-full" disabled={pending} data-testid="product-save">
             {pending ? <Loader2 className="animate-spin" /> : null}
-            {mode === "create" ? "Create product" : "Save changes"}
+            {mode === "create" ? t("form.create") : t("form.save")}
           </Button>
         </div>
       </form>

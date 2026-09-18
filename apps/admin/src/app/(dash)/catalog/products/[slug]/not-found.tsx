@@ -1,4 +1,5 @@
 import { Shirt } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -13,23 +14,25 @@ import {
 
 /** its own h1, like every page - EmptyTitle is a div, not a heading */
 export default function ProductNotFound() {
+  const t = useTranslations("Product");
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Product not found</h1>
+      <h1 className="text-2xl font-bold tracking-tight">{t("notFound.title")}</h1>
       <Empty className="py-16">
         <EmptyHeader>
           <EmptyMedia variant="icon">
             <Shirt />
           </EmptyMedia>
-          <EmptyTitle>No product has that slug</EmptyTitle>
+          <EmptyTitle>{t("notFound.emptyTitle")}</EmptyTitle>
           <EmptyDescription>
-            Products are archived rather than deleted, so it was never created under this name.
+            {t("notFound.description")}
           </EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
           <Button asChild variant="outline">
             <Link href="/catalog" data-testid="product-not-found-back">
-              Back to products
+              {t("notFound.action")}
             </Link>
           </Button>
         </EmptyContent>
