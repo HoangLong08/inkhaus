@@ -1,5 +1,6 @@
 import { cn } from "cn";
 
+import { ORDINAL_CELL, OrdinalHead } from "@/components/common/Ordinal";
 import TableCard from "@/components/common/TableCard";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -79,12 +80,23 @@ export type SkeletonColumn = {
  * `ListPage` needs it for the same reason the page does: without it the
  * placeholder table is only as tall as its rows and the footer sits halfway up
  * the screen, then jumps to the bottom when the data lands.
+ *
+ * `ordinal` is the STT column, and it is deliberately **not** a `SkeletonColumn`
+ * the caller writes out. Its head is the real `OrdinalHead`, so the label and the
+ * `w-12` come out identical to the table underneath by construction rather than
+ * by two people typing the same thing - and, unlike every hard-coded English
+ * label in this file, it is translated. That matters here and nowhere else: it is
+ * the first head in the app that differs between locales, so a literal "#" would
+ * jump ~14px to "STT" on every Vietnamese load. `OrdinalHead` resolves its own
+ * label from a hook, so a `loading.tsx` stays synchronous - which it must, being
+ * a Suspense fallback.
  */
 export function TableSkeleton({
   columns,
   rows = 10,
   dense = false,
   fill = false,
+  ordinal = false,
 }: {
   columns: readonly SkeletonColumn[];
   rows?: number;
@@ -92,11 +104,17 @@ export function TableSkeleton({
   dense?: boolean;
   /** the page is a `ListPage`, so the card takes the height that is left */
   fill?: boolean;
+  /**
+   * the real table opens with the STT column. Every record list does; the two
+   * callers on `/catalog/pricing` do not, being a form and its read-out.
+   */
+  ordinal?: boolean;
 }) {
   const table = (
     <Table>
       <TableHeader>
         <TableRow>
+          {ordinal ? <OrdinalHead /> : null}
           {columns.map((column) => (
             <TableHead
               key={column.label}
@@ -110,6 +128,11 @@ export function TableSkeleton({
       <TableBody>
         {Array.from({ length: rows }, (_, i) => (
           <TableRow key={i}>
+            {ordinal ? (
+              <TableCell className={ORDINAL_CELL}>
+                <Skeleton className="mx-auto h-4 w-4" />
+              </TableCell>
+            ) : null}
             {columns.map((column) => (
               <TableCell
                 key={column.label}
@@ -166,7 +189,7 @@ const ORDER_COLUMNS: SkeletonColumn[] = [
 export function OrdersTableSkeleton({ rows = 10 }: { rows?: number }) {
   // /orders is the list built on TableCard inside a ListPage; the others are
   // not yet
-  return <TableSkeleton columns={ORDER_COLUMNS} rows={rows} dense fill />;
+  return <TableSkeleton columns={ORDER_COLUMNS} rows={rows} dense fill ordinal />;
 }
 
 export function OrderDetailSkeleton() {
