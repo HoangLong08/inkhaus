@@ -23,6 +23,7 @@ export default function Loading() {
       <TableSkeleton
         dense
         fill
+        ordinal
         columns={[
           { label: "Product", bar: "h-4 w-40" },
           { label: "Category", bar: "h-4 w-20" },

@@ -6,6 +6,7 @@ import ListEmpty from "@/components/common/ListEmpty";
 import ListFooter from "@/components/common/ListFooter";
 import ListHeader from "@/components/common/ListHeader";
 import ListPage from "@/components/common/ListPage";
+import { ordinalFrom } from "@/components/common/Ordinal";
 import UrlSearchBox from "@/components/common/UrlSearchBox";
 import ReviewsTable from "@/components/reviews/ReviewsTable";
 import StatusFilterLinks from "@/components/StatusFilterLinks";
@@ -88,6 +89,9 @@ export default async function ReviewsPage({
           reviews={data}
           canModerate={can(user.role, "reviews.moderate")}
           canDelete={can(user.role, "reviews.delete")}
+          // the same two numbers the footer below counts with. The page size is
+          // the API's and is not in the URL, so it is only on `meta`.
+          from={ordinalFrom(meta.page, meta.limit)}
         />
       )}
 

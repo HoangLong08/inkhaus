@@ -6,6 +6,7 @@ import ListEmpty from "@/components/common/ListEmpty";
 import ListFooter from "@/components/common/ListFooter";
 import ListHeader from "@/components/common/ListHeader";
 import ListPage from "@/components/common/ListPage";
+import { ordinalFrom } from "@/components/common/Ordinal";
 import UrlSearchBox from "@/components/common/UrlSearchBox";
 import CustomersTable from "@/components/customers/CustomersTable";
 import { adminApi } from "@/lib/api";
@@ -68,7 +69,12 @@ export default async function CustomersPage({
         />
       ) : (
         <>
-          <CustomersTable customers={data} params={params} />
+          <CustomersTable
+            customers={data}
+            params={params}
+            // the same two numbers the footer below counts with
+            from={ordinalFrom(meta.page, params.limit)}
+          />
           <ListFooter
             base="/customers"
             page={meta.page}

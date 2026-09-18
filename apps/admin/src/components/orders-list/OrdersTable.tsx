@@ -2,6 +2,7 @@ import type { OrderSort } from "@inkhaus/shared/orders";
 import { cn } from "cn";
 import Link from "next/link";
 
+import { OrdinalCell, OrdinalHead } from "@/components/common/Ordinal";
 import { ROW_LINK } from "@/components/common/row-link";
 import SortableHead from "@/components/common/SortableHead";
 import TableCard from "@/components/common/TableCard";
@@ -32,7 +33,9 @@ import type { Params } from "@/lib/url";
  * **The order number is not one of the optional columns and must never become
  * one.** It carries that stretched link; hidden, the row would stop being
  * clickable at all. It is rendered outside the loop below for the same reason
- * `ORDER_COLUMNS` leaves it out.
+ * `ORDER_COLUMNS` leaves it out. The ordinal is outside it on the same grounds:
+ * a row number the reader can switch off is a row number nobody can rely on, so
+ * it never reaches `?cols=` or `OrdersColumnsMenu`.
  *
  * Order, Total and Placed sort by being links too (`SortableHead`).
  */
@@ -106,12 +109,15 @@ export default function OrdersTable({
   sort,
   cols,
   linkParams,
+  from,
 }: {
   orders: AdminOrderListItem[];
   sort: OrderSort;
   /** the visible columns, parsed from `?cols=` */
   cols: readonly OrderColumn[];
   linkParams: Params;
+  /** the ordinal of this page's first row - `ordinalFrom(meta.page, params.limit)` */
+  from: number;
 }) {
   const head = { base: "/orders", params: linkParams, sort };
   const shown = COLUMNS.filter((column) => cols.includes(column.id));
@@ -121,6 +127,7 @@ export default function OrdersTable({
       <Table>
         <TableHeader>
           <TableRow>
+            <OrdinalHead />
             <SortableHead {...head} field="number" label="Order" />
             {shown.map((column) =>
               column.sort ? (
@@ -143,7 +150,7 @@ export default function OrdersTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {orders.map((order) => (
+          {orders.map((order, i) => (
             <TableRow
               key={order.number}
               className="relative"
@@ -152,6 +159,7 @@ export default function OrdersTable({
               data-status={order.status}
               data-total={order.total}
             >
+              <OrdinalCell n={from + i} />
               <TableCell>
                 <Link
                   href={`/orders/${order.number}`}

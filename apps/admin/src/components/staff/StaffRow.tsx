@@ -5,6 +5,7 @@ import { ADMIN_ROLES } from "@inkhaus/shared/orders";
 import { Loader2, LogOut } from "lucide-react";
 import { useState } from "react";
 
+import { OrdinalCell } from "@/components/common/Ordinal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,12 +53,20 @@ const NOT_ALLOWED = "Managing staff is limited to owners.";
 export default function StaffRow({
   member,
   actor,
+  index,
   activeOwners,
   canManage,
   now,
 }: {
   member: StaffMember;
   actor: StaffActor;
+  /**
+   * this row's position in the list, 0-based - the ordinal column's value.
+   * Required, not defaulted: the `<th>` that pairs with it is in `StaffTable`,
+   * and a row that quietly rendered one cell short would simply look misaligned
+   * rather than fail. The type is what catches it.
+   */
+  index: number;
   activeOwners: number;
   canManage: boolean;
   /** when the list was read; relative times are measured from it */
@@ -91,6 +100,7 @@ export default function StaffRow({
       data-active={member.isActive}
       data-self={member.isSelf}
     >
+      <OrdinalCell n={index + 1} />
       {/* name over email: two lines, so it states its own py- and TableCard's
           `py-0` steps aside for it */}
       <TableCell className="py-1.5 leading-tight">

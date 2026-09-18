@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import ListFooter from "@/components/common/ListFooter";
 import ListHeader from "@/components/common/ListHeader";
 import ListPage from "@/components/common/ListPage";
+import { ordinalFrom } from "@/components/common/Ordinal";
 import OrdersToolbar from "@/components/orders/OrdersToolbar";
 import OrdersEmpty from "@/components/orders-list/OrdersEmpty";
 import OrdersExportButton from "@/components/orders-list/OrdersExportButton";
@@ -68,6 +69,9 @@ export default async function OrdersPage({
             sort={params.sort}
             cols={params.cols}
             linkParams={linkParams}
+            // the same two numbers the footer below counts with, so the first
+            // row's ordinal and `list-range`'s "Showing 21-40" cannot disagree
+            from={ordinalFrom(meta.page, params.limit)}
           />
           <ListFooter
             base="/orders"

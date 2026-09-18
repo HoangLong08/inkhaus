@@ -1,6 +1,7 @@
 import { cn } from "cn";
 import Link from "next/link";
 
+import { OrdinalCell, OrdinalHead } from "@/components/common/Ordinal";
 import { ROW_LINK } from "@/components/common/row-link";
 import SortableHead from "@/components/common/SortableHead";
 import TableCard from "@/components/common/TableCard";
@@ -31,9 +32,12 @@ const BASE = "/customers";
 export default function CustomersTable({
   customers,
   params,
+  from,
 }: {
   customers: CustomerListItem[];
   params: CustomersQuery;
+  /** the ordinal of this page's first row - `ordinalFrom(meta.page, params.limit)` */
+  from: number;
 }) {
   const sort = params.sort ?? "created_desc";
   const head = { base: BASE, params, sort };
@@ -43,6 +47,7 @@ export default function CustomersTable({
       <Table>
         <TableHeader>
           <TableRow>
+            <OrdinalHead />
             <TableHead>Customer</TableHead>
             <SortableHead {...head} field="name" label="Name" first="asc" />
             <SortableHead {...head} field="orders" label="Orders" align="right" />
@@ -53,7 +58,7 @@ export default function CustomersTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {customers.map((customer) => (
+          {customers.map((customer, i) => (
             <TableRow
               key={customer.id}
               data-testid="customer-row"
@@ -61,6 +66,7 @@ export default function CustomersTable({
               data-email={customer.email}
               className="relative"
             >
+              <OrdinalCell n={from + i} />
               <TableCell className="max-w-72">
                 <div className="flex items-center gap-2">
                   <Link

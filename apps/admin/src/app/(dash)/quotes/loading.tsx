@@ -37,7 +37,7 @@ export default function Loading() {
           ))}
         </div>
       </div>
-      <TableSkeleton dense fill columns={QUOTE_COLUMNS} />
+      <TableSkeleton dense fill ordinal columns={QUOTE_COLUMNS} />
       <ListFooterSkeleton />
     </ListPage>
   );

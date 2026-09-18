@@ -8,6 +8,7 @@ export default function Loading() {
       <TableSkeleton
         dense
         fill
+        ordinal
         rows={12}
         columns={[
           { label: "Colour", bar: "h-4 w-32" },

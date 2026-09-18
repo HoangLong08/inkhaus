@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import SizeDialog from "@/components/catalog/SizeDialog";
+import { OrdinalCell, OrdinalHead } from "@/components/common/Ordinal";
 import TableCard from "@/components/common/TableCard";
 import {
   AlertDialog,
@@ -89,6 +90,7 @@ export default function SizesTable({
       <Table>
         <TableHeader>
           <TableRow>
+            <OrdinalHead />
             <TableHead>Code</TableHead>
             <TableHead>Label</TableHead>
             <TableHead className="text-right">Upcharge</TableHead>
@@ -100,7 +102,11 @@ export default function SizesTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sizes.map((size) => {
+          {/* a delete filters the row out of the query cache rather than out of
+              this map, so `sizes` is already post-delete and the index is the
+              display position - the rows below renumber at once, and a rollback
+              brings the number back with the row */}
+          {sizes.map((size, index) => {
             const deletable = canPrice && !size.builtIn && size.productCount === 0;
             return (
               <TableRow
@@ -109,6 +115,7 @@ export default function SizesTable({
                 data-code={size.code}
                 data-built-in={String(size.builtIn)}
               >
+                <OrdinalCell n={index + 1} />
                 <TableCell>
                   <span className="inline-flex items-center gap-2">
                     <span className="font-mono font-semibold">{size.code}</span>

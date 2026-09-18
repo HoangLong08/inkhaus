@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { OrdinalCell, OrdinalHead } from "@/components/common/Ordinal";
 import { TOOLBAR_BUTTON } from "@/components/common/toolbar-styles";
 import TableCard from "@/components/common/TableCard";
 import RatingStars from "@/components/reviews/RatingStars";
@@ -117,10 +118,13 @@ export default function ReviewsTable({
   reviews,
   canModerate,
   canDelete,
+  from,
 }: {
   reviews: ReviewListItem[];
   canModerate: boolean;
   canDelete: boolean;
+  /** the ordinal of this page's first row - `ordinalFrom(meta.page, meta.limit)` */
+  from: number;
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -290,6 +294,9 @@ export default function ReviewsTable({
                   }
                 />
               </TableHead>
+              {/* after the tick box, not before it: the control you act with
+                  comes first, then the number you read by */}
+              <OrdinalHead />
               <TableHead>Review</TableHead>
               <TableHead>Rating</TableHead>
               <TableHead>Product</TableHead>
@@ -302,7 +309,10 @@ export default function ReviewsTable({
           </TableHeader>
 
           <TableBody>
-            {rows.map((review) => {
+            {/* `rows`, not `reviews`: a row hidden by an optimistic delete is
+                gone from the page, so the rows under it take its number at once
+                and settle when the refreshed page arrives */}
+            {rows.map((review, i) => {
               const status = statusOf(review);
               const isBusy = busy(review.id);
               const isChosen = selected.has(review.id);
@@ -330,6 +340,8 @@ export default function ReviewsTable({
                       }
                     />
                   </TableCell>
+
+                  <OrdinalCell n={from + i} />
 
                   {/* the tallest cell in the app: a byline plus up to three
                       clamped lines. It states py-2 so TableCard's `py-0` stands

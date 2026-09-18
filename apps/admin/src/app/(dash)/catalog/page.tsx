@@ -9,6 +9,7 @@ import ListEmpty from "@/components/common/ListEmpty";
 import ListFooter from "@/components/common/ListFooter";
 import ListHeader from "@/components/common/ListHeader";
 import ListPage from "@/components/common/ListPage";
+import { OrdinalCell, OrdinalHead, ordinalFrom } from "@/components/common/Ordinal";
 import { ROW_LINK } from "@/components/common/row-link";
 import SortableHead from "@/components/common/SortableHead";
 import TableCard from "@/components/common/TableCard";
@@ -80,6 +81,9 @@ export default async function ProductsPage({
   };
   // a new blank carries a price, so it needs price edits open as well as the role
   const canCreate = can(user.role, "catalog.create") && options.priceEditsEnabled;
+  // the same two numbers the footer counts with, so the first row's ordinal and
+  // `list-range`'s "Showing 21-40" cannot disagree
+  const from = ordinalFrom(meta.page, params.limit);
 
   return (
     <ListPage>
@@ -156,6 +160,8 @@ export default async function ProductsPage({
           <Table>
             <TableHeader>
               <TableRow>
+                {/* a sync component, so this `async` page may render it */}
+                <OrdinalHead />
                 <TableHead>Product</TableHead>
                 <TableHead>Category</TableHead>
                 <SortableHead
@@ -174,7 +180,7 @@ export default async function ProductsPage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.map((product) => (
+              {data.map((product, i) => (
                 <TableRow
                   key={product.slug}
                   // the name link stretches over the whole row, so a click
@@ -184,6 +190,7 @@ export default async function ProductsPage({
                   data-slug={product.slug}
                   data-active={String(product.active)}
                 >
+                  <OrdinalCell n={from + i} />
                   {/* name over slug · type: two lines, so it states its own py-
                       and TableCard's `py-0` steps aside for it */}
                   <TableCell className="py-1.5 leading-tight">

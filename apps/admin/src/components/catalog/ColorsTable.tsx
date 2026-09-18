@@ -9,6 +9,7 @@ import { toast } from "sonner";
 
 import ColorDialog from "@/components/catalog/ColorDialog";
 import ListEmpty from "@/components/common/ListEmpty";
+import { OrdinalCell, OrdinalHead } from "@/components/common/Ordinal";
 import TableCard from "@/components/common/TableCard";
 import StatusBadge from "@/components/StatusBadge";
 import { Badge } from "@/components/ui/badge";
@@ -93,6 +94,7 @@ export default function ColorsTable({ role }: { role: AdminRoleCode }) {
       <Table>
         <TableHeader>
           <TableRow>
+            <OrdinalHead />
             <TableHead>Colour</TableHead>
             <TableHead>Slug</TableHead>
             <TableHead>Hex</TableHead>
@@ -105,13 +107,17 @@ export default function ColorsTable({ role }: { role: AdminRoleCode }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {colors.map((color) => (
+          {/* the list is the API's own order and nothing re-sorts or filters it
+              here - archiving only maps a row in place - so the index is the
+              display position */}
+          {colors.map((color, index) => (
             <TableRow
               key={color.slug}
               data-testid="color-row"
               data-slug={color.slug}
               data-active={String(color.active)}
             >
+              <OrdinalCell n={index + 1} />
               <TableCell>
                 <span className="inline-flex items-center gap-2">
                   {/* the one legitimate inline colour: it is product data */}

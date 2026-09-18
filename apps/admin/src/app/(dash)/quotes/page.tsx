@@ -12,6 +12,7 @@ import ListEmpty from "@/components/common/ListEmpty";
 import ListFooter from "@/components/common/ListFooter";
 import ListHeader from "@/components/common/ListHeader";
 import ListPage from "@/components/common/ListPage";
+import { OrdinalCell, OrdinalHead, ordinalFrom } from "@/components/common/Ordinal";
 import { ROW_LINK } from "@/components/common/row-link";
 import TableCard from "@/components/common/TableCard";
 import UrlSearchBox from "@/components/common/UrlSearchBox";
@@ -55,6 +56,9 @@ export default async function QuotesPage({
   const today = todayUtc();
   // what every control's link keeps: the parsed params, defaults left unspelled
   const linkParams = quotesLinkParams(params);
+  // the same two numbers the footer counts with, so the first row's ordinal and
+  // `list-range`'s "Showing 21-40" cannot disagree
+  const from = ordinalFrom(meta.page, params.limit);
 
   return (
     <ListPage>
@@ -123,6 +127,8 @@ export default async function QuotesPage({
           <Table>
             <TableHeader>
               <TableRow>
+                {/* a sync component, so this `async` page may render it */}
+                <OrdinalHead />
                 <TableHead>Received</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Product</TableHead>
@@ -134,7 +140,7 @@ export default async function QuotesPage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.map((quote) => {
+              {data.map((quote, i) => {
                 const followUp = followUpState(quote.followUpAt, quote.status, today);
                 const title = quote.company ?? quote.name ?? quote.email;
                 return (
@@ -146,6 +152,7 @@ export default async function QuotesPage({
                     data-status={quote.status}
                     data-overdue={followUp === "overdue" ? "true" : undefined}
                   >
+                    <OrdinalCell n={from + i} />
                     <TableCell className="text-muted-foreground whitespace-nowrap text-xs">
                       <time dateTime={quote.createdAt} title={at(quote.createdAt)}>
                         {relative(quote.createdAt)}

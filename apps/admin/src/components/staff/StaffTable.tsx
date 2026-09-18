@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
+import { OrdinalHead } from "@/components/common/Ordinal";
 import TableCard from "@/components/common/TableCard";
 import {
   Table,
@@ -45,6 +46,10 @@ export default function StaffTable({
       <Table>
         <TableHeader>
           <TableRow>
+            {/* the cell that pairs with this head lives in StaffRow, the only
+                list in the app whose row is a file of its own - which is why
+                `index` there is required rather than defaulted */}
+            <OrdinalHead />
             <TableHead>Member</TableHead>
             <TableHead>Role</TableHead>
             <TableHead>Access</TableHead>
@@ -57,10 +62,11 @@ export default function StaffTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.data.map((member) => (
+          {data.data.map((member, index) => (
             <StaffRow
               key={member.id}
               member={member}
+              index={index}
               actor={actor}
               activeOwners={data.activeOwners}
               canManage={canManage}
