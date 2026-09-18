@@ -6,7 +6,11 @@
     "retry": "Try again",
     "clear": "Clear",
     "all": "All",
-    "search": "Search"
+    "search": "Search",
+    "ordinal": {
+      "label": "#",
+      "aria": "Row number"
+    }
   },
 
   "Status": {

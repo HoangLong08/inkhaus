@@ -6,7 +6,11 @@
     "retry": "Thử lại",
     "clear": "Xoá lọc",
     "all": "Tất cả",
-    "search": "Tìm kiếm"
+    "search": "Tìm kiếm",
+    "ordinal": {
+      "label": "STT",
+      "aria": "Số thứ tự"
+    }
   },
 
   "Status": {
