@@ -117,7 +117,9 @@ export function parseFilters(sp: URLSearchParams | Record<string, string | undef
   const sort = get("sort");
   return {
     q: get("q").slice(0, 80),
-    cat: (CATEGORIES as string[]).includes(cat) ? (cat as ProductCategory) : "",
+    // `readonly string[]`, not `string[]`: CATEGORIES is a readonly tuple, and
+    // widening it to a mutable array is a cast TypeScript rightly refuses
+    cat: (CATEGORIES as readonly string[]).includes(cat) ? (cat as ProductCategory) : "",
     color: COLORS[get("color")] ? get("color") : "",
     method: get("method"),
     sort: SORT_KEYS.includes(sort as SortKey) ? (sort as SortKey) : "featured",

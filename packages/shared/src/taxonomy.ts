@@ -81,7 +81,17 @@ export type ProductCategory =
   | "paper"
   | "tech";
 
-export const CATEGORIES: ProductCategory[] = [
+/**
+ * `as const satisfies`, like GARMENT_TYPES and PRINT_METHODS above, rather than
+ * the `: ProductCategory[]` annotation this used to carry. Three reasons, in
+ * order of weight: `satisfies` still checks every entry against the union, so
+ * nothing is lost; a readonly tuple gives `z.enum(CATEGORIES)` in the back
+ * office real literal types instead of a widened `string`; and the admin's
+ * `scripts/i18n-check.mjs` reads these tables out of this file textually,
+ * matching `= [...] as const`, so the odd one out was invisible to the one
+ * check that proves a translation catalogue covers a shared enum.
+ */
+export const CATEGORIES = [
   "apparel",
   "headwear",
   "bags",
@@ -89,7 +99,7 @@ export const CATEGORIES: ProductCategory[] = [
   "home",
   "paper",
   "tech",
-];
+] as const satisfies readonly ProductCategory[];
 
 export const CATEGORY_LABEL: Record<ProductCategory, string> = {
   apparel: "Apparel",
