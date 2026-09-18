@@ -265,6 +265,22 @@ schema that drifts.
    Length limits are the shared constants the API validates with
    (`ORDER_NOTE_MAX`, `CATALOG_LIMITS`), never a number typed twice — the note
    limit was 500 here and 300 in the API.
+   **A translated form's `message` is a KEY, not a sentence**, and
+   `useTranslatedResolver` from `@/lib/form-resolver` replaces `zodResolver`.
+   A schema module is evaluated at import time, in a file a `"use client"`
+   component and a route handler both load, so neither `useTranslations` nor
+   `getTranslations` can be called there — the same bind §6 answers for a
+   sign-in failure by putting a **code** in the URL. The numbers a message
+   interpolates ride beside it in a params table (`CATALOG_VALIDATION_PARAMS`)
+   so a limit is still written once in `@inkhaus/shared`, not re-typed into two
+   catalogues. Translating in the resolver rather than in `FormMessage` is what
+   keeps `ui/form.tsx` unforked. A message the catalogue does not know is passed
+   through untouched, which is how `validateTiers`' own sentences still arrive.
+   `Validation` is in `CHROME_NAMESPACES` for the same reason `Errors` is: the
+   resolver cannot know which page it is on, and a page that had not carried the
+   namespace would show the reader `bulkAbovePrice`.
+   Catalog is the only feature on this shape today; the rest still carry
+   English sentences in their schemas.
 3. **Route-handler input** — every handler under `src/app/api/admin/*` parses its
    segments, query and body with a schema. The client is not trusted, including
    our own. A segment is parsed before it is interpolated into an upstream path
@@ -326,6 +342,15 @@ read them, `StatusBadge` and `common/FilterLinks.tsx` take their label from
 `@/i18n/labels` instead of `humanize`, and `components/nav/` gained
 `LanguageToggle.tsx`. `lib/format.ts` was **not** touched and must not be:
 numbers, money and dates stay en-US / USD / UTC in every locale.
+
+The catalog's turn added two frozen-file changes of its own, and they are here
+for the same reason: `src/i18n/messages.ts` gained `pageMessages()`, because
+the catalog screens are the first to nest a provider and the "spread both sets"
+rule is not something four call sites should have to remember; and
+`src/lib/form-resolver.ts` is a new sibling of the frozen `lib/*.ts` files
+rather than an edit to one. `@inkhaus/shared`'s `CATEGORIES` also stopped being
+the odd one out and became `as const satisfies`, which is what let
+`i18n-check`'s enum-coverage assertion see it at all.
 
 The list chrome went the same way, one commit later: `common/ListFooter.tsx`,
 `common/PageSizeLinks.tsx` and `Pager` are `async` and read
@@ -710,6 +735,26 @@ remounting it, and the TanStack `QueryClient` and its whole cache survive.
   `(dash)` is `force-dynamic`, so **every navigation re-streams whatever the
   provider holds**. A page that needs its own namespace nests a second provider
   from its Server Component; nested providers do not merge, so spread both sets.
+- **A nested provider is `pageMessages(messages, …)`, never a hand-written
+  spread.** The catalog screens are the first pages to nest one, and the spread
+  is not left to each call site to remember: the inner provider *replaces* the
+  outer, so a page that passed only its own namespace would strip the sidebar,
+  the breadcrumb and every `StatusBadge` beneath it. Pass what the page adds;
+  the chrome is not a parameter. A page whose every string is read by a Server
+  Component needs none of this — `getTranslations` reads the full catalogue and
+  ships nothing.
+- **The boundary is Server-or-Client, not page-by-page.** `useTranslations` in a
+  Server Component reads `i18n/request.ts` directly, so a `loading.tsx` or a
+  `not-found.tsx` translates with no provider at all — which is just as well,
+  because a page's own provider lives inside `page.tsx` and could never wrap its
+  own Suspense fallback. Only a namespace a **client** leaf reads has to cross.
+- `e2e/i18n.spec.ts` guards both halves. One test reads a list's **first** table
+  head, which is the ordinal and lives in `Common`, so it proves the chrome
+  arrived; the other reads `/catalog/colors`'s **second** head and opens a
+  dialog, and asserts the chrome is still translated beside them. Drop a
+  namespace from a `pageMessages` call and the second one fails — which is the
+  point, because in a production build a namespace that never arrived renders
+  its own key and every `data-testid` locator sails past it.
 
 ### Labels are keys, never sentences
 
