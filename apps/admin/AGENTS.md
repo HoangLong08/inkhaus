@@ -51,8 +51,8 @@ your way, change the rule here in the same commit — do not work around it.
   that is not a component (`nav/nav-config.ts`) is lowercase.
 - **List controls are shared, not rebuilt per page.** `components/common/` has
   `ListPage`, `ListHeader`, `TableCard`, `ListFooter`, `UrlSearchBox`,
-  `FilterLinks`, `SortableHead`, `PageSizeLinks`, `DateRangePicker` and
-  `OwnersOnly`; `Pager` and `StatusBadge` sit one level up.
+  `FilterLinks`, `SortableHead`, `PageSizeLinks`, `DateRangePicker`, `Ordinal`
+  and `OwnersOnly`; `Pager` and `StatusBadge` sit one level up.
   Every one of them takes the page's zod-parsed params and builds its links with
   `hrefWith()` from `src/lib/url.ts`: keep every other param, drop `page`. A
   control that assembles its own query string from the one key it knows about is
@@ -110,6 +110,25 @@ your way, change the rule here in the same commit — do not work around it.
   a page overrides it only where a spec already names its own id, which today is
   `/orders`. The four overview empties are a different shape — an `Empty` inside
   a Card that already has a title — and stay as they are.
+- **Every list opens with the ordinal column, and it is `common/Ordinal.tsx`.**
+  `OrdinalHead` + `OrdinalCell`, on all eight record lists - every list except
+  `/catalog/pricing`, which is a tier form. The numbering is continuous
+  across pages, and `ordinalFrom` is fed the **same** `page` and `limit` the page
+  hands `ListFooter` - which is what makes "row 1's `data-ordinal` equals
+  `list-range`'s `data-from`" true by construction rather than by arithmetic that
+  agrees today. `/reviews` takes both off `meta`, its page size never being in the
+  URL; the three unpaginated lists start at 1. The index is always the row's
+  position in the array **being rendered**: `ReviewsTable` hides a row the instant
+  an optimistic delete starts, and the rows below it must take its number rather
+  than leave a hole.
+  It reads its label from `Common`, not from `List`, and that is the whole reason
+  one component serves both halves of the app: half the tables are
+  `"use client"`, `List` is deliberately out of `CHROME_NAMESPACES` (s4), and
+  `Common` is already in it. So there is no label prop, no nested provider and no
+  second namespace on the wire. `useTranslations` is a hook, so `OrdinalHead` is
+  sync - an `async` page renders it rather than calling `getTranslations` itself.
+  It is not a hideable column and must never reach `?cols=`: a row number the
+  reader can switch off is a row number nobody can cite.
 - **A table has a stretched row link or a sticky actions column, never both**, and
   today **no table in this app pins a column** — which is how that rule is
   satisfied on all ten lists at once, and it keeps a whole class of
@@ -438,7 +457,7 @@ conventions are what keep it from being rewritten every time the UI moves.
   |---|---|
   | login | `google-form`, `google-signin`, `login-error` |
   | chrome | `user-menu`, `current-user`, `sign-out`, `sign-out-dialog`, `sign-out-{confirm,cancel}`, `sidebar-toggle`, `breadcrumb-current`, `breadcrumb-link`, `theme-toggle`, `theme-{light,dark,system}`, `language-toggle`, `language-{en,vi}`, `nav-link` (data-section), `nav-expand` (data-section), `nav-sub-link` (data-section, data-value), `owners-only` |
-  | shared | `status-badge` (data-status), `status-filter` (data-status, data-count), `pager`, `pager-{first,previous,page,next,last}`, `pager-count` (data-page, data-pages), `list-page`, `list-footer`, `list-empty` (data-reason), `list-range` (data-from, data-to, data-total), `filter-link` (data-param, data-value), `sort-head` (data-sort, data-active), `page-size` (data-limit), `{prefix}-date-{trigger,apply,clear,preset}` |
+  | shared | `status-badge` (data-status), `status-filter` (data-status, data-count), `pager`, `pager-{first,previous,page,next,last}`, `pager-count` (data-page, data-pages), `list-page`, `list-footer`, `list-empty` (data-reason), `list-range` (data-from, data-to, data-total), `row-ordinal` (data-ordinal), `filter-link` (data-param, data-value), `sort-head` (data-sort, data-active), `page-size` (data-limit), `{prefix}-date-{trigger,apply,clear,preset}` |
   | overview | `stat-tile` (data-status, data-count), `recent-order` (data-number), `recent-orders-all`, `range-link` (data-range), `revenue-total` (data-value), `revenue-chart` (data-empty), `series-table`, `top-product` (data-slug), `quote-funnel` (data-created), `attention-item` (data-kind, data-id, data-email, data-number) |
   | orders | `orders-search`, `orders-search-clear`, `orders-columns`, `orders-column` (data-column, data-visible), `order-row` (data-number, data-status, data-total), `order-row-link`, `order-customer-link` (data-customer-id), `orders-export` (data-capped), `orders-export-capped`, `orders-empty` (data-reason), `orders-empty-action` |
   | order detail | `status-select`, `status-option` (data-status), `status-note`, `status-save`, `no-moves`, `order-timeline`, `status-confirm-dialog`, `status-confirm`, `status-confirm-cancel`, `status-tracking-carrier`, `status-tracking-carrier-option` (data-carrier), `status-tracking-number`, `tracking-carrier`, `tracking-carrier-option` (data-carrier), `tracking-number`, `tracking-save`, `tracking-link`, `order-note-input`, `order-note-save`, `timeline-event` (data-kind, data-status), `timeline-actor`, `timeline-tracking-link`, `customer-link`, `design-preview` (data-design, data-side), `quote-origin-link`, `packing-slip-link`, `packing-slip`, `packing-slip-print`, `packing-slip-back`, `order-back`, `order-not-found-back`, `packing-slip-not-found-back` |
@@ -465,10 +484,20 @@ conventions are what keep it from being rewritten every time the UI moves.
   `revenue-total`'s and `customer-stat`'s `data-value` are the raw numbers the
   label formats. A customer profile's values carry `data-field` (the Google row
   also `data-linked`).
+- **`row-ordinal` is the one id a non-interactive cell gets**, and it earns it by
+  carrying a number no label can be compared against: the cell prints
+  `count(n)` - "1,024" with a separator - while `data-ordinal` and `list-range`'s
+  `data-from` are both raw, so the two agree attribute to attribute the way
+  `stat-tile`'s `data-count` and `data-total` already do. A locator is also the
+  only thing that survives `/reviews`, where the tick box is the first cell and
+  the ordinal is the second.
 - **The shared list ids are on every list now, not just `/orders`.** `list-page`,
   `list-footer`, `list-range`, `page-size`, `pager` and `pager-*` appear on
-  `/orders`, `/customers`, `/quotes`, `/catalog` and `/reviews`. Three lists
-  deliberately have **no** `list-footer` — `/staff`, `/catalog/colors` and
+  `/orders`, `/customers`, `/quotes`, `/catalog` and `/reviews`; `row-ordinal` is
+  on all eight record lists - those five plus `/staff`, `/catalog/colors` and
+  `/catalog/sizes`. `/catalog/pricing` is the tenth list and has none: it is a
+  tier form, not a list of records. Three lists deliberately have **no**
+  `list-footer` — `/staff`, `/catalog/colors` and
   `/catalog/sizes` take no `limit` and report no `meta.pages`, so there is
   nothing for a pager or a page-size control to point at. `/reviews` has a
   `list-footer` but no `page-size`: its 20 is the API's, and is what keeps a
