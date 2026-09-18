@@ -98,6 +98,47 @@
     "tech": "Tech"
   },
 
+  "Catalog": {
+    "title": "Products",
+    "description": "Every blank the storefront can print on, archived ones included.",
+    "newProduct": "New product",
+    "floor": "floor {price}",
+
+    "search": {
+      "label": "Search products",
+      "placeholder": "Name or slug"
+    },
+    "filter": {
+      "status": "Filter by status",
+      "category": "Filter by category",
+      "sort": "Sort products"
+    },
+    "active": {
+      "active": "Active",
+      "archived": "Archived"
+    },
+    "sort": {
+      "sort_asc": "Shelf order",
+      "name_asc": "Name",
+      "price_asc": "Price, low first",
+      "price_desc": "Price, high first",
+      "updated_desc": "Recently edited"
+    },
+    "columns": {
+      "product": "Product",
+      "category": "Category",
+      "price": "Price",
+      "colors": "Colours",
+      "orders": "Orders",
+      "status": "Status",
+      "edited": "Edited"
+    },
+    "empty": {
+      "title": "No products match",
+      "description": "Try another category or status, or clear the search."
+    }
+  },
+
   "Validation": {
     "wholeNumber": "Use a whole number.",
     "twoDecimals": "Use at most two decimal places.",

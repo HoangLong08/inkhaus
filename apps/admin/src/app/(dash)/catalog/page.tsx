@@ -1,7 +1,8 @@
-import { can, PRODUCT_SORTS, type ProductSort } from "@inkhaus/shared/admin";
-import { CATEGORIES, CATEGORY_LABEL, GARMENT_TYPE_LABEL } from "@inkhaus/shared/taxonomy";
+import { can, PRODUCT_SORTS } from "@inkhaus/shared/admin";
+import { CATEGORIES } from "@inkhaus/shared/taxonomy";
 import { cn } from "cn";
 import { Plus, SearchX } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import FilterLinks from "@/components/common/FilterLinks";
@@ -25,35 +26,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { getCodeLabel } from "@/i18n/labels";
 import { adminApi } from "@/lib/api";
 import { requireAdmin } from "@/lib/dal";
-import { count, humanize, on, usd } from "@/lib/format";
-import { catalogCategorySchema } from "@/lib/schemas/api";
-import {
-  DEFAULT_PAGE_SIZE,
-  productSortParamSchema,
-  productsQuerySchema,
-} from "@/lib/schemas/params";
+import { count, on, usd } from "@/lib/format";
+import { DEFAULT_PAGE_SIZE, productsQuerySchema } from "@/lib/schemas/params";
 
-export const metadata = { title: "Products — INKHAUS Back Office" };
-
-const SORT_LABEL: Record<ProductSort, string> = {
-  sort_asc: "Shelf order",
-  name_asc: "Name",
-  price_asc: "Price, low first",
-  price_desc: "Price, high first",
-  updated_desc: "Recently edited",
-};
-
-// FilterLinks hands a label its value as a plain string: checked, not cast
-function categoryLabel(value: string) {
-  const parsed = catalogCategorySchema.safeParse(value);
-  return parsed.success ? CATEGORY_LABEL[parsed.data] : humanize(value);
-}
-
-function sortLabel(value: string) {
-  const parsed = productSortParamSchema.safeParse(value);
-  return parsed.success ? SORT_LABEL[parsed.data] : humanize(value);
+export async function generateMetadata() {
+  const t = await getTranslations("Catalog");
+  return { title: `${t("title")} — INKHAUS Back Office` };
 }
 
 /**
@@ -68,11 +49,22 @@ export default async function ProductsPage({
 }) {
   // every field ends in .catch(), so this cannot throw
   const params = productsQuerySchema.parse(await searchParams);
-  const [user, { data, meta }, options] = await Promise.all([
+  const [user, { data, meta }, options, t, categoryLabel, typeLabel] = await Promise.all([
     requireAdmin(),
     adminApi.catalog.products(params),
     adminApi.lookups.catalogOptions(),
+    getTranslations("Catalog"),
+    getCodeLabel("Category"),
+    getCodeLabel("GarmentType"),
   ]);
+
+  // FilterLinks hands a label its value as a plain string, so each of these
+  // takes `string` and falls back the way `useCodeLabel` does. `activeLabel` is
+  // the one that was missing: without it FilterLinks reached for the shared
+  // status table, whose keys are ACTIVE/INACTIVE, missed on "active", and
+  // rendered humanize("active") - English, in every language.
+  const activeLabel = (value: string) => t(`active.${value}` as "active.active");
+  const sortLabel = (value: string) => t(`sort.${value}` as "sort.sort_asc");
 
   // the links every control builds never spell the default page size out
   const linkParams = {
@@ -88,14 +80,14 @@ export default async function ProductsPage({
   return (
     <ListPage>
       <ListHeader
-        title="Products"
-        description="Every blank the storefront can print on, archived ones included."
+        title={t("title")}
+        description={t("description")}
         actions={
           canCreate ? (
             <Button asChild size="sm">
               <Link href="/catalog/products/new" data-testid="product-new">
                 <Plus />
-                New product
+                {t("newProduct")}
               </Link>
             </Button>
           ) : null
@@ -106,8 +98,8 @@ export default async function ProductsPage({
         <div className="flex flex-wrap items-center gap-2">
           <div className="w-full sm:w-64">
             <UrlSearchBox
-              label="Search products"
-              placeholder="Name or slug"
+              label={t("search.label")}
+              placeholder={t("search.placeholder")}
               testId="products-search"
               clearTestId="products-search-clear"
             />
@@ -118,7 +110,8 @@ export default async function ProductsPage({
             values={["active", "archived"]}
             active={params.active === "all" ? undefined : params.active}
             params={linkParams}
-            ariaLabel="Filter by status"
+            ariaLabel={t("filter.status")}
+            label={activeLabel}
           />
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -128,7 +121,7 @@ export default async function ProductsPage({
             values={CATEGORIES}
             active={params.category}
             params={linkParams}
-            ariaLabel="Filter by category"
+            ariaLabel={t("filter.category")}
             label={categoryLabel}
           />
           {/* what narrows the list, then how it is ordered. A gap alone did not
@@ -141,7 +134,7 @@ export default async function ProductsPage({
             values={PRODUCT_SORTS}
             active={params.sort ?? "sort_asc"}
             params={linkParams}
-            ariaLabel="Sort products"
+            ariaLabel={t("filter.sort")}
             allLabel={null}
             label={sortLabel}
           />
@@ -151,8 +144,8 @@ export default async function ProductsPage({
       {data.length === 0 ? (
         <ListEmpty
           icon={SearchX}
-          title="No products match"
-          description="Try another category or status, or clear the search."
+          title={t("empty.title")}
+          description={t("empty.description")}
           reason="filtered"
         />
       ) : (
@@ -162,21 +155,21 @@ export default async function ProductsPage({
               <TableRow>
                 {/* a sync component, so this `async` page may render it */}
                 <OrdinalHead />
-                <TableHead>Product</TableHead>
-                <TableHead>Category</TableHead>
+                <TableHead>{t("columns.product")}</TableHead>
+                <TableHead>{t("columns.category")}</TableHead>
                 <SortableHead
                   base="/catalog"
                   params={linkParams}
                   field="price"
-                  label="Price"
+                  label={t("columns.price")}
                   sort={params.sort}
                   first="asc"
                   align="right"
                 />
-                <TableHead className="text-right">Colours</TableHead>
-                <TableHead className="text-right">Orders</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Edited</TableHead>
+                <TableHead className="text-right">{t("columns.colors")}</TableHead>
+                <TableHead className="text-right">{t("columns.orders")}</TableHead>
+                <TableHead>{t("columns.status")}</TableHead>
+                <TableHead className="text-right">{t("columns.edited")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -206,16 +199,20 @@ export default async function ProductsPage({
                     </Link>
                     <div className="text-muted-foreground text-xs">
                       <span className="font-mono">{product.slug}</span> ·{" "}
-                      {GARMENT_TYPE_LABEL[product.type]}
+                      {typeLabel(product.type)}
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {CATEGORY_LABEL[product.category]}
+                    {categoryLabel(product.category)}
                   </TableCell>
                   {/* price over floor - two lines again */}
                   <TableCell className="py-1.5 text-right leading-tight tabular-nums">
                     <div className="font-semibold">{usd(product.price)}</div>
-                    <div className="text-muted-foreground text-xs">floor {usd(product.bulkPrice)}</div>
+                    {/* usd() first, then interpolated as a string: s9 keeps
+                        money out of ICU and in lib/format.ts */}
+                    <div className="text-muted-foreground text-xs">
+                      {t("floor", { price: usd(product.bulkPrice) })}
+                    </div>
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{product.colorCount}</TableCell>
                   <TableCell className="text-muted-foreground text-right tabular-nums">

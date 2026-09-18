@@ -98,6 +98,47 @@
     "tech": "Công nghệ"
   },
 
+  "Catalog": {
+    "title": "Sản phẩm",
+    "description": "Mọi phôi mà cửa hàng có thể in lên, kể cả phôi đã lưu trữ.",
+    "newProduct": "Thêm sản phẩm",
+    "floor": "sàn {price}",
+
+    "search": {
+      "label": "Tìm sản phẩm",
+      "placeholder": "Tên hoặc slug"
+    },
+    "filter": {
+      "status": "Lọc theo trạng thái",
+      "category": "Lọc theo danh mục",
+      "sort": "Sắp xếp sản phẩm"
+    },
+    "active": {
+      "active": "Đang hoạt động",
+      "archived": "Lưu trữ"
+    },
+    "sort": {
+      "sort_asc": "Thứ tự kệ",
+      "name_asc": "Tên",
+      "price_asc": "Giá tăng dần",
+      "price_desc": "Giá giảm dần",
+      "updated_desc": "Sửa gần đây"
+    },
+    "columns": {
+      "product": "Sản phẩm",
+      "category": "Danh mục",
+      "price": "Giá",
+      "colors": "Màu",
+      "orders": "Đơn hàng",
+      "status": "Trạng thái",
+      "edited": "Đã sửa"
+    },
+    "empty": {
+      "title": "Không có sản phẩm nào khớp",
+      "description": "Hãy thử danh mục hoặc trạng thái khác, hoặc xoá từ khoá tìm kiếm."
+    }
+  },
+
   "Validation": {
     "wholeNumber": "Phải là số nguyên.",
     "twoDecimals": "Tối đa hai chữ số thập phân.",
