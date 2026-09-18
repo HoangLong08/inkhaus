@@ -1,13 +1,18 @@
 /**
  * The top of every list page: the one `<h1>`, an optional sentence saying what
- * the list is for, a meta line (`12 total · page 1 of 2`), and a slot for
- * page-level actions such as Export or New. One component so every list reads the
- * same and none forgets its heading.
+ * the list is for, an optional meta line, and a slot for page-level actions such
+ * as Export or New. One component so every list reads the same and none forgets
+ * its heading.
  *
  * `description` is the slot five pages used to fill with a loose `<p>` of their
  * own, each with slightly different classes. It sits opposite the heading and
  * above the meta line; `items-baseline` on the row puts its first line on the
  * `<h1>`'s baseline, so a page with one and a page without still line up.
+ *
+ * `meta` is for a list with no footer - `8 sizes`, `12 colours · 2 archived`,
+ * the staff head-count - a fact nothing else on the page states. A list that
+ * renders a `ListFooter` passes none: the footer already prints its total and
+ * its page, and the same two numbers a hand's breadth higher read as noise.
  *
  * The description and the meta line are both `text-xs`. They are two muted lines
  * stacked in the same aside, and a one-step size difference between them read as
@@ -17,15 +22,13 @@ export default function ListHeader({
   title,
   description,
   meta,
-  metaTestId,
   actions,
 }: {
   title: string;
   /** one sentence: what this list is and what it is for */
   description?: React.ReactNode;
+  /** a fact no footer states - only for a list without one */
   meta?: React.ReactNode;
-  /** `orders-meta`, `quotes-meta`, … - e2e reads totals from it */
-  metaTestId?: string;
   actions?: React.ReactNode;
 }) {
   const aside = description !== undefined || meta !== undefined || actions;
@@ -43,9 +46,7 @@ export default function ListHeader({
           {meta !== undefined || actions ? (
             <div className="flex flex-wrap items-center gap-3">
               {meta !== undefined ? (
-                <p className="text-muted-foreground text-xs" data-testid={metaTestId}>
-                  {meta}
-                </p>
+                <p className="text-muted-foreground text-xs">{meta}</p>
               ) : null}
               {actions}
             </div>

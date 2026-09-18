@@ -61,8 +61,6 @@ export default async function QuotesPage({
       <ListHeader
         title="Bulk quotes"
         description="Every bulk enquiry the storefront has taken, newest first. Convert one into an order from its own page."
-        meta={`${meta.total} total · page ${meta.page} of ${meta.pages}`}
-        metaTestId="quotes-meta"
       />
 
       {/* Rows per page used to sit in the header's actions slot. It is in

@@ -43,8 +43,6 @@ export default async function ReviewsPage({
       <ListHeader
         title="Reviews"
         description="The moderation queue. Tick several to publish or reject them in one go."
-        meta={`${meta.total} total · page ${meta.page} of ${meta.pages}`}
-        metaTestId="reviews-meta"
       />
 
       <div className="flex shrink-0 flex-wrap items-center gap-x-6 gap-y-2">

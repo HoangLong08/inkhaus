@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { cn } from "cn";
 
 import { buttonVariants } from "@/components/ui/button";
@@ -22,6 +23,11 @@ import { hrefWith, type Params } from "@/lib/url";
  * `params` is the page's parsed params, passed through whole: paging keeps the
  * search, the filters, the sort and the page size. It used to know about
  * `status` and `email` only.
+ *
+ * A Server Component, rendered only by `ListFooter`, so its labels come from
+ * `getTranslations("List")` and none of this reaches the client bundle. The
+ * `pages <= 1` exit stays above the intl read: a pager with nowhere to go
+ * renders nothing and asks for nothing.
  */
 
 /**
@@ -36,7 +42,7 @@ function pageWindow(page: number, pages: number): (number | "gap")[] {
   return shown.flatMap((n, i) => (i > 0 && n - shown[i - 1] > 1 ? ["gap" as const, n] : [n]));
 }
 
-export default function Pager({
+export default async function Pager({
   base,
   page,
   pages,
@@ -56,6 +62,7 @@ export default function Pager({
 }) {
   if (pages <= 1) return null;
 
+  const t = await getTranslations("List");
   const link = (n: number) => hrefWith(base, params, { page: n });
   // An edge button is left out rather than disabled when there is nowhere to go:
   // a disabled <a> is not a thing, and aria-disabled on a link that still
@@ -79,14 +86,15 @@ export default function Pager({
           data-pages={pages}
           className="text-xs font-medium whitespace-nowrap tabular-nums"
         >
-          Page {page} of {pages}
+          {/* page numbers, not data - but still strings, so s9's rule is visible here */}
+          {t("pager.count", { page: String(page), pages: String(pages) })}
         </span>
         <PaginationContent>
           <PaginationItem>
             {page > 1 ? (
               <Link
                 href={link(1)}
-                aria-label="Go to the first page"
+                aria-label={t("pager.firstAria")}
                 data-testid="pager-first"
                 className={edge}
               >
@@ -98,7 +106,7 @@ export default function Pager({
             {page > 1 ? (
               <Link
                 href={link(page - 1)}
-                aria-label="Go to previous page"
+                aria-label={t("pager.previousAria")}
                 data-testid="pager-previous"
                 className={edge}
               >
@@ -110,7 +118,7 @@ export default function Pager({
             {page < pages ? (
               <Link
                 href={link(page + 1)}
-                aria-label="Go to next page"
+                aria-label={t("pager.nextAria")}
                 data-testid="pager-next"
                 className={edge}
               >
@@ -122,7 +130,7 @@ export default function Pager({
             {page < pages ? (
               <Link
                 href={link(pages)}
-                aria-label="Go to the last page"
+                aria-label={t("pager.lastAria")}
                 data-testid="pager-last"
                 className={edge}
               >
@@ -142,7 +150,7 @@ export default function Pager({
           {page > 1 ? (
             <Link
               href={link(1)}
-              aria-label="Go to the first page"
+              aria-label={t("pager.firstAria")}
               data-testid="pager-first"
               className={edge}
             >
@@ -155,12 +163,12 @@ export default function Pager({
           {page > 1 ? (
             <Link
               href={link(page - 1)}
-              aria-label="Go to previous page"
+              aria-label={t("pager.previousAria")}
               data-testid="pager-previous"
               className={step}
             >
               <ChevronLeft />
-              <span className="hidden sm:block">Previous</span>
+              <span className="hidden sm:block">{t("pager.previous")}</span>
             </Link>
           ) : null}
         </PaginationItem>
@@ -191,11 +199,11 @@ export default function Pager({
           {page < pages ? (
             <Link
               href={link(page + 1)}
-              aria-label="Go to next page"
+              aria-label={t("pager.nextAria")}
               data-testid="pager-next"
               className={step}
             >
-              <span className="hidden sm:block">Next</span>
+              <span className="hidden sm:block">{t("pager.next")}</span>
               <ChevronRight />
             </Link>
           ) : null}
@@ -205,7 +213,7 @@ export default function Pager({
           {page < pages ? (
             <Link
               href={link(pages)}
-              aria-label="Go to the last page"
+              aria-label={t("pager.lastAria")}
               data-testid="pager-last"
               className={edge}
             >

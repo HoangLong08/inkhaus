@@ -109,6 +109,30 @@
     }
   },
 
+  "List": {
+    "range": "Đang xem <b>{from}–{to}</b> trong <b>{total}</b> {noun}",
+    "rows": {
+      "label": "Dòng",
+      "aria": "Số dòng mỗi trang"
+    },
+    "pager": {
+      "count": "Trang {page}/{pages}",
+      "previous": "Trước",
+      "next": "Sau",
+      "firstAria": "Về trang đầu",
+      "previousAria": "Về trang trước",
+      "nextAria": "Tới trang sau",
+      "lastAria": "Tới trang cuối"
+    },
+    "nouns": {
+      "orders": "đơn hàng",
+      "quotes": "báo giá",
+      "customers": "khách hàng",
+      "products": "sản phẩm",
+      "reviews": "đánh giá"
+    }
+  },
+
   "Login": {
     "brand": "INKHAUS",
     "brandSub": "Hậu đài",

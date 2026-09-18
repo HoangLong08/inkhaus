@@ -48,7 +48,7 @@ test.describe("reviews", () => {
     expect(pending.map((review) => review.rating).sort()).toEqual([2, 4, 5]);
 
     await page.goto(`/reviews?status=PENDING&q=${SEARCH}`);
-    await expect(page.getByTestId("reviews-meta")).toBeVisible();
+    await expect(page.getByTestId("list-range")).toBeVisible();
     for (const review of pending) {
       await expect(row(page, review.id)).toHaveAttribute("data-status", "PENDING");
     }

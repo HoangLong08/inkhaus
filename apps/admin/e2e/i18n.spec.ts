@@ -49,6 +49,14 @@ test.describe("language", () => {
     const status = await page.getByTestId("status-badge").first().getAttribute("data-status");
     expect(number, "expected at least one order in the list").toBeTruthy();
 
+    // the footer's range line: its words are the List namespace, its numbers
+    // are lib/format.ts - the one place both rules meet on a single element
+    const range = page.getByTestId("list-range");
+    const rangeBefore = (await range.innerText()).trim();
+    const rangeFrom = await range.getAttribute("data-from");
+    const rangeTo = await range.getAttribute("data-to");
+    const rangeTotal = await range.getAttribute("data-total");
+
     await switchTo(page, "vi");
 
     // the label changed - not to any particular string, only away from the old one
@@ -56,11 +64,16 @@ test.describe("language", () => {
       .poll(async () => (await ordersNavLabel(page)).trim())
       .not.toBe(before);
     await expect(page.locator("html")).toHaveAttribute("lang", "vi");
+    await expect.poll(async () => (await range.innerText()).trim()).not.toBe(rangeBefore);
 
     // and every machine-readable value is exactly where it was
     const sameRow = page.locator(`[data-testid="order-row"][data-number="${number}"]`);
     await expect(sameRow).toHaveAttribute("data-total", total!);
     await expect(page.getByTestId("status-badge").first()).toHaveAttribute("data-status", status!);
+    // the regression test for `{total, number}` finding its way into List.range
+    await expect(range).toHaveAttribute("data-from", rangeFrom!);
+    await expect(range).toHaveAttribute("data-to", rangeTo!);
+    await expect(range).toHaveAttribute("data-total", rangeTotal!);
   });
 
   test("the choice survives a reload, and switching back restores English", async ({ page }) => {

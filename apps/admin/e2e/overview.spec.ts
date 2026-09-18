@@ -15,13 +15,6 @@ const rangeLink = (page: Page, range: string) =>
 const tile = (page: Page, status: string) =>
   page.locator(`[data-testid="stat-tile"][data-status="${status}"]`);
 
-/** the first number in some text, separators and all: "1,204 total · page 1 of 61" -> 1204 */
-function firstNumber(text: string) {
-  const match = /\d[\d,]*/.exec(text);
-  expect(match, `no number in "${text}"`).not.toBeNull();
-  return Number(match![0].replace(/,/g, ""));
-}
-
 test.describe("overview", () => {
   test("the range switch is a link, and the chart's table has one row per day", async ({ page }) => {
     await page.goto("/");
@@ -86,12 +79,14 @@ test.describe("overview", () => {
   test("the pending-payment tile agrees with the list it opens", async ({ page }) => {
     await page.goto("/");
     const pending = tile(page, "PENDING_PAYMENT");
-    await expect(pending).toContainText(/\d/);
-    const shown = firstNumber(await pending.innerText());
+    const shown = await pending.getAttribute("data-count");
+    // a zero would mean no rows, and therefore no list-footer to read below
+    expect(Number(shown), "expected pending-payment orders in the fixtures").toBeGreaterThan(0);
 
     await pending.click();
     await expect(page).toHaveURL(/\/orders\?status=PENDING_PAYMENT$/);
-    expect(firstNumber(await page.getByTestId("orders-meta").innerText())).toBe(shown);
+    // data-* to data-*, never a parsed label: the tile's count IS the list's total
+    await expect(page.getByTestId("list-range")).toHaveAttribute("data-total", shown!);
   });
 
   test("a quiet range answers a zero for every day, not a gap", async () => {

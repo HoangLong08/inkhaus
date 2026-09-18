@@ -109,6 +109,30 @@
     }
   },
 
+  "List": {
+    "range": "Showing <b>{from}–{to}</b> of <b>{total}</b> {noun}",
+    "rows": {
+      "label": "Rows",
+      "aria": "Rows per page"
+    },
+    "pager": {
+      "count": "Page {page} of {pages}",
+      "previous": "Previous",
+      "next": "Next",
+      "firstAria": "Go to the first page",
+      "previousAria": "Go to the previous page",
+      "nextAria": "Go to the next page",
+      "lastAria": "Go to the last page"
+    },
+    "nouns": {
+      "orders": "orders",
+      "quotes": "quotes",
+      "customers": "customers",
+      "products": "products",
+      "reviews": "reviews"
+    }
+  },
+
   "Login": {
     "brand": "INKHAUS",
     "brandSub": "Back office",

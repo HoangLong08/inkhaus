@@ -44,8 +44,6 @@ export default async function OrdersPage({
       <ListHeader
         title="Orders"
         description="Every order the storefront has taken. The queue counts are all-time; the table follows the filters you set."
-        meta={`${meta.total} total · page ${meta.page} of ${meta.pages}`}
-        metaTestId="orders-meta"
       />
 
       {/* its own boundary: a slow stats call must not hold the table back */}

@@ -87,7 +87,7 @@ test.describe("catalog as owner", () => {
     await expect(page).toHaveURL(new RegExp(`[?&]q=${TEST_PRODUCT}`));
     const row = page.locator(`[data-testid="product-row"][data-slug="${TEST_PRODUCT}"]`);
     await expect(row).toHaveAttribute("data-active", "false");
-    await expect(page.getByTestId("products-meta")).toContainText(/\d/);
+    await expect(page.getByTestId("list-range")).toHaveAttribute("data-total", /^[1-9]\d*$/);
 
     await row.click();
     await expect(page).toHaveURL(new RegExp(`${PRODUCT_PAGE}$`));

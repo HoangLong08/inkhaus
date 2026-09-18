@@ -60,7 +60,8 @@ test.describe("orders list", () => {
     await expect(page.getByTestId("orders-empty")).toHaveAttribute("data-reason", "filtered");
     await expect(page.getByTestId("order-row")).toHaveCount(0);
     await expect(page.getByTestId("segment-error")).toHaveCount(0);
-    await expect(page.getByTestId("orders-meta")).toBeVisible();
+    // an empty list has no range and no pager - there is nothing to page through
+    await expect(page.getByTestId("list-footer")).toHaveCount(0);
 
     // clearing the filters keeps the page size
     await page.getByTestId("orders-empty-action").click();

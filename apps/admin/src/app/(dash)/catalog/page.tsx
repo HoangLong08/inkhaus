@@ -86,8 +86,6 @@ export default async function ProductsPage({
       <ListHeader
         title="Products"
         description="Every blank the storefront can print on, archived ones included."
-        meta={`${count(meta.total)} products · page ${meta.page} of ${meta.pages}`}
-        metaTestId="products-meta"
         actions={
           canCreate ? (
             <Button asChild size="sm">

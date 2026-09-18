@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
 import { Button } from "@/components/ui/button";
 import { PAGE_SIZES } from "@/lib/schemas/params";
@@ -8,8 +9,11 @@ import { hrefWith, type Params } from "@/lib/url";
  * Rows per page, as links. The sizes are the ones `limitParam` accepts - a size
  * offered here that the schema did not know would silently fall back to 20.
  * Changing size drops `page`: row 41 is not on page 3 any more.
+ *
+ * A Server Component, reached only through `ListFooter`, so it reads the `List`
+ * namespace with `getTranslations` and nothing here ships to the browser.
  */
-export default function PageSizeLinks({
+export default async function PageSizeLinks({
   base,
   params = {},
   active,
@@ -22,14 +26,16 @@ export default function PageSizeLinks({
   active: number;
   sizes?: readonly number[];
   param?: string;
-  /** the caller already prints "Rows" beside it - `ListFooter` does */
+  /** the caller already prints `List.rows.label` beside it - `ListFooter` does */
   hideLabel?: boolean;
 }) {
+  const t = await getTranslations("List");
+
   return (
-    <nav aria-label="Rows per page" className="flex items-center gap-1">
+    <nav aria-label={t("rows.aria")} className="flex items-center gap-1">
       {hideLabel ? null : (
         <span aria-hidden className="text-muted-foreground mr-1 text-xs">
-          Rows
+          {t("rows.label")}
         </span>
       )}
       {sizes.map((size) => {

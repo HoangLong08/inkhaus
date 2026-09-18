@@ -9,7 +9,6 @@ import ListPage from "@/components/common/ListPage";
 import UrlSearchBox from "@/components/common/UrlSearchBox";
 import CustomersTable from "@/components/customers/CustomersTable";
 import { adminApi } from "@/lib/api";
-import { count } from "@/lib/format";
 import { customersLinkParams, customersQuerySchema } from "@/lib/schemas/params";
 
 export const metadata = { title: "Customers — INKHAUS Back Office" };
@@ -38,8 +37,6 @@ export default async function CustomersPage({
       <ListHeader
         title="Customers"
         description="One row per address: everyone who has ordered, asked for a quote or saved a design."
-        meta={`${count(meta.total)} total · page ${meta.page} of ${meta.pages}`}
-        metaTestId="customers-meta"
       />
 
       <div className="flex shrink-0 flex-wrap items-center gap-2">
