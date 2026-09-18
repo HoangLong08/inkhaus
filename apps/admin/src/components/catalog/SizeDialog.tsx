@@ -247,7 +247,7 @@ function SizeForm({
               <FormControl>
                 <NumberInput {...field} step={1} inputMode="numeric" className="tabular-nums" data-testid="size-sort-order" />
               </FormControl>
-              <FormDescription>Size pickers list sizes in this order.</FormDescription>
+              <FormDescription>{t("form.sortOrderHint")}</FormDescription>
               <FormMessage />
             </FormItem>
           )}
