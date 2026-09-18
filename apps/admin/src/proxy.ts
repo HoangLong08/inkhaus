@@ -110,11 +110,17 @@ function isOwnOrigin(origin: string, request: NextRequest) {
 }
 
 export const config = {
-  // Everything except the login page, the OAuth routes, Next's own assets, and
-  // robots.txt. Excluding /login matters: redirecting it would loop for anyone
-  // without a cookie. /api/auth/google matters more: the callback is precisely
-  // the request that arrives *without* a session cookie and whose job is to
-  // create one - proxying it away would make signing in impossible. robots.txt
-  // has to stay reachable or a crawler is told to sign in instead of go away.
-  matcher: ["/((?!login|api/auth/google|robots.txt|_next/static|_next/image|favicon.ico).*)"],
+  // Everything except the login page, the OAuth routes, Next's own assets, the
+  // app icons and robots.txt. Excluding /login matters: redirecting it would
+  // loop for anyone without a cookie. /api/auth/google matters more: the
+  // callback is precisely the request that arrives *without* a session cookie
+  // and whose job is to create one - proxying it away would make signing in
+  // impossible. robots.txt has to stay reachable or a crawler is told to sign in
+  // instead of go away. icon.svg and apple-icon.png are the file-convention
+  // icons in src/app, served at exactly those paths: without them here the one
+  // page a visitor with no cookie ever sees - /login - is the one page with no
+  // icon, and every request for it costs a 307 to /login?next=%2Ficon.svg.
+  matcher: [
+    "/((?!login|api/auth/google|robots.txt|icon.svg|apple-icon.png|_next/static|_next/image|favicon.ico).*)",
+  ],
 };

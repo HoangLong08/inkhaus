@@ -610,6 +610,17 @@ block above is not a formality.
   because the plugin spreads `config.turbopack` and writes its own
   `resolveAlias`. It wires the webpack alias too, so `next build --webpack` still
   resolves.
+- **The app icons are `src/app/icon.svg` and `src/app/apple-icon.png`, and both
+  are named in `proxy.ts`'s matcher.** They are a tab icon and a bookmark icon,
+  nothing more: there is no `manifest.ts`, no `apple-mobile-web-app-capable` and
+  no `public/`, so the rule above still holds. The matcher is the part that is
+  easy to get wrong — Next serves a file-convention icon at its own path, that
+  path is not one of Next's `_next/*` assets, and a visitor with no cookie is
+  redirected to `/login` instead of being handed the image. The mark is the ink
+  square with an acid `IH` that `nav/BrandHeader.tsx` draws, inverting the
+  storefront's so the two tabs are told apart; its letters are `<rect>`s rather
+  than `<text>`, because an SVG served on its own does not carry this app's
+  webfonts. A new icon file here is a matcher edit in the same commit.
 
 ## 8. Commands.
 
