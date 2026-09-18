@@ -61,6 +61,43 @@
     "DIGITAL_PRINT": "In kỹ thuật số"
   },
 
+  "GarmentType": {
+    "tee": "Áo thun",
+    "hoodie": "Áo hoodie",
+    "ziphoodie": "Hoodie khoá kéo",
+    "longsleeve": "Áo tay dài",
+    "tank": "Áo ba lỗ",
+    "crewneck": "Áo nỉ cổ tròn",
+
+    "cap": "Nón lưỡi trai",
+    "beanie": "Nón len",
+
+    "tote": "Túi tote",
+
+    "mug": "Ly sứ",
+    "tumbler": "Bình giữ nhiệt",
+
+    "blanket": "Chăn",
+    "pillow": "Gối",
+    "apron": "Tạp dề",
+    "mousepad": "Lót chuột",
+    "ornament": "Đồ treo trang trí",
+
+    "phonecase": "Ốp điện thoại",
+    "sticker": "Sticker",
+    "poster": "Poster"
+  },
+
+  "Category": {
+    "apparel": "Quần áo",
+    "headwear": "Nón",
+    "bags": "Túi",
+    "drinkware": "Đồ uống",
+    "home": "Gia dụng",
+    "paper": "Giấy & in ấn",
+    "tech": "Công nghệ"
+  },
+
   "Nav": {
     "group": "Quản trị",
     "expand": "Hiện lối tắt của {section}",

@@ -137,6 +137,8 @@ const ADMIN_ROLES = enumFrom("orders.ts", "ADMIN_ROLES");
 const CARRIERS = enumFrom("orders.ts", "CARRIERS");
 const REVIEW_STATUSES = enumFrom("admin.ts", "REVIEW_STATUSES");
 const PRINT_METHODS = enumFrom("taxonomy.ts", "PRINT_METHODS");
+const GARMENT_TYPES = enumFrom("taxonomy.ts", "GARMENT_TYPES");
+const CATEGORIES = enumFrom("taxonomy.ts", "CATEGORIES");
 
 const CODE_TABLES = {
   // ACTIVE/INACTIVE are not an enum anywhere - they are how this app spells the
@@ -145,6 +147,8 @@ const CODE_TABLES = {
   Role: ADMIN_ROLES,
   Carrier: CARRIERS,
   PrintMethod: PRINT_METHODS,
+  GarmentType: GARMENT_TYPES,
+  Category: CATEGORIES,
 };
 
 for (const [namespace, codes] of Object.entries(CODE_TABLES)) {

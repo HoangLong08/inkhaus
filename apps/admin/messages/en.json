@@ -61,6 +61,43 @@
     "DIGITAL_PRINT": "Digital print"
   },
 
+  "GarmentType": {
+    "tee": "Tee",
+    "hoodie": "Hoodie",
+    "ziphoodie": "Zip hoodie",
+    "longsleeve": "Long sleeve",
+    "tank": "Tank",
+    "crewneck": "Crewneck",
+
+    "cap": "Cap",
+    "beanie": "Beanie",
+
+    "tote": "Tote",
+
+    "mug": "Mug",
+    "tumbler": "Tumbler",
+
+    "blanket": "Blanket",
+    "pillow": "Pillow",
+    "apron": "Apron",
+    "mousepad": "Mouse pad",
+    "ornament": "Ornament",
+
+    "phonecase": "Phone case",
+    "sticker": "Sticker",
+    "poster": "Poster"
+  },
+
+  "Category": {
+    "apparel": "Apparel",
+    "headwear": "Headwear",
+    "bags": "Bags",
+    "drinkware": "Drinkware",
+    "home": "Home",
+    "paper": "Paper & print",
+    "tech": "Tech"
+  },
+
   "Nav": {
     "group": "Back office",
     "expand": "Show {section} shortcuts",

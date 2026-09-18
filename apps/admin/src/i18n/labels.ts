@@ -5,7 +5,11 @@ import type {
   OrderStatusCode,
   QuoteStatusCode,
 } from "@inkhaus/shared/orders";
-import type { PrintMethodCode } from "@inkhaus/shared/taxonomy";
+import type {
+  GarmentType,
+  PrintMethodCode,
+  ProductCategory,
+} from "@inkhaus/shared/taxonomy";
 import { useTranslations } from "next-intl";
 import { getTranslations } from "next-intl/server";
 
@@ -38,7 +42,22 @@ import type vi from "../../messages/vi.json";
 
 /* ------------------------------------------------------- the code tables */
 
-export const CODE_NAMESPACES = ["Status", "Role", "Carrier", "PrintMethod"] as const;
+/**
+ * `GarmentType` and `Category` are the catalog's two vocabularies, and they are
+ * deliberately NOT in CHROME_NAMESPACES: nineteen garment names and seven aisle
+ * names on every navigation in the app, to serve two screens, is the cost s4
+ * already refused to pay for `List`. A Server Component reads them straight off
+ * the full catalogue; the one client component that needs them - ProductForm -
+ * gets them from the provider its page nests.
+ */
+export const CODE_NAMESPACES = [
+  "Status",
+  "Role",
+  "Carrier",
+  "PrintMethod",
+  "GarmentType",
+  "Category",
+] as const;
 
 export type CodeNamespace = (typeof CODE_NAMESPACES)[number];
 
@@ -77,6 +96,10 @@ export type _CarrierEn = NoneMissing<Missing<En["Carrier"], CarrierCode>>;
 export type _CarrierVi = NoneMissing<Missing<Vi["Carrier"], CarrierCode>>;
 export type _PrintMethodEn = NoneMissing<Missing<En["PrintMethod"], PrintMethodCode>>;
 export type _PrintMethodVi = NoneMissing<Missing<Vi["PrintMethod"], PrintMethodCode>>;
+export type _GarmentTypeEn = NoneMissing<Missing<En["GarmentType"], GarmentType>>;
+export type _GarmentTypeVi = NoneMissing<Missing<Vi["GarmentType"], GarmentType>>;
+export type _CategoryEn = NoneMissing<Missing<En["Category"], ProductCategory>>;
+export type _CategoryVi = NoneMissing<Missing<Vi["Category"], ProductCategory>>;
 
 /* --------------------------------------------------- the runtime lookups */
 

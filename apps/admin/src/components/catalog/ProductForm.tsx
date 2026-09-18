@@ -8,7 +8,6 @@ import {
   CATEGORY_LABEL,
   GARMENT_TYPE_LABEL,
   GARMENT_TYPES,
-  PRINT_METHOD_LABEL,
   PRINT_METHODS,
 } from "@inkhaus/shared/taxonomy";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -42,6 +41,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { useCodeLabel } from "@/i18n/labels";
 import type { CatalogColor, CatalogProduct, CatalogSize } from "@/lib/api";
 import { ClientApiError, clientApi } from "@/lib/client-api";
 import { usd } from "@/lib/format";
@@ -252,6 +252,7 @@ function ProductFields({
 }: FieldsProps) {
   const priceLocked = !canPrice || !priceEditsEnabled;
   const sizeCodes = sizes.map((s) => s.code);
+  const methodLabel = useCodeLabel("PrintMethod");
 
   return (
     <Form {...form}>
@@ -420,7 +421,9 @@ function ProductFields({
               label="Offered in"
               testId="product-method"
               dataName="data-method"
-              options={PRINT_METHODS.map((m) => ({ value: m, label: PRINT_METHOD_LABEL[m] }))}
+              // the shared PRINT_METHOD_LABEL table is a wire value, not display
+              // copy (AGENTS.md s9) - the translated one is keyed off the code
+              options={PRINT_METHODS.map((m) => ({ value: m, label: methodLabel(m) }))}
               order={(values) => PRINT_METHODS.filter((m) => values.includes(m))}
             />
           </Section>
