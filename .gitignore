@@ -16,3 +16,11 @@ playwright-report
 blob-report
 # signed-in browser state the admin e2e setup project writes - live session tokens
 apps/admin/e2e/.auth/
+
+# agent scratch: settings, and worktrees that are each a full checkout of this
+# repo. `git add -A` from the root would otherwise stage ten copies of it.
+.claude/
+# business and ops paperwork kept beside the code for convenience - infrastructure
+# costing, the domain and VPS guide. Not source, and one of them is a live Excel
+# lock file that changes whenever the workbook is open.
+docs/
