@@ -3,6 +3,7 @@
 import { TIER_LIMITS, validateTiers } from "@inkhaus/shared/pricing";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Trash2, TriangleAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
@@ -75,6 +76,7 @@ function TierForm({
   priceEditsEnabled: boolean;
   products: TierSample[];
 }) {
+  const t = useTranslations("Tiers");
   const router = useRouter();
   const queryClient = useQueryClient();
   const key = queryKeys.catalog.tiers();
@@ -108,13 +110,13 @@ function TierForm({
       if (context?.previous) queryClient.setQueryData(key, context.previous);
       if (error instanceof ClientApiError && error.status === 401) return;
       // the form keeps what was typed, so the ladder can be fixed and saved again
-      toast.error("Could not save the ladder", { description: error.message });
+      toast.error(t("ladder.saveError"), { description: error.message });
     },
 
     onSuccess: (saved) => {
       queryClient.setQueryData(key, saved);
       form.reset(tiersToForm(saved));
-      toast.success("Tier ladder saved");
+      toast.success(t("ladder.saved"));
     },
 
     onSettled: () => {
@@ -143,11 +145,10 @@ function TierForm({
           <Card>
             <CardHeader>
               <CardTitle className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
-                Ladder
+                {t("ladder.title")}
               </CardTitle>
               <CardDescription>
-                A tier starts at a total quantity and takes a percentage off every product&apos;s
-                single-unit price. The first is always one unit at no discount.
+                {t("ladder.description")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -156,10 +157,10 @@ function TierForm({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>From quantity</TableHead>
-                      <TableHead>Discount (%)</TableHead>
+                      <TableHead>{t("ladder.from")}</TableHead>
+                      <TableHead>{t("ladder.discount")}</TableHead>
                       <TableHead className="w-12">
-                        <span className="sr-only">Remove</span>
+                        <span className="sr-only">{t("ladder.remove")}</span>
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -176,7 +177,7 @@ function TierForm({
                             name={`tiers.${index}.minQty`}
                             render={({ field: input }) => (
                               <FormItem>
-                                <FormLabel className="sr-only">Tier {index + 1} starts at</FormLabel>
+                                <FormLabel className="sr-only">{t("ladder.minAria", { n: index + 1 })}</FormLabel>
                                 <FormControl>
                                   <NumberInput
                                     {...input}
@@ -199,7 +200,7 @@ function TierForm({
                             name={`tiers.${index}.percent`}
                             render={({ field: input }) => (
                               <FormItem>
-                                <FormLabel className="sr-only">Tier {index + 1} discount, percent</FormLabel>
+                                <FormLabel className="sr-only">{t("ladder.discountAria", { n: index + 1 })}</FormLabel>
                                 <FormControl>
                                   <NumberInput
                                     {...input}
@@ -223,7 +224,7 @@ function TierForm({
                             size="icon-sm"
                             disabled={index === 0}
                             onClick={() => remove(index)}
-                            aria-label={`Remove tier ${index + 1}`}
+                            aria-label={t("ladder.removeAria", { n: index + 1 })}
                             data-testid="tier-remove"
                           >
                             <Trash2 />
@@ -243,14 +244,14 @@ function TierForm({
                   data-testid="tier-add"
                 >
                   <Plus />
-                  Add tier
+                  {t("ladder.add")}
                 </Button>
               </fieldset>
 
               {ladderError ? (
                 <Alert variant="destructive" data-testid="tiers-error">
                   <TriangleAlert />
-                  <AlertTitle>This ladder cannot be saved</AlertTitle>
+                  <AlertTitle>{t("ladder.error")}</AlertTitle>
                   <AlertDescription>{ladderError}</AlertDescription>
                 </Alert>
               ) : null}
@@ -262,7 +263,7 @@ function TierForm({
                 data-testid="tiers-save"
               >
                 {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
-                Save ladder
+                {t("ladder.save")}
               </Button>
             </CardFooter>
           </Card>

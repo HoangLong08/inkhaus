@@ -1,6 +1,10 @@
+import { useTranslations } from "next-intl";
+
 import { ListHeaderSkeleton, TableSkeleton } from "@/components/skeletons";
 
 export default function Loading() {
+  const t = useTranslations("Tiers");
+
   return (
     <div className="space-y-6">
       <ListHeaderSkeleton chips={0} />
@@ -8,16 +12,16 @@ export default function Loading() {
         <TableSkeleton
           rows={7}
           columns={[
-            { label: "From quantity", bar: "h-9 w-full" },
-            { label: "Discount (%)", bar: "h-9 w-full" },
+            { label: t("ladder.from"), bar: "h-9 w-full" },
+            { label: t("ladder.discount"), bar: "h-9 w-full" },
           ]}
         />
         <TableSkeleton
           rows={7}
           columns={[
-            { label: "From", bar: "h-4 w-10" },
-            { label: "Discount", align: "right", bar: "h-4 w-12" },
-            { label: "Unit price", align: "right", bar: "h-4 w-14" },
+            { label: t("preview.from"), bar: "h-4 w-10" },
+            { label: t("preview.discount"), align: "right", bar: "h-4 w-12" },
+            { label: t("preview.unitPrice"), align: "right", bar: "h-4 w-14" },
           ]}
         />
       </div>

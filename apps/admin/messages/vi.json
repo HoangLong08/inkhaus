@@ -236,6 +236,42 @@
     }
   },
 
+  "Tiers": {
+    "title": "Bậc giá",
+    "meta": "{count, plural, other {{total} bậc}}",
+    "description": "Đơn hàng được tính theo tổng số lượng: bậc sâu nhất mà đơn chạm tới quyết định mức giảm trên giá một sản phẩm, và không sản phẩm nào rẻ hơn giá sỉ của chính nó. Phụ phí kích cỡ được cộng thêm phía trên.",
+    "capped": "Bản xem trước lấy {shown} trong {total} sản phẩm đang bán, theo thứ tự kệ.",
+
+    "ladder": {
+      "title": "Thang bậc",
+      "description": "Một bậc bắt đầu từ một tổng số lượng và giảm theo phần trăm trên giá một sản phẩm. Bậc đầu tiên luôn là một sản phẩm, không giảm.",
+      "from": "Từ số lượng",
+      "discount": "Mức giảm (%)",
+      "remove": "Xoá",
+      "removeAria": "Xoá bậc {n}",
+      "minAria": "Bậc {n} bắt đầu từ",
+      "discountAria": "Mức giảm của bậc {n}, tính theo phần trăm",
+      "add": "Thêm bậc",
+      "save": "Lưu thang bậc",
+      "error": "Không lưu được thang bậc này",
+      "saveError": "Không lưu được thang bậc",
+      "saved": "Đã lưu thang bậc giá"
+    },
+
+    "preview": {
+      "title": "Xem trước",
+      "hint": "Giá một sản phẩm ở mỗi bậc, chưa tính phụ phí kích cỡ.",
+      "ownerHint": "Chỉ chủ đặt được giá. Giá một sản phẩm ở mỗi bậc, chưa tính phụ phí kích cỡ.",
+      "product": "Sản phẩm để xem trước",
+      "none": "Không có sản phẩm nào đang bán để xem trước.",
+      "invalid": "Hãy sửa thang bậc để thấy mức giá nó sẽ tính.",
+      "from": "Từ",
+      "discount": "Mức giảm",
+      "unitPrice": "Đơn giá",
+      "floor": "Giá sàn"
+    }
+  },
+
   "PriceSync": {
     "title": "Đang tắt quyền sửa giá",
     "description": "Cửa hàng vẫn hiển thị giá lấy từ mã nguồn, trong khi thanh toán tính tiền theo cơ sở dữ liệu. Chừng nào cửa hàng chưa đọc giá từ API, một thay đổi giá ở đây sẽ khiến trang sản phẩm hiện một số và thu một số khác - nên giá, phụ phí kích cỡ và thang bậc giá đều ở chế độ chỉ đọc. Nội dung, màu sắc và lưu trữ vẫn lưu được bình thường."

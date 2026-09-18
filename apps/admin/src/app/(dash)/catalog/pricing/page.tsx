@@ -1,17 +1,23 @@
 import { can } from "@inkhaus/shared/admin";
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 
 import PriceSyncWarning from "@/components/catalog/PriceSyncWarning";
 import TierEditor from "@/components/catalog/TierEditor";
 import TierLadder from "@/components/catalog/TierLadder";
 import ListHeader from "@/components/common/ListHeader";
+import { IntlClientProvider } from "@/i18n/IntlClientProvider";
+import { pageMessages } from "@/i18n/messages";
 import { adminApi } from "@/lib/api";
 import { requireAdmin } from "@/lib/dal";
 import { count } from "@/lib/format";
 import { getQueryClient } from "@/lib/query-client";
 import { queryKeys } from "@/lib/query-keys";
 
-export const metadata = { title: "Price tiers — INKHAUS Back Office" };
+export async function generateMetadata() {
+  const t = await getTranslations("Tiers");
+  return { title: `${t("title")} — INKHAUS Back Office` };
+}
 
 /**
  * How many blanks the preview can price: one page of the products list, whose
@@ -25,7 +31,12 @@ const PREVIEW_PRODUCTS = 100;
  * price edits are on); staff get the same preview, read-only.
  */
 export default async function PricingPage() {
-  const user = await requireAdmin();
+  const [user, t, locale, messages] = await Promise.all([
+    requireAdmin(),
+    getTranslations("Tiers"),
+    getLocale(),
+    getMessages(),
+  ]);
   const queryClient = getQueryClient();
   const [tiers, options, products] = await Promise.all([
     queryClient.fetchQuery({
@@ -44,18 +55,26 @@ export default async function PricingPage() {
   }));
 
   return (
-    <HydrationBoundary state={dehydrate(queryClient)}>
+    // TierEditor, TierPreview and PriceSyncWarning are client leaves here
+    <IntlClientProvider locale={locale} messages={pageMessages(messages, "Tiers", "PriceSync")}>
+      <HydrationBoundary state={dehydrate(queryClient)}>
       <div className="space-y-6">
-        <ListHeader title="Price tiers" meta={`${tiers.tiers.length} tiers`} />
+        <ListHeader
+          title={t("title")}
+          meta={t("meta", {
+            count: tiers.tiers.length,
+            total: count(tiers.tiers.length),
+          })}
+        />
         <p className="text-muted-foreground max-w-prose text-sm">
-          An order is priced on its total quantity: the deepest tier it reaches sets the discount
-          off each product&apos;s single-unit price, and no unit ever costs less than that
-          product&apos;s bulk price. Size upcharges are added on top.
+          {t("description")}
         </p>
         {products.meta.total > samples.length ? (
           <p className="text-muted-foreground max-w-prose text-sm">
-            The preview offers the first {count(samples.length)} of {count(products.meta.total)}{" "}
-            products on sale, in shelf order.
+            {t("capped", {
+              shown: count(samples.length),
+              total: count(products.meta.total),
+            })}
           </p>
         ) : null}
         {!options.priceEditsEnabled ? <PriceSyncWarning /> : null}
@@ -65,6 +84,7 @@ export default async function PricingPage() {
           <TierLadder products={samples} />
         )}
       </div>
-    </HydrationBoundary>
+      </HydrationBoundary>
+    </IntlClientProvider>
   );
 }

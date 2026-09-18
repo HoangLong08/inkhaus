@@ -236,6 +236,42 @@
     }
   },
 
+  "Tiers": {
+    "title": "Price tiers",
+    "meta": "{count, plural, one {{total} tier} other {{total} tiers}}",
+    "description": "An order is priced on its total quantity: the deepest tier it reaches sets the discount off each product's single-unit price, and no unit ever costs less than that product's bulk price. Size upcharges are added on top.",
+    "capped": "The preview offers the first {shown} of {total} products on sale, in shelf order.",
+
+    "ladder": {
+      "title": "Ladder",
+      "description": "A tier starts at a total quantity and takes a percentage off every product's single-unit price. The first is always one unit at no discount.",
+      "from": "From quantity",
+      "discount": "Discount (%)",
+      "remove": "Remove",
+      "removeAria": "Remove tier {n}",
+      "minAria": "Tier {n} starts at",
+      "discountAria": "Tier {n} discount, percent",
+      "add": "Add tier",
+      "save": "Save ladder",
+      "error": "This ladder cannot be saved",
+      "saveError": "Could not save the ladder",
+      "saved": "Tier ladder saved"
+    },
+
+    "preview": {
+      "title": "Preview",
+      "hint": "One unit at each tier, before size upcharges.",
+      "ownerHint": "Owners set prices. One unit at each tier, before size upcharges.",
+      "product": "Product to preview",
+      "none": "No product on sale to preview with.",
+      "invalid": "Fix the ladder to see what it would charge.",
+      "from": "From",
+      "discount": "Discount",
+      "unitPrice": "Unit price",
+      "floor": "Floor"
+    }
+  },
+
   "PriceSync": {
     "title": "Price edits are switched off",
     "description": "The storefront still shows prices from code, while checkout charges what is in the database. Until the storefront reads prices from the API, a price changed here would put one number on the product page and charge another - so prices, size upcharges and the tier ladder are read-only. Copy, colours and archiving still save."

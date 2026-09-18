@@ -1,6 +1,7 @@
 "use client";
 
 import { unitPrice, type Tier } from "@inkhaus/shared/pricing";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -35,12 +36,17 @@ export type TierSample = { slug: string; name: string; price: number; bulkPrice:
 export default function TierPreview({
   tiers,
   products,
-  description = "One unit at each tier, before size upcharges.",
+  description,
 }: {
   tiers: Tier[] | null;
   products: TierSample[];
+  /** the read-only ladder says who may change it; left out, the plain hint */
   description?: string;
 }) {
+  // not a default parameter any more: the fallback comes from a hook, and a
+  // hook cannot be called in a parameter list - the same move FilterLinks made
+  // with `allLabel`
+  const t = useTranslations("Tiers");
   const [slug, setSlug] = useState(products[0]?.slug);
   const sample = products.find((p) => p.slug === slug) ?? products[0];
 
@@ -48,13 +54,13 @@ export default function TierPreview({
     <Card>
       <CardHeader>
         <CardTitle className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
-          Preview
+          {t("preview.title")}
         </CardTitle>
-        <CardDescription>{description}</CardDescription>
+        <CardDescription>{description ?? t("preview.hint")}</CardDescription>
         {sample ? (
           <CardAction>
             <Label htmlFor="tiers-sample" className="sr-only">
-              Product to preview
+              {t("preview.product")}
             </Label>
             <Select value={sample.slug} onValueChange={setSlug}>
               <SelectTrigger id="tiers-sample" className="w-48" data-testid="tiers-sample">
@@ -73,16 +79,16 @@ export default function TierPreview({
       </CardHeader>
       <CardContent>
         {!sample ? (
-          <p className="text-muted-foreground text-sm">No product on sale to preview with.</p>
+          <p className="text-muted-foreground text-sm">{t("preview.none")}</p>
         ) : !tiers ? (
-          <p className="text-muted-foreground text-sm">Fix the ladder to see what it would charge.</p>
+          <p className="text-muted-foreground text-sm">{t("preview.invalid")}</p>
         ) : (
           <Table data-testid="tiers-preview">
             <TableHeader>
               <TableRow>
-                <TableHead>From</TableHead>
-                <TableHead className="text-right">Discount</TableHead>
-                <TableHead className="text-right">Unit price</TableHead>
+                <TableHead>{t("preview.from")}</TableHead>
+                <TableHead className="text-right">{t("preview.discount")}</TableHead>
+                <TableHead className="text-right">{t("preview.unitPrice")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -99,7 +105,7 @@ export default function TierPreview({
                       <span className="inline-flex items-center gap-2">
                         {floored ? (
                           <Badge variant="outline" className="text-muted-foreground">
-                            Floor
+                            {t("preview.floor")}
                           </Badge>
                         ) : null}
                         {usd(unitPrice(sample, tier.min, tiers))}

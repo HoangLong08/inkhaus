@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 
 import TierPreview, { type TierSample } from "@/components/catalog/TierPreview";
 import { clientApi } from "@/lib/client-api";
@@ -11,6 +12,7 @@ import { queryKeys } from "@/lib/query-keys";
  * table, same cache entry the page hydrated.
  */
 export default function TierLadder({ products }: { products: TierSample[] }) {
+  const t = useTranslations("Tiers");
   const { data } = useQuery({
     queryKey: queryKeys.catalog.tiers(),
     queryFn: () => clientApi.catalog.tiers(),
@@ -21,7 +23,7 @@ export default function TierLadder({ products }: { products: TierSample[] }) {
     <TierPreview
       tiers={tiers}
       products={products}
-      description="Owners set prices. One unit at each tier, before size upcharges."
+      description={t("preview.ownerHint")}
     />
   );
 }
